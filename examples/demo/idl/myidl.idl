@@ -1,0 +1,36 @@
+import "ms-dtyp.idl";
+import "ms-wmi.idl";
+
+typedef RPC_UNICODE_STRING MY_UNICODE_STRING, *PMY_UNICODE_STRING;
+
+typedef [context_handle] void* PCONTEXT_HANDLE_MY;
+
+typedef struct _MY_INTERFACE_STRUCT {
+    wchar_t * str1;
+    PRPC_UNICODE_STRING str2;
+} MY_INTERFACE_STRUCT, *PMY_INTERFACE_STRUCT;
+
+ [
+     uuid(6BFFD098-A112-3610-9833-012892020162),
+     version(0.0),
+     pointer_default(unique)
+ ]
+ interface my_interface {
+    error_status_t TestCall(
+        [in, unique, string] wchar_t * input,
+        [in, unique] PRPC_UNICODE_STRING input2,
+        [out, unique, string] wchar_t * output,
+        [out, unique] PMY_INTERFACE_STRUCT my_struct_output,
+        [out, unique] PMY_UNICODE_STRING my_unicode_string_output
+    );
+}
+     
+
+ [
+     object,
+     uuid(6BFFD098-A112-3610-9833-012892020162),
+     pointer_default(unique)
+ ]
+ interface IDcomInterface : IWbemObjectSink  {
+    HRESULT TestDCOMCallWithBase();
+}

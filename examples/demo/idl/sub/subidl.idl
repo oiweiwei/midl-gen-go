@@ -1,0 +1,12 @@
+
+ [
+     uuid(6BFFD098-A112-3610-9833-012892020163),
+     version(0.0),
+     pointer_default(unique)
+ ]
+ interface my_interface3 {
+    error_status_t TestCall(
+        [in, unique, string] wchar_t * input,
+        [out, unique, string] wchar_t * output
+    );
+}
