@@ -235,7 +235,7 @@ type File struct {
 	// GoPkgBase is the base name of the Go package.
 	GoPkgBase string `json:"go_pkg_base,omitempty"`
 	// MIDLConfig is the MIDL configuration for the file.
-	MIDLConfig *Config `json:"-,omitempty"`
+	MIDLConfig *Config `json:"-"`
 	// The list of imports.
 	Imports []string `json:"imports,omitempty"`
 	// Export is a map of exported symbols on file level.
