@@ -29,10 +29,8 @@ demo:
 		-I examples/demo/idl/ \
 			examples/demo/idl/**
 
-.PHONY: test-demo
-test-demo:
-	cd examples && go test -v ./...
-
-.PHONY:
+.PHONY: test
 test:
 	go test ./...
+	cd examples && go test -v ./...
+
