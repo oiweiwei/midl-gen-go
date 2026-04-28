@@ -4,7 +4,9 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"path/filepath"
 	"sort"
+	"strings"
 	"sync"
 
 	"github.com/rs/zerolog"
@@ -46,6 +48,38 @@ func (m *MSDN) Index(ctx context.Context, protocolName string) (Index, bool) {
 	return index, true
 }
 
+func (m *MSDN) GetOverview(ctx context.Context) (*Page, bool) {
+
+	m.mu.RLock()
+	defer m.mu.RUnlock()
+
+	for _, p := range m.pages {
+		if p.Name == "Overview" || strings.HasPrefix(p.Name, "Overview") {
+			return p, true
+		}
+	}
+
+	return nil, false
+}
+
+func (m *MSDN) GetIntroduction(ctx context.Context) (*Page, bool) {
+	m.mu.RLock()
+	defer m.mu.RUnlock()
+
+	for _, p := range m.pages {
+		if p.Name == "Introduction" || strings.HasPrefix(p.Name, "Introduction") {
+			return p, true
+		}
+	}
+
+	return nil, false
+}
+
+func NormalizePageName(name string) string {
+	// trim all _, \n, \t, and spaces.
+	return strings.Trim(name, "_\n\t ")
+}
+
 // GetPage retrieves the documentation page for the specified protocol name and page names.
 func (m *MSDN) GetPage(ctx context.Context, pages ...string) (*Page, bool) {
 
@@ -56,13 +90,21 @@ func (m *MSDN) GetPage(ctx context.Context, pages ...string) (*Page, bool) {
 
 	for _, p := range m.pages {
 		for _, pageName := range pages {
-			if p.Name == pageName {
+			if p.Name == pageName || NormalizePageName(p.Name) == NormalizePageName(pageName) {
 				out = out.Merge(p)
 			}
 		}
 	}
 
 	return out, out != nil
+}
+
+func (m *MSDN) SyncForFile(ctx context.Context, filePath string) error {
+
+	protocolName := filepath.Base(filePath)
+	protocolName = strings.TrimSuffix(protocolName, filepath.Ext(protocolName))
+
+	return m.Sync(ctx, protocolName)
 }
 
 // Sync synchronizes the documentation pages and indexes for the specified protocol name.
@@ -162,11 +204,16 @@ func (m *MSDN) Sync(ctx context.Context, protocolName string) error {
 	})
 
 	for _, page := range pages {
-		if _, ok := m.lookup[protocol.Name+"/"+page.UUID]; ok {
+		key := pageKey(protocol.Name, page.Name, page.UUID)
+		if _, ok := m.lookup[key]; ok {
 			continue
 		}
-		m.pages, m.lookup[protocol.Name+"/"+page.UUID] = append(m.pages, page), page
+		m.pages, m.lookup[key] = append(m.pages, page), page
 	}
 
 	return errors.Join(errs...)
+}
+
+func pageKey(protocolName, pageName, uuid string) string {
+	return protocolName + "/" + pageName + "/" + uuid
 }

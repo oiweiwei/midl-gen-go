@@ -12,6 +12,7 @@ import (
 	"net/url"
 	"os"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"time"
 
@@ -31,6 +32,13 @@ func (c *Client) GetProtocolDocumentationURL(protocolName string) string {
 	protocolName = strings.ToLower(protocolName)
 
 	if !strings.Contains(protocolName, "/") {
+
+		if c.Indexer != nil {
+			if index, ok := c.Indexer.Get(protocolName); ok {
+				return MustJoinURL(OpenSpecsBaseURL, index.Family, index.Name)
+			}
+		}
+
 		if !strings.Contains(protocolName, "-") {
 			protocolName = msPrefix + protocolName
 		}
@@ -49,6 +57,7 @@ func (c *Client) GetPageURL(protocolName, pageUUID string) string {
 }
 
 // MustGetDocument retrieves the HTML document from the specified URL, retrying indefinitely until it succeeds.
+// It respects Retry-After headers on 429 responses and returns an error for any other non-200 status code.
 func (c *Client) MustGetDocument(ctx context.Context, url string) (*goquery.Document, error) {
 
 	log := zerolog.Ctx(ctx).With().
@@ -69,6 +78,24 @@ func (c *Client) MustGetDocument(ctx context.Context, url string) (*goquery.Docu
 			continue
 		}
 
+		if resp.StatusCode == http.StatusTooManyRequests {
+			// drain and close the body before sleeping.
+			readAllAndClose(ctx, resp.Body) //nolint:errcheck
+			delay := retryAfterDelay(resp, 5*time.Second)
+			log.Warn().Dur("delay", delay).Msg("rate limited, waiting before retry")
+			select {
+			case <-ctx.Done():
+				return nil, ctx.Err()
+			case <-time.After(delay):
+			}
+			continue
+		}
+
+		if resp.StatusCode != http.StatusOK {
+			readAllAndClose(ctx, resp.Body) //nolint:errcheck
+			return nil, fmt.Errorf("unexpected status %d fetching %s", resp.StatusCode, url)
+		}
+
 		body, err := readAllAndClose(ctx, resp.Body)
 		if err != nil {
 			log.Warn().Err(err).Msg("reading document body")
@@ -86,6 +113,26 @@ func (c *Client) MustGetDocument(ctx context.Context, url string) (*goquery.Docu
 
 		return document, nil
 	}
+}
+
+// retryAfterDelay parses the Retry-After header from the response and returns the duration to wait.
+// If the header is absent or unparseable, it returns the provided fallback duration.
+func retryAfterDelay(resp *http.Response, fallback time.Duration) time.Duration {
+	v := resp.Header.Get("Retry-After")
+	if v == "" {
+		return fallback
+	}
+	// Retry-After may be a delay-seconds integer or an HTTP-date.
+	if secs, err := strconv.Atoi(v); err == nil {
+		return time.Duration(secs) * time.Second
+	}
+	if t, err := http.ParseTime(v); err == nil {
+		if d := time.Until(t); d > 0 {
+			return d
+		}
+		return 0
+	}
+	return fallback
 }
 
 func (c *Client) RelPath(ctx context.Context, protocolName, name string) string {
@@ -223,6 +270,10 @@ func (c *Client) GetProtocolIndexByID(ctx context.Context, protocolName, indexUU
 			for _, extra := range c.Indexer.GetExtra(protocolName) {
 				name, uuid := extra.Name+" "+"structure", extra.UUID
 				index[name] = map[string]string{name: uuid, "_source": "extra"}
+				for _, alias := range extra.Aliases {
+					alias := alias + " " + "structure"
+					index[alias] = map[string]string{alias: uuid, "_source": "extra-alias"}
+				}
 			}
 		}
 
@@ -260,6 +311,10 @@ func (c *Client) GetProtocolIndexByID(ctx context.Context, protocolName, indexUU
 		for _, extra := range c.Indexer.GetExtra(protocolName) {
 			name, uuid := extra.Name+" "+"structure", extra.UUID
 			index[name] = map[string]string{name: uuid, "_source": "extra"}
+			for _, alias := range extra.Aliases {
+				alias := alias + " " + "structure"
+				index[alias] = map[string]string{alias: uuid, "_source": "extra-alias"}
+			}
 		}
 	}
 
@@ -284,6 +339,14 @@ func (c *Client) GetProtocolDocumentationPage(ctx context.Context, protocolName,
 		// so we need to split it and adjust the protocol name accordingly.
 		last := strings.LastIndex(pageUUID, "/")
 		protocolName, pageUUID = pageUUID[:last], pageUUID[last+1:]
+
+		log.Debug().Msg("adjusted protocol name and page UUID based on page UUID containing a slash")
+
+		log = log.With().
+			Str("protocol_name", protocolName).
+			Str("page_uuid", pageUUID).
+			Logger()
+
 	}
 
 	page := &Page{

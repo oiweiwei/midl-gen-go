@@ -207,19 +207,15 @@
     uuid: 9378e9b2-b1df-4086-9023-f609e727e904
 - par:
   - name: RPC_V2_UREPLY_PRINTER
-    uuid: 1ccdac5b-0b2a-4bd3-8afd-d2c2589130fc
+    uuid: ms-rprn/1ccdac5b-0b2a-4bd3-8afd-d2c2589130fc
   - name: DRIVER_INFO_1
     uuid: ms-rprn/4464eaf0-f34f-40d5-b970-736437a21913
-  - name: DRIVER_INFO_2
-    uuid: ms-rprn/4464eaf0-f34f-40d5-b970-736437a21913
-  - name: RPC_DRIVER_INFO_3
-    uuid: ms-rprn/4464eaf0-f34f-40d5-b970-736437a21913
-  - name: RPC_DRIVER_INFO_4
-    uuid: ms-rprn/4464eaf0-f34f-40d5-b970-736437a21913
-  - name: RPC_DRIVER_INFO_6
-    uuid: ms-rprn/4464eaf0-f34f-40d5-b970-736437a21913
-  - name: RPC_DRIVER_INFO_8
-    uuid: ms-rprn/4464eaf0-f34f-40d5-b970-736437a21913
+    aliases:
+    - DRIVER_INFO_2
+    - RPC_DRIVER_INFO_3
+    - RPC_DRIVER_INFO_4
+    - RPC_DRIVER_INFO_6
+    - RPC_DRIVER_INFO_8
 - rprn:
   - name: RPC_V2_UREPLY_PRINTER
     uuid: 1ccdac5b-0b2a-4bd3-8afd-d2c2589130fc

@@ -27,6 +27,9 @@ type Page struct {
 	// Documentation is a list of strings that provide the main content of the page, including
 	// descriptions, explanations, and other relevant information.
 	Documentation []string `json:"documentation"`
+	// CodeSnippet is an optional field that can contain a code snippet related to the page's content,
+	// which can be used to illustrate concepts or provide examples.
+	CodeSnippet string `json:"code_snippet,omitempty"`
 	// Sections is a list of sections within the page, where each section contains its
 	// own name and documentation.
 	Sections []*Section `json:"sections"`
@@ -34,10 +37,28 @@ type Page struct {
 	Raw []byte `json:"raw"`
 }
 
-// GetSection retrieves a section from the page by its name. It returns the section and a boolean indicating
+func (p *Page) GetSection(name string) (*Section, bool) {
+
+	s, ok := p.getSection(name)
+	if !ok {
+		return nil, false
+	}
+
+	ss := *s
+
+	for _, section := range p.Sections {
+		if section.DependsOn == s.Name {
+			ss.Documentation = append(ss.Documentation, section.Documentation...)
+		}
+	}
+
+	return &ss, true
+}
+
+// getSection retrieves a section from the page by its name. It returns the section and a boolean indicating
 // whether the section was found. The method checks for both the exact name and a version of the name
 // with a "__" prefix, which is a common convention in documentation for certain types of sections.
-func (p *Page) GetSection(name string) (*Section, bool) {
+func (p *Page) getSection(name string) (*Section, bool) {
 
 	if p == nil {
 		return nil, false
@@ -71,7 +92,7 @@ func (p *Page) GetObjectSection(name string) (*Section, bool) {
 		name = "Return Values"
 	}
 
-	return p.GetSection(name)
+	return p.getSection(name)
 }
 
 // Merge combines the content of the current page with another page, merging their documentation and sections.
@@ -141,9 +162,41 @@ func (p *Page) Marshal(ctx context.Context) (io.Reader, error) {
 	return bytes.NewReader(p.Raw), nil
 }
 
+func (p *Page) AddSectionWithDependsOn(section string, doc string) *Page {
+
+	dependsOn := ""
+	if len(p.Sections) > 0 {
+		last := p.Sections[len(p.Sections)-1]
+		for last != nil {
+			dependsOn = last.Name
+			last, _ = p.getSection(last.DependsOn)
+		}
+	}
+
+	s, last := &Section{Name: section, DependsOn: dependsOn}, len(p.Sections)-1
+	for i, section := range p.Sections {
+		if section.Name == s.Name {
+			section.AddDocumentation(doc)
+			p.Sections[i], p.Sections[last] = p.Sections[last], p.Sections[i]
+			return p
+		}
+	}
+
+	p.Sections = append(p.Sections, s.AddDocumentation(doc))
+	return p
+}
+
 // AddSection adds a new section with the specified name and documentation to the page.
 func (p *Page) AddSection(section string, doc string) *Page {
-	s := &Section{Name: section}
+	s, last := &Section{Name: section}, len(p.Sections)-1
+	for i, section := range p.Sections {
+		if section.Name == s.Name {
+			section.AddDocumentation(doc)
+			p.Sections[i], p.Sections[last] = p.Sections[last], p.Sections[i]
+			return p
+		}
+	}
+
 	p.Sections = append(p.Sections, s.AddDocumentation(doc))
 	return p
 }
@@ -154,6 +207,27 @@ var skipDocs = map[string]struct{}{
 	"":                        {},
 	"msdn link":               {},
 	"Server Processing Rules": {},
+}
+
+// AddCodeSnippet adds a code snippet to the page. If there are existing sections,
+// the code snippet is added to the last section;
+// otherwise, it is added to the page itself. This allows for flexibility in organizing code
+// snippets within the documentation structure.
+func (p *Page) AddCodeSnippet(snippet string) *Page {
+
+	if snippet == "" {
+		return p
+	}
+
+	if len(p.Sections) > 0 {
+		p.Sections[len(p.Sections)-1].AddDocumentation(snippet)
+		return p
+	}
+
+	snippet = fmt.Sprintf("<pre>\n%s\n</pre>", snippet)
+
+	p.CodeSnippet = snippet
+	return p
 }
 
 // AddDocumentation adds a documentation string to the page.
@@ -178,6 +252,12 @@ type Section struct {
 	// Documentation is a list of strings that provide the content of the section, including descriptions,
 	// explanations, and other relevant information specific to that section.
 	Documentation []string `json:"documentation"`
+	// CodeSnippet is an optional field that can contain a code snippet related to the page's content,
+	// which can be used to illustrate concepts or provide examples.
+	CodeSnippet string `json:"code_snippet,omitempty"`
+	// DependsOn is an optional field that indicates a dependency on another section, which can be used to establish
+	// relationships between sections and indicate that the content of one section relies on or is related to the content of another section.
+	DependsOn string `json:"depends_on,omitempty"`
 }
 
 // Lines returns the documentation of the section as a slice of strings, where each string
@@ -206,7 +286,7 @@ func (s *Section) AddDocumentation(doc string) *Section {
 }
 
 var (
-	nameRe = regexp.MustCompile(`([A-Za-z0-9_ \xa0]+)(?:<\d+>)?(?:\((?:(?:variable)|(?:\d+ (?:bytes?|words?)))\))?\s*:`)
+	nameRe = regexp.MustCompile(`([A-Za-z0-9_ \xa0]+|(?:\(unnamed union\)))(?:<\d+>)?(?:\((?:(?:variable)|(?:\d+ (?:bytes?|words?|bits?)))\))?\s*:`)
 )
 
 // parseName attempts to extract a section name from the provided string using a regular expression.
@@ -223,7 +303,7 @@ func parseName(n string) (string, bool) {
 // information such as section names and documentation content, and storing the raw HTML for reference.
 func (p *Page) FromDocument(ctx context.Context, document *goquery.Document) (*Page, error) {
 
-	if val, ok := document.Attr("name"); ok && val != "" {
+	if val, ok := document.Attr("name"); ok && val != "" && p.Name == "" {
 		p.Name = val
 	}
 
@@ -277,15 +357,14 @@ func (p *Page) FromDocument(ctx context.Context, document *goquery.Document) (*P
 					qn := &goquery.Selection{Nodes: []*html.Node{n}}
 					switch n.Data {
 					case "pre":
-						p.AddDocumentation("<pre>\n" + strings.TrimSpace(qn.Text()) + "\n</pre>")
+						p.AddCodeSnippet(strings.TrimSpace(qn.Text()))
 						return
 					case "p":
-
 						found := false
 						qn.Find("b").Each(func(_ int, b *goquery.Selection) {
 							if name, ok := parseName(DocString(b)); ok {
 								found = true
-								p.AddSection(name, "")
+								p.AddSectionWithDependsOn(name, "")
 							}
 						})
 
@@ -407,12 +486,15 @@ func PageDocumentToRaw(ctx context.Context, name, uuid string, document *goquery
 // Render generates a string representation of the page, including its name, documentation,
 // and sections, formatted in a way that is suitable for display or further processing, with
 // line breaks and indentation for better readability.
-func (p *Page) Render() string {
+func (p *Page) Render(prefix ...any) string {
 
 	s := &strings.Builder{}
 
 	P := func(a ...any) {
-		fmt.Fprintln(s, append([]any{"//"}, a...)...)
+		if len(prefix) > 0 {
+			a = append(prefix, a...)
+		}
+		fmt.Fprintln(s, a...)
 	}
 
 	P("#", p.Name)
@@ -422,12 +504,28 @@ func (p *Page) Render() string {
 		renderLine(P, doc, 80)
 	}
 
-	for _, section := range p.Sections {
+	if p.CodeSnippet != "" {
 		P()
-		P("##", section.Name)
-		for _, doc := range section.Documentation {
+		P("## Code")
+		renderLine(P, p.CodeSnippet, 80)
+	}
+
+	if len(p.Sections) > 0 {
+		P()
+		P("## Sections")
+
+		for _, section := range p.Sections {
 			P()
-			renderLine(P, doc, 80)
+			P("###", section.Name)
+			if section.CodeSnippet != "" {
+				P()
+				P("#### Code")
+				renderLine(P, section.CodeSnippet, 80)
+			}
+			for _, doc := range section.Documentation {
+				P()
+				renderLine(P, doc, 80)
+			}
 		}
 	}
 

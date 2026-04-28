@@ -27,8 +27,9 @@ type ProtocolIndex struct {
 }
 
 type Reference struct {
-	Name string `yaml:"name" json:"name"`
-	UUID string `yaml:"uuid" json:"uuid"`
+	Name    string   `yaml:"name" json:"name"`
+	UUID    string   `yaml:"uuid" json:"uuid"`
+	Aliases []string `yaml:"aliases,omitempty" json:"aliases,omitempty"`
 }
 
 type Extra []map[string][]*Reference

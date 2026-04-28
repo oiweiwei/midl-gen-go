@@ -9,6 +9,8 @@ import (
 
 	"github.com/oiweiwei/midl-gen-go/codegen/gen"
 	"github.com/oiweiwei/midl-gen-go/midl"
+	"github.com/oiweiwei/midl-gen-go/msdn/openspecs"
+	"github.com/rs/zerolog"
 	"github.com/spf13/cobra"
 )
 
@@ -46,6 +48,13 @@ func newGenerateCmd() *cobra.Command {
 			midl.Setup()
 
 			for _, fn := range args {
+
+				ctx := context.Background()
+
+				if verbose {
+					ctx = zerolog.New(os.Stdout).Level(zerolog.DebugLevel).WithContext(ctx)
+				}
+
 				p := &gen.Generator{
 					ImportsPath:          pkg,
 					Format:               !noFormat,
@@ -55,7 +64,7 @@ func newGenerateCmd() *cobra.Command {
 					MSDNIndexerFile:      msdnOpenspecsIndexer,
 					MSDNIndexerExtraFile: msdnOpenspecsIndexerExtra,
 				}
-				if err := p.Gen(context.Background(), fn); err != nil {
+				if err := p.Gen(ctx, fn); err != nil {
 					return fmt.Errorf("%s: %w", fn, err)
 				}
 			}
@@ -68,8 +77,8 @@ func newGenerateCmd() *cobra.Command {
 	cmd.Flags().StringVarP(&output, "output", "o", "msrpc/", "output directory root")
 	cmd.Flags().StringVar(&pkg, "pkg", "github.com/oiweiwei/go-msrpc/msrpc", "Go import path base for generated packages")
 	cmd.Flags().StringVar(&msdnOpenspecsCache, "msdn-openspecs-cache-dir", ".cache/doc/", "cache directory for MSDN documentation")
-	cmd.Flags().StringVar(&msdnOpenspecsIndexer, "msdn-openspecs-indexer-file", "", "indexer file for MSDN documentation")
-	cmd.Flags().StringVar(&msdnOpenspecsIndexerExtra, "msdn-openspecs-indexer-extra-file", "", "extra indexer file for MSDN documentation; repeatable")
+	cmd.Flags().StringVar(&msdnOpenspecsIndexer, "msdn-openspecs-indexer-file", "/msdn/index.yaml", "indexer file for MSDN documentation")
+	cmd.Flags().StringVar(&msdnOpenspecsIndexerExtra, "msdn-openspecs-indexer-extra-file", "/msdn/extra.yaml", "extra indexer file for MSDN documentation; repeatable")
 	cmd.Flags().BoolVar(&verbose, "verbose", false, "enable verbose/trace output")
 	cmd.Flags().BoolVar(&noFormat, "no-format", false, "skip gofmt on generated files")
 
@@ -106,6 +115,91 @@ func newDumpCmd() *cobra.Command {
 	return cmd
 }
 
+func newMSDNCmd() *cobra.Command {
+	var (
+		msdnOpenspecsCache        string
+		msdnOpenspecsIndexer      string
+		msdnOpenspecsIndexerExtra string
+		list                      bool
+		verbose                   bool
+		outputFormat              string
+	)
+
+	cmd := &cobra.Command{
+		Use:   "msdn [flags] index-name [object-name...]",
+		Short: "Fetch and render an MSDN Open Specifications documentation page",
+		Args:  cobra.MinimumNArgs(1),
+		RunE: func(cmd *cobra.Command, args []string) error {
+			protocolName, pageNames := args[0], args[1:]
+
+			ctx := context.Background()
+			if verbose {
+				ctx = zerolog.New(os.Stdout).Level(zerolog.DebugLevel).WithContext(ctx)
+			}
+
+			indexer, err := openspecs.NewProtocolIndexerFromFile(msdnOpenspecsIndexer)
+			if err != nil {
+				return fmt.Errorf("msdn: openspecs: load indexer file: %w", err)
+			}
+
+			if msdnOpenspecsIndexerExtra != "" {
+				if err := indexer.ReadExtraFromFile(msdnOpenspecsIndexerExtra); err != nil {
+					return fmt.Errorf("msdn: openspecs: read extra indexer file: %w", err)
+				}
+			}
+
+			msdn := &openspecs.MSDN{
+				CacheFS: msdnOpenspecsCache,
+				Indexer: indexer,
+			}
+
+			if err := msdn.Sync(ctx, protocolName); err != nil {
+				return fmt.Errorf("msdn: openspecs: sync: %w", err)
+			}
+
+			if list || len(pageNames) == 0 {
+				index, ok := msdn.Index(ctx, protocolName)
+				if !ok {
+					return fmt.Errorf("msdn: index not found for protocol: %s", protocolName)
+				}
+				index.Each(func(entry string, _ map[string]string) bool {
+					if name, ok := openspecs.ExtractName(entry); ok {
+						fmt.Println(name)
+					}
+					return true
+				})
+				return nil
+			}
+
+			page, ok := msdn.GetPage(ctx, pageNames...)
+			if !ok {
+				return fmt.Errorf("msdn: page not found: %s", strings.Join(pageNames, ", "))
+			}
+
+			if outputFormat == "json" {
+				b, err := json.MarshalIndent(page, "", "  ")
+				if err != nil {
+					return fmt.Errorf("msdn: marshal page: %w", err)
+				}
+				fmt.Println(string(b))
+				return nil
+			}
+
+			fmt.Print(page.Render())
+			return nil
+		},
+	}
+
+	cmd.Flags().StringVar(&msdnOpenspecsCache, "msdn-openspecs-cache-dir", "msdn/.cache/", "cache directory for MSDN documentation")
+	cmd.Flags().StringVar(&msdnOpenspecsIndexer, "msdn-openspecs-indexer-file", "msdn/index.yaml", "indexer file for MSDN documentation")
+	cmd.Flags().StringVar(&msdnOpenspecsIndexerExtra, "msdn-openspecs-indexer-extra-file", "msdn/extra.yaml", "extra indexer file for MSDN documentation")
+	cmd.Flags().BoolVar(&list, "list", false, "list available object names in the protocol index")
+	cmd.Flags().BoolVar(&verbose, "verbose", false, "enable verbose/trace output")
+	cmd.Flags().StringVarP(&outputFormat, "output", "o", "", "output format: json (default: text render)")
+
+	return cmd
+}
+
 func main() {
 	root := &cobra.Command{
 		Use:           "midl-gen-go",
@@ -114,7 +208,7 @@ func main() {
 		SilenceErrors: true,
 	}
 
-	root.AddCommand(newGenerateCmd(), newDumpCmd())
+	root.AddCommand(newGenerateCmd(), newDumpCmd(), newMSDNCmd())
 
 	if err := root.Execute(); err != nil {
 		fmt.Fprintln(os.Stderr, err)
