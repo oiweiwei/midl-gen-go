@@ -7,23 +7,23 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/oiweiwei/midl-gen-go/codegen/doc"
 	"github.com/oiweiwei/midl-gen-go/midl"
+	"github.com/oiweiwei/midl-gen-go/msdn/openspecs"
 )
 
 type TypeGenerator struct {
 	*Generator
 	*Scopes
 	GoTypeName string
-	Doc        *doc.TypeDoc
+	Doc        *openspecs.Page
 	OrigType   *midl.Type
 }
 
 func (p *Generator) NewTypeGenerator(ctx context.Context, typ *midl.Type) *TypeGenerator {
 	scopes := NewScopes(typ.Scopes())
-	docs, ok := p.Doc.Type(scopes.Alias())
+	docs, ok := p.MSDN.GetPage(ctx, scopes.Alias())
 	if !ok {
-		docs, _ = p.Doc.Type(scopes.Scope().Parent)
+		docs, _ = p.MSDN.GetPage(ctx, scopes.Scope().Parent)
 	}
 	return &TypeGenerator{
 		Generator:  p,
@@ -55,7 +55,7 @@ func (p *TypeGenerator) GenPipe(ctx context.Context) {
 	p.P("//", p.GoTypeName, "type", "represents", RPCName(p.Alias()), "RPC", "pipe.")
 	if p.Doc != nil {
 		p.P("//")
-		p.GenComment(ctx, p.Doc.Doc)
+		p.GenComment(ctx, p.Doc.Documentation)
 	}
 
 	p.P("type", p.GoTypeName, "interface", "{")
@@ -134,7 +134,7 @@ func (p *TypeGenerator) GenEnum(ctx context.Context) {
 	p.P("//", p.GoTypeName, "type", "represents", RPCName(p.Alias()), "RPC", "enumeration.")
 	if p.Doc != nil {
 		p.P("//")
-		p.GenComment(ctx, p.Doc.Doc)
+		p.GenComment(ctx, p.Doc.Documentation)
 	}
 
 	if p.Enum().Is32 {
@@ -146,8 +146,8 @@ func (p *TypeGenerator) GenEnum(ctx context.Context) {
 	p.P()
 	p.P("var", "(")
 	for _, enum := range p.Enum().Elems {
-		if doc, ok := p.Doc.Field(enum.Value); ok {
-			p.GenComment(ctx, doc.Doc)
+		if doc, ok := p.Doc.GetSection(enum.Value); ok {
+			p.GenComment(ctx, doc.Documentation)
 		}
 		p.P(GoMergeNames(ctx, p.GoTypeName, GoName(ctx, enum.Value)), p.GoTypeName, "=", strconv.Itoa(enum.ID))
 	}
@@ -184,8 +184,8 @@ func (p *TypeGenerator) GenStructField(ctx context.Context, field *midl.Field) {
 	if field.IsHandle() {
 		return
 	}
-	if doc, ok := p.Doc.Field(field.Name); ok {
-		p.GenComment(ctx, doc.Doc)
+	if doc, ok := p.Doc.GetSection(field.Name); ok {
+		p.GenComment(ctx, doc.Documentation)
 	}
 	notes := ""
 	if !field.IsString() && p.GoFieldTypeName(ctx, p.Scope(), field) == "string" {
@@ -512,7 +512,7 @@ func (p *TypeGenerator) GenStruct(ctx context.Context) {
 	}
 	if p.Doc != nil {
 		p.P("//")
-		p.GenComment(ctx, p.Doc.Doc)
+		p.GenComment(ctx, p.Doc.Documentation)
 	}
 
 	if n := p.Scope().Names; len(n) > 0 {

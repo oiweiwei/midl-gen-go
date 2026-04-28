@@ -22,6 +22,7 @@ make gen     # regenerate midl/parse.go from parse.y
 ```sh
 midl-gen-go generate [flags] file.idl ...
 midl-gen-go dump     [flags] file.idl
+midl-gen-go msdn     [flags] index-name [object-name...]
 ```
 
 ### `generate` flags
@@ -31,15 +32,104 @@ midl-gen-go dump     [flags] file.idl
 | `-I`, `--include` | | IDL search path entry; repeatable. Format: `path` or `base=path` |
 | `-o`, `--output` | `msrpc/` | Output directory root |
 | `--pkg` | `github.com/oiweiwei/go-msrpc/msrpc` | Go import path base for generated packages |
-| `--doc-cache` | `.cache/doc/` | Cache directory for MSDN documentation |
+| `--msdn-openspecs-cache-dir` | `.cache/doc/` | Cache directory for MSDN documentation |
+| `--msdn-openspecs-indexer-file` | `/msdn/index.yaml` | Protocol indexer file for MSDN documentation (empty = skip MSDN sync) |
+| `--msdn-openspecs-indexer-extra-file` | `/msdn/extra.yaml` | Extra indexer file for MSDN documentation |
 | `--verbose` | `false` | Enable trace output |
 | `--no-format` | `false` | Skip `gofmt` on generated files |
+
+Setting `--msdn-openspecs-indexer-file` to an empty string disables MSDN documentation
+fetching entirely. Generated files will have no doc-comments sourced from MS Open
+Specifications pages.
 
 ### `dump` flags
 
 | Flag | Description |
 | ---- | ----------- |
 | `-I`, `--include` | IDL search path entry (same format as `generate`) |
+
+### `msdn` flags
+
+| Flag | Default | Description |
+| ---- | ------- | ----------- |
+| `--msdn-openspecs-cache-dir` | `msdn/.cache/` | Cache directory for fetched MSDN pages |
+| `--msdn-openspecs-indexer-file` | `msdn/index.yaml` | Protocol indexer file mapping names to URLs |
+| `--msdn-openspecs-indexer-extra-file` | `msdn/extra.yaml` | Extra indexer file for additional entries |
+| `--list` | `false` | List all available object names in the protocol index |
+| `-o`, `--output` | | Output format: `json` (default: plain-text render) |
+| `--verbose` | `false` | Enable trace output |
+
+The `msdn` command fetches and renders MS Open Specifications documentation pages.
+`index-name` is a protocol short name (e.g. `ms-rpce`) looked up in the indexer files.
+Optional `object-name` arguments narrow the result to a specific struct, enum, or method.
+
+```sh
+# list all documented objects for a protocol
+midl-gen-go msdn ms-dtyp --list
+
+# render a single object as text
+midl-gen-go msdn ms-dtyp FILETIME
+
+# render as JSON
+midl-gen-go msdn -o json ms-dtyp FILETIME
+```
+
+### Indexer file format (`index.yaml`)
+
+The indexer file is a YAML list of protocol entries. Each entry maps a short name to its
+MS Open Specifications family and UUID. The generator uses this to locate the online
+documentation page for a given IDL file.
+
+```yaml
+- family: windows_protocols   # "windows_protocols" or "exchange_server_protocols"
+  name: dtyp                  # short name; "ms-" prefix is added automatically
+  uuid: cd85413a-cb32-43f1-ac50-d5267cd9542a
+
+# A protocol that lives inside another protocol's document uses "ref":
+- family: windows_protocols
+  name: claims
+  uuid: 9b7ab76e-076a-4f91-9d9d-186fd211fd66
+  ref: ms-adts/               # redirect: look up pages under ms-adts instead
+```
+
+Field reference:
+
+| Field | Required | Description |
+| ----- | -------- | ----------- |
+| `family` | no | Protocol family. Defaults to `windows_protocols`. |
+| `name` | yes | Short protocol name (e.g. `dtyp`, `ms-dtyp`, `mc-ccfg`). The `ms-` prefix is added automatically if absent. |
+| `uuid` | no | Interface UUID used to locate the documentation page. |
+| `ref` | no | Redirect to another protocol's document subtree (e.g. `ms-adts/`). |
+
+### Extra indexer file format (`extra.yaml`)
+
+The extra file supplies per-protocol overrides for individual type or method entries that
+are not discoverable from the main page index (e.g. union arms that share a page with a
+parent type).
+
+```yaml
+- dnsp:                              # protocol short name (without "ms-" prefix)
+  - name: DNSSRV_RPC_UNION          # type or method name as it appears in the IDL
+    uuid: b61a8727-46b1-4981-a6b3-a1d4b92b67c4  # UUID of the specific section
+
+- rprn:
+  - name: RPC_V2_UREPLY_PRINTER
+    uuid: 1ccdac5b-0b2a-4bd3-8afd-d2c2589130fc
+
+  - name: DRIVER_INFO_1
+    uuid: ms-rprn/4464eaf0-f34f-40d5-b970-736437a21913  # cross-protocol ref: proto/uuid
+    aliases:                         # additional IDL names that map to the same page
+      - DRIVER_INFO_2
+      - RPC_DRIVER_INFO_3
+```
+
+Field reference:
+
+| Field | Required | Description |
+| ----- | -------- | ----------- |
+| `name` | yes | Type or method name as it appears in the IDL. |
+| `uuid` | yes | UUID of the documentation section. Use `protocol/uuid` to reference a page from another protocol. |
+| `aliases` | no | Additional IDL names that resolve to the same documentation page. |
 
 ### IDL Search Path (`-I`)
 

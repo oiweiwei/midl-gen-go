@@ -92,18 +92,18 @@ func (p *Generator) GenServerInterface(ctx context.Context, iff *midl.Interface)
 		}
 		for _, op := range iff.Body.Operations {
 			// gen operation doc.
-			doc, ok := p.Doc.Type(op.Name)
+			doc, ok := p.MSDN.GetPage(ctx, op.Name)
 			if ok {
 				p.P()
-				p.GenComment(ctx, doc.Doc)
+				p.GenComment(ctx, doc.Documentation)
 			} else {
 				p.P()
 				p.P("//", op.Name, "operation.")
 			}
 			for _, field := range []string{"Return Values", "Exceptions Thrown"} {
-				if doc, ok := doc.Field(field); ok {
+				if doc, ok := doc.GetSection(field); ok {
 					p.P("//")
-					p.GenComment(ctx, doc.Doc)
+					p.GenComment(ctx, doc.Documentation)
 				}
 			}
 			if p.IsUnusedOp(op.Name) {
@@ -316,18 +316,18 @@ func (p *Generator) GenClientInterface(ctx context.Context, iff *midl.Interface)
 		}
 		for _, op := range iff.Body.Operations {
 			// gen operation doc.
-			doc, ok := p.Doc.Type(op.Name)
+			doc, ok := p.MSDN.GetPage(ctx, op.Name)
 			if ok {
 				p.P()
-				p.GenComment(ctx, doc.Doc)
+				p.GenComment(ctx, doc.Documentation)
 			} else {
 				p.P()
 				p.P("//", op.Name, "operation.")
 			}
 			for _, field := range []string{"Return Values", "Exceptions Thrown"} {
-				if doc, ok := doc.Field(field); ok {
+				if doc, ok := doc.GetSection(field); ok {
 					p.P("//")
-					p.GenComment(ctx, doc.Doc)
+					p.GenComment(ctx, doc.Documentation)
 				}
 			}
 			if p.IsUnusedOp(op.Name) {
