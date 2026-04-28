@@ -19,7 +19,7 @@ func (p *TypeGenerator) GenUnion(ctx context.Context) {
 	}
 	if p.Doc != nil {
 		p.P("//")
-		p.GenComment(ctx, p.Doc.Doc)
+		p.GenComment(ctx, p.Doc.Documentation)
 	}
 
 	p.Structure(p.GoTypeName, func() {

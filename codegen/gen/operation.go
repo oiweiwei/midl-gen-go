@@ -332,7 +332,7 @@ func (p *Generator) GenOperationStruct(ctx context.Context, op *midl.Operation, 
 	p.P("//", p.OpName(ctx, op, dir), "structure", "represents", "the", RPCName(op.Name),
 		"operation", strings.ToLower(ParamName(dir)))
 
-	doc, _ := p.Doc.Type(op.Name)
+	doc, _ := p.MSDN.GetPage(ctx, op.Name)
 
 	// generate go structure for the in/out/any parameters.
 	p.Structure(p.OpName(ctx, op, dir), func() {
@@ -362,8 +362,8 @@ func (p *Generator) GenOperationStruct(ctx context.Context, op *midl.Operation, 
 			}
 			if dir != AnyParam {
 				// gen docstring.
-				if doc, ok := doc.ObjectField(param.Name); ok {
-					p.GenComment(ctx, doc.Doc)
+				if doc, ok := doc.GetObjectSection(param.Name); ok {
+					p.GenComment(ctx, doc.Documentation)
 				} else if param.Name == p.ReturnValue() {
 					p.P("//", p.ReturnValue()+":", "The", op.Name, "return value.")
 				}

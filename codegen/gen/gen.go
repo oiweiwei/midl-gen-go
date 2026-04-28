@@ -9,10 +9,10 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/oiweiwei/midl-gen-go/codegen/doc"
 	go_names "github.com/oiweiwei/midl-gen-go/gonames"
 	"github.com/oiweiwei/midl-gen-go/midl"
 	"github.com/oiweiwei/midl-gen-go/midl/uuid"
+	"github.com/oiweiwei/midl-gen-go/msdn/openspecs"
 )
 
 func FieldName(i int, n string) string {
@@ -28,18 +28,20 @@ type GeneratorOptions struct {
 }
 
 type Generator struct {
-	out         *FileBuffer
-	inCB        bool // in comment block.
-	Trace       bool
-	MultiFile   bool
-	Format      bool
-	ImportsPath string
-	Dir         string
-	Doc         *doc.Doc
-	Cache       string
-	Opts        GeneratorOptions
-	CheckErr    func(...interface{})
-	Files       []*FileBuffer
+	out                  *FileBuffer
+	inCB                 bool // in comment block.
+	Trace                bool
+	MultiFile            bool
+	Format               bool
+	ImportsPath          string
+	Dir                  string
+	MSDN                 *openspecs.MSDN
+	MSDNCache            string
+	MSDNIndexerFile      string
+	MSDNIndexerExtraFile string
+	Opts                 GeneratorOptions
+	CheckErr             func(...interface{})
+	Files                []*FileBuffer
 }
 
 func trimExt(p string) string {
@@ -110,8 +112,14 @@ func (p *Generator) Gen(ctx context.Context, fn string) error {
 
 	ctx = go_names.WithNamer(ctx, f.Namer())
 
-	p.Doc, err = doc.BuildDoc(fn, doc.WithCache(p.Cache))
+	indexer, err := openspecs.NewProtocolIndexerFromFile(p.MSDNIndexerFile)
 	if err != nil {
+		return err
+	}
+
+	p.MSDN = &openspecs.MSDN{CacheFS: p.MSDNCache, Indexer: indexer}
+
+	if err := p.MSDN.Sync(ctx, filepath.Base(fn)); err != nil {
 		return err
 	}
 
@@ -195,17 +203,17 @@ func (p *Generator) Gen(ctx context.Context, fn string) error {
 
 		if p.out.IsRoot {
 			p.P("//", "The", p.out.PackageName, "package", "implements", "the", strings.ToUpper(p.out.PackageName), "client", "protocol.")
-			if intro, ok := p.Doc.Type("Introduction"); ok {
+			if intro, ok := p.MSDN.GetPage(ctx, "Introduction"); ok {
 				p.P("//")
 				p.P("//", "# Introduction")
 				p.P("//")
-				p.GenComment(ctx, intro.Doc)
+				p.GenComment(ctx, intro.Documentation)
 			}
-			if overview, ok := p.Doc.Type("Overview (synopsis)"); ok {
+			if overview, ok := p.MSDN.GetPage(ctx, "Overview (synopsis)"); ok {
 				p.P("//")
 				p.P("//", "# Overview")
 				p.P("//")
-				p.GenComment(ctx, overview.Doc)
+				p.GenComment(ctx, overview.Documentation)
 			}
 		}
 

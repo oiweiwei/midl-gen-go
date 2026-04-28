@@ -26,12 +26,14 @@ func applyIncludes(includes []string) {
 
 func newGenerateCmd() *cobra.Command {
 	var (
-		includes []string
-		output   string
-		pkg      string
-		docCache string
-		verbose  bool
-		noFormat bool
+		includes                  []string
+		output                    string
+		pkg                       string
+		msdnOpenspecsCache        string
+		msdnOpenspecsIndexer      string
+		msdnOpenspecsIndexerExtra string
+		verbose                   bool
+		noFormat                  bool
 	)
 
 	cmd := &cobra.Command{
@@ -45,11 +47,13 @@ func newGenerateCmd() *cobra.Command {
 
 			for _, fn := range args {
 				p := &gen.Generator{
-					ImportsPath: pkg,
-					Format:      !noFormat,
-					Trace:       verbose,
-					Dir:         output,
-					Cache:       docCache,
+					ImportsPath:          pkg,
+					Format:               !noFormat,
+					Trace:                verbose,
+					Dir:                  output,
+					MSDNCache:            msdnOpenspecsCache,
+					MSDNIndexerFile:      msdnOpenspecsIndexer,
+					MSDNIndexerExtraFile: msdnOpenspecsIndexerExtra,
 				}
 				if err := p.Gen(context.Background(), fn); err != nil {
 					return fmt.Errorf("%s: %w", fn, err)
@@ -63,7 +67,9 @@ func newGenerateCmd() *cobra.Command {
 		"IDL search path entry; repeatable. Format: path or base=path (base is Go module path)")
 	cmd.Flags().StringVarP(&output, "output", "o", "msrpc/", "output directory root")
 	cmd.Flags().StringVar(&pkg, "pkg", "github.com/oiweiwei/go-msrpc/msrpc", "Go import path base for generated packages")
-	cmd.Flags().StringVar(&docCache, "doc-cache", ".cache/doc/", "cache directory for MSDN documentation")
+	cmd.Flags().StringVar(&msdnOpenspecsCache, "msdn-openspecs-cache-dir", ".cache/doc/", "cache directory for MSDN documentation")
+	cmd.Flags().StringVar(&msdnOpenspecsIndexer, "msdn-openspecs-indexer-file", "", "indexer file for MSDN documentation")
+	cmd.Flags().StringVar(&msdnOpenspecsIndexerExtra, "msdn-openspecs-indexer-extra-file", "", "extra indexer file for MSDN documentation; repeatable")
 	cmd.Flags().BoolVar(&verbose, "verbose", false, "enable verbose/trace output")
 	cmd.Flags().BoolVar(&noFormat, "no-format", false, "skip gofmt on generated files")
 
