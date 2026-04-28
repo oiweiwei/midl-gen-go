@@ -2,11 +2,8 @@ default: build
 
 .PHONY: gen
 gen:
-	@goyacc -v midl/y.out -o midl/parse.go -p RPC midl/parse.y
-
-.PHONY: gen-oem
-gen-oem:
 	@go generate ./...
+	@goyacc -v midl/y.out -o midl/parse.go -p RPC midl/parse.y
 
 .PHONY: bin
 bin:
@@ -22,3 +19,18 @@ TAG   ?= latest
 .PHONY: docker
 docker:
 	docker build -t $(IMAGE):$(TAG) .
+
+.PHONY: demo
+demo:
+	./bin/midl-gen-go generate \
+		--pkg github.com/oiweiwei/midl-gen-go/examples/demo/ \
+		-o examples/demo \
+		-I ../go-msrpc/idl/ \
+		-I examples/demo/idl/ \
+			examples/demo/idl/**
+
+.PHONY: test
+test:
+	go test ./...
+	cd examples && go test -v ./...
+

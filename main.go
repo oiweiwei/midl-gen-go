@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
+	"path/filepath"
 	"strings"
 
 	"github.com/oiweiwei/midl-gen-go/codegen/gen"
@@ -24,6 +25,40 @@ func applyIncludes(includes []string) {
 		parts = append(parts, strings.Split(existing, ":")...)
 	}
 	midl.SetPathVar(strings.Join(parts, ":"))
+}
+
+func collectFiles(paths []string) ([]string, error) {
+
+	var files []string
+	for _, path := range paths {
+		stat, err := os.Stat(path)
+		if err != nil {
+			if os.IsNotExist(err) {
+				files = append(files, path)
+				continue
+			}
+			return nil, err
+		}
+
+		if stat.IsDir() {
+			err := filepath.Walk(path, func(p string, info os.FileInfo, err error) error {
+				if err != nil {
+					return err
+				}
+				if !info.IsDir() && strings.HasSuffix(info.Name(), ".idl") {
+					files = append(files, p)
+				}
+				return nil
+			})
+			if err != nil {
+				return nil, err
+			}
+		} else {
+			files = append(files, path)
+		}
+	}
+
+	return files, nil
 }
 
 func newGenerateCmd() *cobra.Command {
@@ -47,7 +82,12 @@ func newGenerateCmd() *cobra.Command {
 			midl.RPCErrorVerbose = true
 			midl.Setup()
 
-			for _, fn := range args {
+			files, err := collectFiles(args)
+			if err != nil {
+				return fmt.Errorf("collect files: %w", err)
+			}
+
+			for _, fn := range files {
 
 				ctx := context.Background()
 
@@ -76,9 +116,9 @@ func newGenerateCmd() *cobra.Command {
 		"IDL search path entry; repeatable. Format: path or base=path (base is Go module path)")
 	cmd.Flags().StringVarP(&output, "output", "o", "msrpc/", "output directory root")
 	cmd.Flags().StringVar(&pkg, "pkg", "github.com/oiweiwei/go-msrpc/msrpc", "Go import path base for generated packages")
-	cmd.Flags().StringVar(&msdnOpenspecsCache, "msdn-openspecs-cache-dir", ".cache/doc/", "cache directory for MSDN documentation")
-	cmd.Flags().StringVar(&msdnOpenspecsIndexer, "msdn-openspecs-indexer-file", "/msdn/index.yaml", "indexer file for MSDN documentation")
-	cmd.Flags().StringVar(&msdnOpenspecsIndexerExtra, "msdn-openspecs-indexer-extra-file", "/msdn/extra.yaml", "extra indexer file for MSDN documentation; repeatable")
+	cmd.Flags().StringVar(&msdnOpenspecsCache, "msdn-openspecs-cache-dir", "msdn/.cache/doc/", "cache directory for MSDN documentation")
+	cmd.Flags().StringVar(&msdnOpenspecsIndexer, "msdn-openspecs-indexer-file", "", "indexer file for MSDN documentation")
+	cmd.Flags().StringVar(&msdnOpenspecsIndexerExtra, "msdn-openspecs-indexer-extra-file", "", "extra indexer file for MSDN documentation; repeatable")
 	cmd.Flags().BoolVar(&verbose, "verbose", false, "enable verbose/trace output")
 	cmd.Flags().BoolVar(&noFormat, "no-format", false, "skip gofmt on generated files")
 

@@ -1,6 +1,7 @@
 package midl
 
 import (
+	"context"
 	"fmt"
 	"math/big"
 	"testing"
@@ -42,10 +43,10 @@ func TestExprTreeResolve(t *testing.T) {
 	eval, ok := e.Eval(tExprStore{"x": Expr{Value: big.NewInt(5)}})
 	fmt.Println(eval.String(), ok)
 
-	fmt.Println("y", "=", e.Expression())
+	fmt.Println("y", "=", e.Expression(context.Background()))
 
 	// r := &ExprTree{Value: big.NewInt(28)}
 	rx, ok := e.Resolve(NewIdent("y"))
-	fmt.Println(rx.Value, "=", rx.Expression(), ok)
+	fmt.Println(rx.Value, "=", rx.Expression(context.Background()), ok)
 
 }

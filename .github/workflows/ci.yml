@@ -1,0 +1,44 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  ci:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout midl-gen-go
+        uses: actions/checkout@v4
+
+      - name: Checkout go-msrpc (idl only)
+        run: |
+          git clone --filter=blob:none --no-checkout https://github.com/oiweiwei/go-msrpc.git ../go-msrpc
+          cd ../go-msrpc
+          git sparse-checkout init --cone
+          git sparse-checkout set idl
+          git checkout
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+
+      - name: Install goyacc
+        run: go install golang.org/x/tools/cmd/goyacc@latest
+
+      - name: Build midl
+        run: make build
+
+      - name: Run demo
+        run: make demo
+
+      - name: Test
+        run: go test ./...
+
+      - name: Test demo
+        working-directory: examples
+        run: go test ./...
