@@ -27,6 +27,7 @@ type Config struct {
 		Prefix    map[string]struct{} `yaml:"-"`
 		Suffix    []string            `yaml:"suffix"`
 	}
+	Namer *Namer `yaml:"-"`
 }
 
 func LoadConfig() *Config {
@@ -56,6 +57,10 @@ func LoadNamerFromPath(p string) (*Namer, error) {
 
 func (c *Config) Copy() *Config {
 	c2 := &Config{}
+
+	if c == nil {
+		return c2
+	}
 
 	c2.Rename = make(map[string][]string)
 	for k, v := range c.Rename {
@@ -88,6 +93,8 @@ func (c *Config) Copy() *Config {
 	c2.Trim.PrefixAll = append([]string(nil), c.Trim.PrefixAll...)
 	c2.Trim.Prefixes = append([]string(nil), c.Trim.Prefixes...)
 	c2.Trim.Suffix = append([]string(nil), c.Trim.Suffix...)
+	c2.Trim.Prefix = make(map[string]struct{})
+	c2.Trim.Word = make(map[string]struct{})
 
 	for k := range c.Trim.Prefix {
 		c2.Trim.Prefix[k] = struct{}{}
@@ -125,7 +132,15 @@ func (c *Config) Merge(other *Config) *Config {
 	}
 
 	for k, v := range other.LookBehind {
-		c2.LookBehind[k] = v
+		m, ok := c2.LookBehind[k]
+		if !ok {
+			m = make(map[string][]string)
+		}
+
+		for k2, v2 := range v {
+			m[k2] = v2
+		}
+		c2.LookBehind[k] = m
 	}
 
 	c2.Trim.PrefixAll = append(c2.Trim.PrefixAll, other.Trim.PrefixAll...)
