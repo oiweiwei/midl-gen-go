@@ -33,22 +33,26 @@ func (c *Config) For(idl string) *Config {
 		return nil
 	}
 
-	if c.Namer != nil {
-		return c
-	}
-
 	n := &go_names.Config{}
 
 	idl = filepath.Base(idl)
 	idl = strings.TrimSuffix(idl, path.Ext(idl))
 
-	n = n.Merge(c.GoNames.Global)
-
 	for _, m := range c.GoNames.IDL {
 		if cfg, ok := m[idl]; ok {
-			n = n.Merge(cfg)
-			break
+			if cfg.Namer == nil {
+				if c.Namer != nil {
+					n = n.Merge(c.Namer.Config)
+				}
+				n = n.Merge(cfg)
+				cfg.Namer = &go_names.Namer{Config: n}
+			}
+			return &Config{Namer: cfg.Namer}
 		}
+	}
+
+	if c.Namer != nil {
+		return c
 	}
 
 	cc := *c
@@ -100,6 +104,10 @@ func LoadConfig(dir string) (*Config, error) {
 		if c.Namer, err = go_names.LoadNamerFromPath(filepath.Join(dir, ConfigDir, c.GoNames.Path)); err != nil {
 			return nil, fmt.Errorf("load config: load gonames: %w", err)
 		}
+	}
+
+	if c.GoNames.Global != nil {
+		c.Namer = &go_names.Namer{Config: c.Namer.Merge(c.GoNames.Global)}
 	}
 
 	configsStoreMu.Lock()

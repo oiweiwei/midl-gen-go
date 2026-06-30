@@ -843,7 +843,7 @@ func TypeSize(s TypeStore, t *Type) int {
 		ret = 4
 	case TypeArray:
 		if t.Array.IsFixed() {
-			ret = int(t.Array.Bound.Upper) * TypeSize(s, t.Elem)
+			ret = (int(t.Array.Bound.Upper) + 1) * TypeSize(s, t.Elem)
 		}
 	case TypeAttribute:
 		return TypeSize(s, t.Elem)
