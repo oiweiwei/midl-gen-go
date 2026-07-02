@@ -220,6 +220,259 @@ func (o *PcontextHandleMy) UnmarshalNDR(ctx context.Context, w ndr.Reader) error
 	return nil
 }
 
+// MyEnum type represents MY_ENUM RPC enumeration.
+type MyEnum uint16
+
+var (
+	MyEnumValue1    MyEnum = 0
+	MyEnumValue2    MyEnum = 1
+	MyEnumReserved1 MyEnum = 2
+	MyEnumReserved2 MyEnum = 3
+	MyEnumValue3    MyEnum = 2
+)
+
+func (o MyEnum) String() string {
+	switch o {
+	case MyEnumValue1:
+		return "MyEnumValue1"
+	case MyEnumValue2:
+		return "MyEnumValue2"
+	case MyEnumReserved1:
+		return "MyEnumReserved1"
+	case MyEnumReserved2:
+		return "MyEnumReserved2"
+	case MyEnumValue3:
+		return "MyEnumValue3"
+	}
+	return "Invalid"
+}
+
+// MyUnion structure represents MY_UNION RPC union.
+type MyUnion struct {
+	// Types that are assignable to Value
+	//
+	// *MyUnion_Int1
+	// *MyUnion_Str1
+	Value is_MyUnion `json:"value"`
+}
+
+func (o *MyUnion) GetValue() any {
+	if o == nil {
+		return nil
+	}
+	switch value := (interface{})(o.Value).(type) {
+	case *MyUnion_Int1:
+		if value != nil {
+			return value.Int1
+		}
+	case *MyUnion_Str1:
+		if value != nil {
+			return value.Str1
+		}
+	}
+	return nil
+}
+
+type is_MyUnion interface {
+	ndr.Marshaler
+	ndr.Unmarshaler
+	is_MyUnion()
+}
+
+func (o *MyUnion) NDRSwitchValue(sw uint16) uint16 {
+	if o == nil {
+		return uint16(0)
+	}
+	switch (interface{})(o.Value).(type) {
+	case *MyUnion_Int1:
+		return uint16(0)
+	case *MyUnion_Str1:
+		return uint16(1)
+	}
+	return uint16(0)
+}
+
+func (o *MyUnion) MarshalUnionNDR(ctx context.Context, w ndr.Writer, sw uint16) error {
+	if err := w.WriteUnionAlign(9); err != nil {
+		return err
+	}
+	if err := w.WriteSwitch(ndr.Enum(uint16(sw))); err != nil {
+		return err
+	}
+	if err := w.WriteUnionAlign(9); err != nil {
+		return err
+	}
+	switch sw {
+	case uint16(0):
+		_o, _ := o.Value.(*MyUnion_Int1)
+		if _o != nil {
+			if err := _o.MarshalNDR(ctx, w); err != nil {
+				return err
+			}
+		} else {
+			if err := (&MyUnion_Int1{}).MarshalNDR(ctx, w); err != nil {
+				return err
+			}
+		}
+	case uint16(1):
+		_o, _ := o.Value.(*MyUnion_Str1)
+		if _o != nil {
+			if err := _o.MarshalNDR(ctx, w); err != nil {
+				return err
+			}
+		} else {
+			if err := (&MyUnion_Str1{}).MarshalNDR(ctx, w); err != nil {
+				return err
+			}
+		}
+	default:
+	}
+	return nil
+}
+
+func (o *MyUnion) UnmarshalUnionNDR(ctx context.Context, w ndr.Reader, sw uint16) error {
+	if err := w.ReadUnionAlign(9); err != nil {
+		return err
+	}
+	if err := w.ReadSwitch(ndr.Enum((*uint16)(&sw))); err != nil {
+		return err
+	}
+	if err := w.ReadUnionAlign(9); err != nil {
+		return err
+	}
+	switch sw {
+	case uint16(0):
+		o.Value = &MyUnion_Int1{}
+		if err := o.Value.UnmarshalNDR(ctx, w); err != nil {
+			return err
+		}
+	case uint16(1):
+		o.Value = &MyUnion_Str1{}
+		if err := o.Value.UnmarshalNDR(ctx, w); err != nil {
+			return err
+		}
+	default:
+	}
+	return nil
+}
+
+// MyUnion_Int1 structure represents MY_UNION RPC union arm.
+//
+// It has following labels: 0
+type MyUnion_Int1 struct {
+	Int1 int32 `idl:"name:int1" json:"int1"`
+}
+
+func (*MyUnion_Int1) is_MyUnion() {}
+
+func (o *MyUnion_Int1) MarshalNDR(ctx context.Context, w ndr.Writer) error {
+	if err := w.WriteData(o.Int1); err != nil {
+		return err
+	}
+	return nil
+}
+func (o *MyUnion_Int1) UnmarshalNDR(ctx context.Context, w ndr.Reader) error {
+	if err := w.ReadData(&o.Int1); err != nil {
+		return err
+	}
+	return nil
+}
+
+// MyUnion_Str1 structure represents MY_UNION RPC union arm.
+//
+// It has following labels: 1
+type MyUnion_Str1 struct {
+	Str1 string `idl:"name:str1" json:"str1"`
+}
+
+func (*MyUnion_Str1) is_MyUnion() {}
+
+func (o *MyUnion_Str1) MarshalNDR(ctx context.Context, w ndr.Writer) error {
+	if o.Str1 != "" {
+		_ptr_str1 := ndr.MarshalNDRFunc(func(ctx context.Context, w ndr.Writer) error {
+			if err := ndr.WriteUTF16String(ctx, w, o.Str1); err != nil {
+				return err
+			}
+			return nil
+		})
+		if err := w.WritePointer(&o.Str1, _ptr_str1); err != nil {
+			return err
+		}
+	} else {
+		if err := w.WritePointer(nil); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+func (o *MyUnion_Str1) UnmarshalNDR(ctx context.Context, w ndr.Reader) error {
+	_ptr_str1 := ndr.UnmarshalNDRFunc(func(ctx context.Context, w ndr.Reader) error {
+		if err := ndr.ReadUTF16String(ctx, w, &o.Str1); err != nil {
+			return err
+		}
+		return nil
+	})
+	_s_str1 := func(ptr interface{}) { o.Str1 = *ptr.(*string) }
+	if err := w.ReadPointer(&o.Str1, _s_str1, _ptr_str1); err != nil {
+		return err
+	}
+	return nil
+}
+
+// MyStructWithUnion structure represents MY_STRUCT_WITH_UNION RPC structure.
+type MyStructWithUnion struct {
+	MyUnionSwitch MyEnum   `idl:"name:my_union_switch" json:"my_union_switch"`
+	MyUnion       *MyUnion `idl:"name:my_union;switch_is:my_union_switch" json:"my_union"`
+}
+
+func (o *MyStructWithUnion) xxx_PreparePayload(ctx context.Context) error {
+	if err := ndr.BeforePreparePayload(ctx, o); err != nil {
+		return err
+	}
+	if err := ndr.AfterPreparePayload(ctx, o); err != nil {
+		return err
+	}
+	return nil
+}
+func (o *MyStructWithUnion) MarshalNDR(ctx context.Context, w ndr.Writer) error {
+	if err := o.xxx_PreparePayload(ctx); err != nil {
+		return err
+	}
+	if err := w.WriteAlign(9); err != nil {
+		return err
+	}
+	if err := w.WriteEnum(uint16(o.MyUnionSwitch)); err != nil {
+		return err
+	}
+	_swMyUnion := uint16(o.MyUnionSwitch)
+	if o.MyUnion != nil {
+		if err := o.MyUnion.MarshalUnionNDR(ctx, w, _swMyUnion); err != nil {
+			return err
+		}
+	} else {
+		if err := (&MyUnion{}).MarshalUnionNDR(ctx, w, _swMyUnion); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+func (o *MyStructWithUnion) UnmarshalNDR(ctx context.Context, w ndr.Reader) error {
+	if err := w.ReadAlign(9); err != nil {
+		return err
+	}
+	if err := w.ReadEnum((*uint16)(&o.MyUnionSwitch)); err != nil {
+		return err
+	}
+	if o.MyUnion == nil {
+		o.MyUnion = &MyUnion{}
+	}
+	_swMyUnion := uint16(o.MyUnionSwitch)
+	if err := o.MyUnion.UnmarshalUnionNDR(ctx, w, _swMyUnion); err != nil {
+		return err
+	}
+	return nil
+}
+
 // MyInterfaceStruct structure represents MY_INTERFACE_STRUCT RPC structure.
 type MyInterfaceStruct struct {
 	Str1 string              `idl:"name:str1" json:"str1"`
@@ -305,6 +558,84 @@ func (o *MyInterfaceStruct) UnmarshalNDR(ctx context.Context, w ndr.Reader) erro
 	})
 	_s_str2 := func(ptr interface{}) { o.Str2 = *ptr.(**dtyp.UnicodeString) }
 	if err := w.ReadPointer(&o.Str2, _s_str2, _ptr_str2); err != nil {
+		return err
+	}
+	return nil
+}
+
+// MyStruct structure represents MY_STRUCT RPC structure.
+type MyStruct struct {
+	Int1 int32  `idl:"name:int1" json:"int1"`
+	Str1 string `idl:"name:str1" json:"str1"`
+	_    uint16 `idl:"name:reserved"`
+}
+
+func (o *MyStruct) xxx_PreparePayload(ctx context.Context) error {
+	if err := ndr.BeforePreparePayload(ctx, o); err != nil {
+		return err
+	}
+	if err := ndr.AfterPreparePayload(ctx, o); err != nil {
+		return err
+	}
+	return nil
+}
+func (o *MyStruct) MarshalNDR(ctx context.Context, w ndr.Writer) error {
+	if err := o.xxx_PreparePayload(ctx); err != nil {
+		return err
+	}
+	if err := w.WriteAlign(9); err != nil {
+		return err
+	}
+	if err := w.WriteData(o.Int1); err != nil {
+		return err
+	}
+	if o.Str1 != "" {
+		_ptr_str1 := ndr.MarshalNDRFunc(func(ctx context.Context, w ndr.Writer) error {
+			if err := ndr.WriteUTF16String(ctx, w, o.Str1); err != nil {
+				return err
+			}
+			return nil
+		})
+		if err := w.WritePointer(&o.Str1, _ptr_str1); err != nil {
+			return err
+		}
+	} else {
+		if err := w.WritePointer(nil); err != nil {
+			return err
+		}
+	}
+	// reserved reserved
+	if err := w.WriteData(uint16(0)); err != nil {
+		return err
+	}
+	if err := w.WriteTrailingGap(9); err != nil {
+		return err
+	}
+	return nil
+}
+func (o *MyStruct) UnmarshalNDR(ctx context.Context, w ndr.Reader) error {
+	if err := w.ReadAlign(9); err != nil {
+		return err
+	}
+	if err := w.ReadData(&o.Int1); err != nil {
+		return err
+	}
+	_ptr_str1 := ndr.UnmarshalNDRFunc(func(ctx context.Context, w ndr.Reader) error {
+		if err := ndr.ReadUTF16String(ctx, w, &o.Str1); err != nil {
+			return err
+		}
+		return nil
+	})
+	_s_str1 := func(ptr interface{}) { o.Str1 = *ptr.(*string) }
+	if err := w.ReadPointer(&o.Str1, _s_str1, _ptr_str1); err != nil {
+		return err
+	}
+	// reserved reserved
+	var _reserved uint16
+	if err := w.ReadData(&_reserved); err != nil {
+		return err
+	}
+	if err := w.ReadTrailingGap(9); err != nil {
 		return err
 	}
 	return nil

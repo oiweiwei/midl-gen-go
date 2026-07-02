@@ -81,7 +81,7 @@ func GoMergeNames(ctx context.Context, n1, n2 string) string {
 
 func (nr *Namer) MergeNames(n1, n2 string) string {
 
-	l1, l2 := nr.GoName(n1), nr.GoName(n2)
+	l1, l2 := nr.GoName(n1), nr.GoNameNoReserved(n2)
 
 	i, j := 0, 0
 	for i, j = 0, 0; j < len(l1) && i < len(l2); i, j = i+1, j+1 {
