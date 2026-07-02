@@ -5,10 +5,35 @@ typedef RPC_UNICODE_STRING MY_UNICODE_STRING, *PMY_UNICODE_STRING;
 
 typedef [context_handle] void* PCONTEXT_HANDLE_MY;
 
+typedef enum _MY_ENUM {
+    VALUE1 = 0,
+    VALUE2 = 1,
+    RESERVED1 = 2,
+    RESERVED2 = 3,
+    VALUE3 = 2
+} MY_ENUM;
+
+typedef [switch_type(MY_ENUM)] union _MY_UNION {
+    [case(VALUE1)] int int1;
+    [case(VALUE2)] wchar_t * str1;
+    [default];
+} MY_UNION, *PMY_UNION;
+
+typedef struct _MY_STRUCT_WITH_UNION {
+    MY_ENUM my_union_switch;
+    [switch_is(my_union_switch)] MY_UNION my_union;
+} MY_STRUCT_WITH_UNION, *PMY_STRUCT_WITH_UNION;
+
 typedef struct _MY_INTERFACE_STRUCT {
     wchar_t * str1;
     PRPC_UNICODE_STRING str2;
 } MY_INTERFACE_STRUCT, *PMY_INTERFACE_STRUCT;
+
+typedef struct _MY_STRUCT {
+    int int1;
+    wchar_t * str1;
+    unsigned short reserved;
+} MY_STRUCT, *PMY_STRUCT;
 
  [
      uuid(6BFFD098-A112-3610-9833-012892020162),

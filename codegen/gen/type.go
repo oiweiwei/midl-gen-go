@@ -149,14 +149,14 @@ func (p *TypeGenerator) GenEnum(ctx context.Context) {
 		if doc, ok := p.Doc.GetSection(enum.Value); ok {
 			p.GenComment(ctx, doc.Documentation)
 		}
-		p.P(GoMergeNames(ctx, p.GoTypeName, GoName(ctx, enum.Value)), p.GoTypeName, "=", strconv.Itoa(enum.ID))
+		p.P(GoMergeNames(ctx, p.GoTypeName, GoNameNoReserved(ctx, enum.Value)), p.GoTypeName, "=", strconv.Itoa(enum.ID))
 	}
 	p.P(")")
 	p.P()
 	p.Block("func", "(o "+p.GoTypeName+")", "String()", "string", func() {
 		p.Block("switch o", func() {
 			for _, enum := range p.Enum().Elems {
-				n := GoMergeNames(ctx, p.GoTypeName, GoName(ctx, enum.Value))
+				n := GoMergeNames(ctx, p.GoTypeName, GoNameNoReserved(ctx, enum.Value))
 				p.P("case", n, ":")
 				p.P("return", p.Q(n))
 			}
