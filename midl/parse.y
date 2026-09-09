@@ -56,6 +56,8 @@ var (
     TagIDs                []pTagID
     ComClass              ComClass
     Library               Library
+    LibraryBody           LibraryBody
+    ImportLib             ImportLib
     ComInterfaces         []*ComInterface
     ComInterface          *ComInterface
     DispatchInterface     DispatchInterface
@@ -64,6 +66,8 @@ var (
 
 %type <File> external file
 %type <Library> library library_header library_body
+%type <LibraryBody> library_element
+%type <ImportLib> importlib
 %type <Interface> interface interface_header
 %type <ComClass> coclass coclass_header
 %type <ComInterfaces> coclass_member_list
@@ -265,6 +269,7 @@ var (
 %token <Token> TYPEDEF
 %token <UUID> UUID
 %token <Token> INTERFACE
+%token <Token> IMPORTLIB
 %token <Token> IDEMPOTENT
 %token <Token> BROADCAST
 %token <Token> MAYBE
@@ -493,15 +498,45 @@ library_header          : attributes0 LIBRARY IDENT
                             }
                         ;
 
-library_body            : coclass semicolon
+library_body            : library_element semicolon
+                            {
+                                $$ = Library{Body: $1}
+                            }
+                        | library_body library_element semicolon
+                            {
+
+                                if len($2.ComClasses) > 0 {
+                                    $$.Body.ComClasses = append($$.Body.ComClasses, $2.ComClasses...)
+                                }
+                                if len($2.Interfaces) > 0 {
+                                    $$.Body.Interfaces = append($$.Body.Interfaces, $2.Interfaces...)
+                                }
+                                if len($2.ImportLibs) > 0 {
+                                    $$.Body.ImportLibs = append($$.Body.ImportLibs, $2.ImportLibs...)
+                                }
+                            }
+                        ;
+
+library_element         : coclass
                             {
                                 cc := $1
-                                $$ = Library{Body: LibraryBody{ComClasses: []*ComClass{&cc}}}
+                                $$ = LibraryBody{ComClasses: []*ComClass{&cc}}
                             }
-                        | library_body coclass semicolon
+                        | interface_header
                             {
-                                cc := $2
-                                $$.Body.ComClasses = append($$.Body.ComClasses, &cc)
+                                cc := $1
+                                $$ = LibraryBody{Interfaces: []*Interface{&cc}}
+                            }
+                        | importlib
+                            {
+                                cc := $1
+                                $$ = LibraryBody{ImportLibs: []*ImportLib{&cc}}
+                            }
+                        ;
+
+importlib               : IMPORTLIB '(' STRING_LITERAL ')'
+                            {
+                                $$ = ImportLib{Name: $3}
                             }
                         ;
 

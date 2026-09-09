@@ -8,7 +8,13 @@ type Library struct {
 
 // LibraryBody ...
 type LibraryBody struct {
-	ComClasses []*ComClass `json:"com_classes,omitempty"`
+	ComClasses []*ComClass  `json:"com_classes,omitempty"`
+	Interfaces []*Interface `json:"interfaces,omitempty"`
+	ImportLibs []*ImportLib `json:"import_libs,omitempty"`
+}
+
+type ImportLib struct {
+	Name string `json:"name"`
 }
 
 // ComClass structure ...
