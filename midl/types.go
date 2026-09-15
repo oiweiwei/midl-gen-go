@@ -269,6 +269,20 @@ type Type struct {
 	Elem      *Type      `json:"elem,omitempty"`
 }
 
+// IsSigned function returns true if type is signed integer type.
+// This is useful when generating code for return code error handling,
+// where signed integer is used to represent error codes:
+// For signed integer types, the return value is negative for error codes,
+// and positive for success codes.
+func (t *Type) IsSigned() bool {
+	base := t.Base()
+	switch base.Kind {
+	case TypeInt8, TypeInt16, TypeInt32, TypeInt64, TypeInt32_64:
+		return true
+	}
+	return false
+}
+
 func (t *Type) IsString() bool {
 	for _, t := range t.flat() {
 		if t.Attrs != nil && t.Attrs.Usage.IsString {

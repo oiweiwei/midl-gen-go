@@ -215,7 +215,13 @@ func (p *Generator) GenClient(ctx context.Context, iff *midl.Interface) {
 				Attrs: param.Attrs.FieldAttr,
 			}
 
-			p.If("op."+GoName(ctx, field.Name), "!=", p.GoTypeZeroValue(ctx, nil, field, NewScopes(field.Scopes())), func() {
+			cmp := "!="
+
+			if field.Type.IsSigned() {
+				cmp = "<"
+			}
+
+			p.If("op."+GoName(ctx, field.Name), cmp, p.GoTypeZeroValue(ctx, nil, field, NewScopes(field.Scopes())), func() {
 				p.P("return", "out", ",", p.B("fmt.Errorf", `"%s: %w"`, "op.OpName()", p.B("o.cc.Error", "ctx", "op."+GoName(ctx, field.Name))))
 			})
 		}
