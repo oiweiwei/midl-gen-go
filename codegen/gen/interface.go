@@ -215,7 +215,13 @@ func (p *Generator) GenClient(ctx context.Context, iff *midl.Interface) {
 				Attrs: param.Attrs.FieldAttr,
 			}
 
-			p.If("op."+GoName(ctx, field.Name), "!=", p.GoTypeZeroValue(ctx, nil, field, NewScopes(field.Scopes())), func() {
+			comparison := "!="
+			if isHRESULT(op.Type) {
+				// HRESULT succeeds when its signed value is nonnegative, including
+				// S_FALSE. Other RPC status types still require a zero result.
+				comparison = "<"
+			}
+			p.If("op."+GoName(ctx, field.Name), comparison, p.GoTypeZeroValue(ctx, nil, field, NewScopes(field.Scopes())), func() {
 				p.P("return", "out", ",", p.B("fmt.Errorf", `"%s: %w"`, "op.OpName()", p.B("o.cc.Error", "ctx", "op."+GoName(ctx, field.Name))))
 			})
 		}
@@ -298,6 +304,19 @@ func (p *Generator) GenClient(ctx context.Context, iff *midl.Interface) {
 			p.P("return", p.Amp(dn+"{cc: cc}"), ",", "nil")
 		}
 	})
+}
+
+// isHRESULT follows typedef attributes, including aliases of HRESULT. Require
+// a signed 32-bit scalar: strict HRESULT definitions and pointer aliases must
+// keep the ordinary nonzero return handling.
+func isHRESULT(t *midl.Type) bool {
+	hresult := false
+	for ; t.Is(midl.TypeAttribute); t = t.Elem {
+		if t.Attrs != nil && t.Attrs.Alias == "HRESULT" {
+			hresult = true
+		}
+	}
+	return hresult && t.Is(midl.TypeInt32)
 }
 
 func (p *Generator) GenClientInterface(ctx context.Context, iff *midl.Interface) {
