@@ -93,6 +93,8 @@ func (p *TypeGenerator) GenUnionUnmarshalNDR(ctx context.Context) {
 }
 
 func (p *TypeGenerator) GenUnionArmPrimitiveTypeUnmarshalNDR(ctx context.Context, cases *midl.UnionCase, armName string) {
+	// Null pointers skip the deferred callback, including when reusing a union.
+	p.P("o.Value", "=", "nil")
 	// render deferred unmarshalling function.
 	p.P("_ptr_o", ":=", "ndr.UnmarshalNDRFunc", "(", "func(ctx context.Context, w ndr.Reader) error {")
 	p.P("o.Value", "=", p.Amp(armName)+"{}")
