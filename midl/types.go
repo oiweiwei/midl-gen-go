@@ -696,6 +696,7 @@ type Format struct {
 	MultiSize      bool
 	Rune           bool
 	Hex            bool
+	PreserveNull   bool
 }
 
 type Direction struct {

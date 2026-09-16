@@ -255,6 +255,8 @@ func (a pAttr) Set(at pAttrType) pAttr {
 		a.Format.Rune = true
 	case FORMAT_HEX:
 		a.Format.Hex = true
+	case FORMAT_PRESERVE_NULL:
+		a.Format.PreserveNull = true
 	case SWITCH_IS:
 		a.SwitchIs = at.Attr.SwitchIs
 	case IGNORE:
@@ -403,6 +405,9 @@ func (a pAttr) MapAttr() map[int]interface{} {
 	}
 	if a.Format.Hex {
 		ret[FORMAT_HEX] = a.Format.Hex
+	}
+	if a.Format.PreserveNull {
+		ret[FORMAT_PRESERVE_NULL] = a.Format.PreserveNull
 	}
 	if !a.SwitchIs.Empty() {
 		ret[SWITCH_IS] = a.SwitchIs
@@ -602,6 +607,9 @@ func (a pAttr) Merge(ma pAttr) pAttr {
 	}
 	if ma.Format.Hex {
 		a.Format.Hex = ma.Format.Hex
+	}
+	if ma.Format.PreserveNull {
+		a.Format.PreserveNull = ma.Format.PreserveNull
 	}
 	if !ma.SwitchIs.Empty() {
 		a.SwitchIs = ma.SwitchIs
@@ -831,6 +839,7 @@ var pAllowedFieldAttr = []int{
 	FORMAT_UTF8,
 	FORMAT_RUNE,
 	FORMAT_HEX,
+	FORMAT_PRESERVE_NULL,
 	FORMAT_MULTI_SIZE,
 	SWITCH_IS,
 	IGNORE,
@@ -854,6 +863,7 @@ var pAllowedParamAttr = []int{
 	FORMAT_UTF8,
 	FORMAT_RUNE,
 	FORMAT_HEX,
+	FORMAT_PRESERVE_NULL,
 	FORMAT_MULTI_SIZE,
 	SWITCH_IS,
 	IGNORE,
@@ -880,6 +890,7 @@ var pAllowedTypeAttr = []int{
 	FORMAT_UTF8,
 	FORMAT_RUNE,
 	FORMAT_HEX,
+	FORMAT_PRESERVE_NULL,
 	FORMAT_MULTI_SIZE,
 	POINTER,
 	V1_ENUM,

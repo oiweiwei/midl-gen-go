@@ -27,6 +27,9 @@ typedef struct _MY_STRUCT_WITH_UNION {
 typedef struct _MY_INTERFACE_STRUCT {
     wchar_t * str1;
     PRPC_UNICODE_STRING str2;
+    char * cstr1;
+    [format(rune)] char * rune1;
+    [format(rune)] wchar_t * rune2;
 } MY_INTERFACE_STRUCT, *PMY_INTERFACE_STRUCT;
 
 typedef struct _MY_STRUCT {

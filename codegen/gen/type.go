@@ -663,7 +663,12 @@ func (p *TypeGenerator) GenFieldMarshalNDR(ctx context.Context, field *midl.Fiel
 		} else if scopes.Is(midl.TypeUint32_64) {
 			p.CheckErr(p.B("w.WriteData", p.B("ndr.Uint3264", name)))
 		} else if field.Attrs.Format.Rune {
-			p.CheckErr(p.B("w.WriteData", p.B("uint16", name)))
+			switch scopes.Kind() {
+			case midl.TypeChar, midl.TypeUChar, midl.TypeUint8:
+				p.CheckErr(p.B("w.WriteData", p.B("uint8", name)))
+			case midl.TypeWChar, midl.TypeUint16, midl.TypeInt16:
+				p.CheckErr(p.B("w.WriteData", p.B("uint16", name)))
+			}
 		} else {
 			p.CheckErr(p.B("w.WriteData", name))
 		}

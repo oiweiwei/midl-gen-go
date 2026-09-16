@@ -245,6 +245,7 @@ var (
 %token <Token> FORMAT_UTF8
 %token <Token> FORMAT_RUNE
 %token <Token> FORMAT_HEX
+%token <Token> FORMAT_PRESERVE_NULL
 %token <Token> IGNORE
 %token <Token> POINTER
 %token <Token> POINTER_REF
@@ -2585,6 +2586,10 @@ format_attribute        : FORMAT_UTF8
                         | FORMAT_HEX
                             {
                                 $$ = FORMAT_HEX
+                            }
+                        | FORMAT_PRESERVE_NULL
+                            {
+                                $$ = FORMAT_PRESERVE_NULL
                             }
                         ;
 
