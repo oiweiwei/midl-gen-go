@@ -658,7 +658,7 @@ func (val Expr) Neg() (Expr, bool) {
 
 // Not function performs boolean negation.
 func (val Expr) Not() (Expr, bool) {
-	return NewExpr(UNEG, func() (interface{}, bool) {
+	return NewExpr(UNOT, func() (interface{}, bool) {
 		return !val.Bool(), true
 	}, val)
 }

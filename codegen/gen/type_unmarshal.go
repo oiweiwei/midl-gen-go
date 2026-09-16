@@ -8,7 +8,7 @@ import (
 
 func (p *TypeGenerator) GenStructUnmarshalNDR(ctx context.Context) {
 
-	trailingField := len(p.Struct().Fields) - 1
+	trailingField := p.Struct().LastFieldIndex()
 	if p.IsConformant() || p.IsVarying() {
 		trailingField--
 	}
@@ -33,6 +33,18 @@ func (p *TypeGenerator) GenStructUnmarshalNDR(ctx context.Context) {
 			p.P("//", "pad", p.Scope().Pad)
 			p.GenDoAlignmentUnmarshalNDR(ctx, int(p.Scope().Pad))
 		}
+
+		for _, field := range p.Struct().Fields {
+			if field.Attrs.Ignore && !field.DefaultValue.Empty() {
+				p.P("//", "default value for ignored field", field.Name)
+				expr := field.DefaultValue
+				p.P(p.EO(ctx, field.Name), "=", p.B(
+					p.GoFieldTypeName(ctx, p.Scope(), field),
+					p.GenExpr(ctx, expr, p.LookupExprField(ctx, expr), ""),
+				))
+			}
+		}
+
 		p.P("return nil")
 	})
 

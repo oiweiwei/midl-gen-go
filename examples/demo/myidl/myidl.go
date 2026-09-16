@@ -478,8 +478,9 @@ type MyInterfaceStruct struct {
 	Str1  string              `idl:"name:str1" json:"str1"`
 	Str2  *dtyp.UnicodeString `idl:"name:str2" json:"str2"`
 	Cstr1 string              `idl:"name:cstr1" json:"cstr1"`
-	Rune1 rune                `idl:"name:rune1" json:"rune1"`
-	Rune2 rune                `idl:"name:rune2" json:"rune2"`
+	// This is a rune field represented by char * pointer
+	Rune1 rune `idl:"name:rune1" json:"rune1"`
+	Rune2 rune `idl:"name:rune2" json:"rune2"`
 }
 
 func (o *MyInterfaceStruct) xxx_PreparePayload(ctx context.Context) error {

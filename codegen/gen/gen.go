@@ -388,6 +388,10 @@ func (p *Generator) CB(f func()) {
 	p.inCB = false
 }
 
+func (p *Generator) GenCommentLine(ctx context.Context, line string) {
+	p.GenComment(ctx, []string{line})
+}
+
 func (p *Generator) GenComment(ctx context.Context, docs []string) {
 	p.CB(func() {
 		for _, doc := range docs {
@@ -449,6 +453,10 @@ func (p *Generator) GenTag(ctx context.Context, field *midl.Field) string {
 
 	if field.Attrs.Pointer != midl.PointerTypeNone && field.Attrs.Pointer != midl.PointerTypeRefWeak {
 		tag = append(tag, "pointer:"+field.Attrs.Pointer.String())
+	}
+
+	if field.Attrs.Ignore {
+		tag = append(tag, "ignore")
 	}
 
 	n := GoSnakeCase(ctx, field.Name)

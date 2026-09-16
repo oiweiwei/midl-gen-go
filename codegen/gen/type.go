@@ -57,6 +57,10 @@ func (p *TypeGenerator) GenPipe(ctx context.Context) {
 		p.P("//")
 		p.GenComment(ctx, p.Doc.Documentation)
 	}
+	if len(p.Scope().DocString) > 0 {
+		p.P("//")
+		p.GenCommentLine(ctx, p.Scope().DocString)
+	}
 
 	p.P("type", p.GoTypeName, "interface", "{")
 	p.P("Pipe()", "<-chan", p.GoFieldTypeName(ctx, p.Scope(), p.GenPipeField(ctx, p.Type())))
@@ -136,6 +140,10 @@ func (p *TypeGenerator) GenEnum(ctx context.Context) {
 		p.P("//")
 		p.GenComment(ctx, p.Doc.Documentation)
 	}
+	if len(p.Scope().DocString) > 0 {
+		p.P("//")
+		p.GenCommentLine(ctx, p.Scope().DocString)
+	}
 
 	if p.Enum().Is32 {
 		// accomodate all possible values.
@@ -186,6 +194,9 @@ func (p *TypeGenerator) GenStructField(ctx context.Context, field *midl.Field) {
 	}
 	if doc, ok := p.Doc.GetSection(field.Name); ok {
 		p.GenComment(ctx, doc.Documentation)
+	}
+	if len(field.Attrs.DocString) > 0 {
+		p.GenCommentLine(ctx, field.Attrs.DocString)
 	}
 	notes := ""
 	if !field.IsString() && p.GoFieldTypeName(ctx, p.Scope(), field) == "string" {
@@ -333,7 +344,7 @@ ranged_loop:
 	}
 
 	for _, field := range defaulted {
-		if !field.DefaultValue.IsZero() {
+		if !field.DefaultValue.IsZero() && !field.Attrs.Ignore {
 			p.If(p.EO(ctx, field.Name), "==", p.GoTypeZeroValue(ctx, p.Scope(), field, NewScopes(field.Scopes())), func() {
 				expr := field.DefaultValue
 				p.P(p.EO(ctx, field.Name), "=", p.B(
@@ -514,6 +525,10 @@ func (p *TypeGenerator) GenStruct(ctx context.Context) {
 		p.P("//")
 		p.GenComment(ctx, p.Doc.Documentation)
 	}
+	if len(p.Scope().DocString) > 0 {
+		p.P("//")
+		p.GenCommentLine(ctx, p.Scope().DocString)
+	}
 
 	if n := p.Scope().Names; len(n) > 0 {
 		ctx = p.WithNamer(ctx, p.Scopes.WithAlias(n[0]))
@@ -589,7 +604,7 @@ func (p *TypeGenerator) GenStructMarshalNDRSizePreamble(ctx context.Context, fie
 
 func (p *TypeGenerator) GenStructMarshalNDR(ctx context.Context) {
 
-	trailingField := len(p.Struct().Fields) - 1
+	trailingField := p.Struct().LastFieldIndex()
 	if p.IsConformant() || p.IsVarying() {
 		trailingField--
 	}

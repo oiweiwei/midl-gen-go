@@ -86,6 +86,7 @@ var (
 %type <Strings> import_list
 %type <Strings> import import1
 %type <String> import_name
+%type <String> string_literal
 %type <Export> export
 %type <Operation> op_declarator
 
@@ -302,6 +303,7 @@ var (
 %token <Token> PRAGMA_CPP_QUOTE
 %token <Token> CALLBACK
 %token <Token> HELP_STRING
+%token <Token> DOC_STRING
 %token <Token> DUAL
 %token <Token> PROPGET
 %token <Token> PROPPUT
@@ -535,7 +537,7 @@ library_element         : coclass
                             }
                         ;
 
-importlib               : IMPORTLIB '(' STRING_LITERAL ')'
+importlib               : IMPORTLIB '(' string_literal ')'
                             {
                                 $$ = ImportLib{Name: $3}
                             }
@@ -892,9 +894,13 @@ attribute               : FIRST_IS '(' attr_var_list ')'
                             {
                                 $$ = pAttrType{IID_IS, pAttr{IIDIs: $3}}
                             }
-                        | HELP_STRING '(' STRING_LITERAL ')'
+                        | HELP_STRING '(' string_literal ')'
                             {
                                 $$ = pAttrType{HELP_STRING, pAttr{HelpString: $3}}
+                            }
+                        | DOC_STRING '(' string_literal ')'
+                            {
+                                $$ = pAttrType{DOC_STRING, pAttr{DocString: $3}}
                             }
                         | DUAL
                             {
@@ -962,7 +968,7 @@ attribute               : FIRST_IS '(' attr_var_list ')'
                             {
                                 $$ = pAttrType{APPOBJECT, pAttr{}}
                             }
-                        | ANNOTATION '(' STRING_LITERAL ')'
+                        | ANNOTATION '(' string_literal ')'
                             {
                                 $$ = pAttrType{ANNOTATION, pAttr{Annotation: $3}}
                             }
@@ -1029,7 +1035,7 @@ excep_name1             : excep_name
                             }
                         ;
 
-port_spec               : STRING_LITERAL
+port_spec               : string_literal
                             {
                                 $$ = $1
                             }
@@ -1146,7 +1152,7 @@ import_list             : import_name
                             }
                         ;
 
-import_name             : STRING_LITERAL
+import_name             : string_literal
                             {
                                 $$ = $1
                             }
@@ -1192,7 +1198,7 @@ pragma_declarator       : PRAGMA_DEFINE IDENT const_exp
                                     return 0
                                 }
                             }
-                        | PRAGMA_CPP_QUOTE '(' STRING_LITERAL ')'
+                        | PRAGMA_CPP_QUOTE '(' string_literal ')'
                             {
                                 // XXX: re-enter the STRING_LITERAL as PRAGMA_DEFINE.
                                 pushLex(RPClex, $3)
@@ -1263,7 +1269,7 @@ const_exp               : integer_const_exp
                             {
                                 $$ = $1
                             }
-                        | STRING_LITERAL
+                        | string_literal
                             {
                                 $$ = NewValue($1)
                             }
@@ -2716,6 +2722,16 @@ param_declarators1      : param_declarators1 ',' param_declarator
                         | param_declarator
                             {
                                 $$ = []*Param{$1}
+                            }
+                        ;
+
+string_literal          : string_literal STRING_LITERAL
+                            {
+                                $$ = $$ + $2
+                            }
+                        | STRING_LITERAL
+                            {
+                                $$ = $1
                             }
                         ;
 
