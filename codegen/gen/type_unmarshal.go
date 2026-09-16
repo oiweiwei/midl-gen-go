@@ -324,13 +324,7 @@ func (p *TypeGenerator) GenFieldUnmarshalNDR(ctx context.Context, field *midl.Fi
 					break
 				}
 
-				// convert utf16/byte array back to string.
-				switch scopes := scopes.Next(); scopes.Kind() {
-				case midl.TypeWChar, midl.TypeUint16, midl.TypeInt16:
-					p.P(origName, "=", p.B("strings.TrimRight", p.B("string", p.B("utf16.Decode", name)), "ndr.ZeroString"))
-				case midl.TypeChar, midl.TypeUChar, midl.TypeInt8, midl.TypeUint8:
-					p.P(origName, "=", p.B("strings.TrimRight", p.B("string", name), "ndr.ZeroString"))
-				}
+				p.genReadStringBuffer(origName, name, scopes, field)
 			}
 			break
 		}
@@ -362,13 +356,7 @@ func (p *TypeGenerator) GenFieldUnmarshalNDR(ctx context.Context, field *midl.Fi
 				break
 			}
 
-			// convert utf16/byte array back to string.
-			switch scopes := scopes.Next(); scopes.Kind() {
-			case midl.TypeWChar, midl.TypeUint16, midl.TypeInt16:
-				p.P(origName, "=", p.B("strings.TrimRight", p.B("string", p.B("utf16.Decode", name)), "ndr.ZeroString"))
-			case midl.TypeChar, midl.TypeUChar, midl.TypeInt8, midl.TypeUint8:
-				p.P(origName, "=", p.B("strings.TrimRight", p.B("string", name), "ndr.ZeroString"))
-			}
+			p.genReadStringBuffer(origName, name, scopes, field)
 		}
 
 	case scopes.Is(midl.TypePipe):
@@ -426,4 +414,21 @@ func (p *TypeGenerator) GenFieldUnmarshalNDR(ctx context.Context, field *midl.Fi
 		p.P("_", "=", name)
 	}
 
+}
+
+// genReadStringBuffer preserves all code units in length-delimited strings.
+func (p *TypeGenerator) genReadStringBuffer(dst, src string, scopes *Scopes, field *midl.Field) {
+	var value string
+	switch scopes.Next().Kind() {
+	case midl.TypeWChar, midl.TypeUint16, midl.TypeInt16:
+		value = p.B("string", p.B("utf16.Decode", src))
+	case midl.TypeChar, midl.TypeUChar, midl.TypeInt8, midl.TypeUint8:
+		value = p.B("string", src)
+	default:
+		return
+	}
+	if scopes.Dim().IsNullTerminated || field.Attrs.Format.NullTerminated {
+		value = p.B("strings.TrimRight", value, "ndr.ZeroString")
+	}
+	p.P(dst, "=", value)
 }
