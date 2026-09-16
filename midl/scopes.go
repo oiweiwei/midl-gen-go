@@ -161,6 +161,9 @@ string_loop:
 			case typ.Is(TypeChar) || typ.Is(TypeWChar):
 				// keep track of isChar, to avoid rendering pointer to char as a uint8.
 				isString, isChar = true, typ.Is(TypeChar)
+				if f.Attrs.Format.Rune {
+					isString = false
+				}
 			case typ.Is(TypePointer):
 
 				if !f.IsString() && (scopes[i].Attr.Pointer == PointerTypeRef || scopes[i].Attr.Pointer == PointerTypeRefWeak) {

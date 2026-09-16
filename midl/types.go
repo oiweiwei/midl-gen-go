@@ -247,8 +247,25 @@ type Struct struct {
 	Fields []*Field `json:"fields,omitempty"`
 }
 
-// LastField function
+func (s *Struct) LastFieldIndex() int {
+	for i := len(s.Fields) - 1; i >= 0; i-- {
+		if s.Fields[i].Attrs.Ignore {
+			continue
+		}
+		return i
+	}
+	return len(s.Fields) - 1
+}
+
+// LastField function returns last non-ignored field if such exists,
+// otherwise returns last field in the structure.
 func (s *Struct) LastField() *Field {
+	for i := len(s.Fields) - 1; i >= 0; i-- {
+		if s.Fields[i].Attrs.Ignore {
+			continue
+		}
+		return s.Fields[i]
+	}
 	return s.Fields[len(s.Fields)-1]
 }
 
@@ -436,11 +453,12 @@ type TypeAttr struct {
 	Public                  bool
 	Alias                   string
 	// names, pointers to keep track of lost data merged.
-	Names    []string
-	Pointers []PointerType
-	Parent   string
-	Pad      uint64
-	IsLayout bool
+	Names     []string
+	Pointers  []PointerType
+	Parent    string
+	Pad       uint64
+	IsLayout  bool
+	DocString string
 }
 
 func (t *TypeAttr) EnumType() Kind {
@@ -474,6 +492,7 @@ func (t *TypeAttr) clone() *TypeAttr {
 		t.Parent,
 		t.Pad,
 		t.IsLayout,
+		t.DocString,
 	}
 }
 
@@ -616,6 +635,7 @@ type FieldAttr struct {
 	NoSizeLimit bool
 	IsLayout    bool
 	DefaultNull []Expr
+	DocString   string
 }
 
 func (f *FieldAttr) SizeAttr() *SizeAttr {
@@ -696,6 +716,7 @@ type Format struct {
 	MultiSize      bool
 	Rune           bool
 	Hex            bool
+	PreserveNull   bool
 }
 
 type Direction struct {

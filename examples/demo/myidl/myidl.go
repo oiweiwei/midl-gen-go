@@ -475,8 +475,12 @@ func (o *MyStructWithUnion) UnmarshalNDR(ctx context.Context, w ndr.Reader) erro
 
 // MyInterfaceStruct structure represents MY_INTERFACE_STRUCT RPC structure.
 type MyInterfaceStruct struct {
-	Str1 string              `idl:"name:str1" json:"str1"`
-	Str2 *dtyp.UnicodeString `idl:"name:str2" json:"str2"`
+	Str1  string              `idl:"name:str1" json:"str1"`
+	Str2  *dtyp.UnicodeString `idl:"name:str2" json:"str2"`
+	Cstr1 string              `idl:"name:cstr1" json:"cstr1"`
+	// This is a rune field represented by char * pointer
+	Rune1 rune `idl:"name:rune1" json:"rune1"`
+	Rune2 rune `idl:"name:rune2" json:"rune2"`
 }
 
 func (o *MyInterfaceStruct) xxx_PreparePayload(ctx context.Context) error {
@@ -531,6 +535,43 @@ func (o *MyInterfaceStruct) MarshalNDR(ctx context.Context, w ndr.Writer) error 
 			return err
 		}
 	}
+	if o.Cstr1 != "" {
+		_ptr_cstr1 := ndr.MarshalNDRFunc(func(ctx context.Context, w ndr.Writer) error {
+			if err := ndr.WriteCharString(ctx, w, o.Cstr1); err != nil {
+				return err
+			}
+			return nil
+		})
+		if err := w.WritePointer(&o.Cstr1, _ptr_cstr1); err != nil {
+			return err
+		}
+	} else {
+		if err := w.WritePointer(nil); err != nil {
+			return err
+		}
+	}
+	// XXX pointer to primitive type, default behavior is to write non-null pointer.
+	// if this behavior is not desired, use goext_default_null([cond]) attribute.
+	_ptr_rune1 := ndr.MarshalNDRFunc(func(ctx context.Context, w ndr.Writer) error {
+		if err := w.WriteData(uint8(o.Rune1)); err != nil {
+			return err
+		}
+		return nil
+	})
+	if err := w.WritePointer(&o.Rune1, _ptr_rune1); err != nil {
+		return err
+	}
+	// XXX pointer to primitive type, default behavior is to write non-null pointer.
+	// if this behavior is not desired, use goext_default_null([cond]) attribute.
+	_ptr_rune2 := ndr.MarshalNDRFunc(func(ctx context.Context, w ndr.Writer) error {
+		if err := w.WriteData(uint16(o.Rune2)); err != nil {
+			return err
+		}
+		return nil
+	})
+	if err := w.WritePointer(&o.Rune2, _ptr_rune2); err != nil {
+		return err
+	}
 	return nil
 }
 func (o *MyInterfaceStruct) UnmarshalNDR(ctx context.Context, w ndr.Reader) error {
@@ -558,6 +599,40 @@ func (o *MyInterfaceStruct) UnmarshalNDR(ctx context.Context, w ndr.Reader) erro
 	})
 	_s_str2 := func(ptr interface{}) { o.Str2 = *ptr.(**dtyp.UnicodeString) }
 	if err := w.ReadPointer(&o.Str2, _s_str2, _ptr_str2); err != nil {
+		return err
+	}
+	_ptr_cstr1 := ndr.UnmarshalNDRFunc(func(ctx context.Context, w ndr.Reader) error {
+		if err := ndr.ReadCharString(ctx, w, &o.Cstr1); err != nil {
+			return err
+		}
+		return nil
+	})
+	_s_cstr1 := func(ptr interface{}) { o.Cstr1 = *ptr.(*string) }
+	if err := w.ReadPointer(&o.Cstr1, _s_cstr1, _ptr_cstr1); err != nil {
+		return err
+	}
+	_ptr_rune1 := ndr.UnmarshalNDRFunc(func(ctx context.Context, w ndr.Reader) error {
+		var _Rune1 uint8
+		if err := w.ReadData(&_Rune1); err != nil {
+			return err
+		}
+		o.Rune1 = rune(_Rune1)
+		return nil
+	})
+	_s_rune1 := func(ptr interface{}) { o.Rune1 = *ptr.(*rune) }
+	if err := w.ReadPointer(&o.Rune1, _s_rune1, _ptr_rune1); err != nil {
+		return err
+	}
+	_ptr_rune2 := ndr.UnmarshalNDRFunc(func(ctx context.Context, w ndr.Reader) error {
+		var _Rune2 uint16
+		if err := w.ReadData(&_Rune2); err != nil {
+			return err
+		}
+		o.Rune2 = rune(_Rune2)
+		return nil
+	})
+	_s_rune2 := func(ptr interface{}) { o.Rune2 = *ptr.(*rune) }
+	if err := w.ReadPointer(&o.Rune2, _s_rune2, _ptr_rune2); err != nil {
 		return err
 	}
 	return nil

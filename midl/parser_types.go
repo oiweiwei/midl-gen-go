@@ -193,6 +193,7 @@ type pAttr struct {
 	IIDIs                   Expr
 	Retval                  bool
 	HelpString              string
+	DocString               string
 	Dual                    bool
 	PropGet                 bool
 	PropPut                 bool
@@ -255,6 +256,8 @@ func (a pAttr) Set(at pAttrType) pAttr {
 		a.Format.Rune = true
 	case FORMAT_HEX:
 		a.Format.Hex = true
+	case FORMAT_PRESERVE_NULL:
+		a.Format.PreserveNull = true
 	case SWITCH_IS:
 		a.SwitchIs = at.Attr.SwitchIs
 	case IGNORE:
@@ -307,6 +310,8 @@ func (a pAttr) Set(at pAttrType) pAttr {
 		a.IIDIs = at.Attr.IIDIs
 	case HELP_STRING:
 		a.HelpString = at.Attr.HelpString
+	case DOC_STRING:
+		a.DocString = at.Attr.DocString
 	case DUAL:
 		a.Dual = true
 	case PROPGET:
@@ -404,6 +409,9 @@ func (a pAttr) MapAttr() map[int]interface{} {
 	if a.Format.Hex {
 		ret[FORMAT_HEX] = a.Format.Hex
 	}
+	if a.Format.PreserveNull {
+		ret[FORMAT_PRESERVE_NULL] = a.Format.PreserveNull
+	}
 	if !a.SwitchIs.Empty() {
 		ret[SWITCH_IS] = a.SwitchIs
 	}
@@ -481,6 +489,9 @@ func (a pAttr) MapAttr() map[int]interface{} {
 	}
 	if a.HelpString != "" {
 		ret[HELP_STRING] = a.HelpString
+	}
+	if len(a.DocString) > 0 {
+		ret[DOC_STRING] = a.DocString
 	}
 	if a.Dual {
 		ret[DUAL] = a.Dual
@@ -603,6 +614,9 @@ func (a pAttr) Merge(ma pAttr) pAttr {
 	if ma.Format.Hex {
 		a.Format.Hex = ma.Format.Hex
 	}
+	if ma.Format.PreserveNull {
+		a.Format.PreserveNull = ma.Format.PreserveNull
+	}
 	if !ma.SwitchIs.Empty() {
 		a.SwitchIs = ma.SwitchIs
 	}
@@ -680,6 +694,9 @@ func (a pAttr) Merge(ma pAttr) pAttr {
 	}
 	if ma.HelpString != "" {
 		a.HelpString = ma.HelpString
+	}
+	if len(ma.DocString) > 0 {
+		a.DocString = ma.DocString
 	}
 	if ma.Dual {
 		a.Dual = ma.Dual
@@ -831,6 +848,7 @@ var pAllowedFieldAttr = []int{
 	FORMAT_UTF8,
 	FORMAT_RUNE,
 	FORMAT_HEX,
+	FORMAT_PRESERVE_NULL,
 	FORMAT_MULTI_SIZE,
 	SWITCH_IS,
 	IGNORE,
@@ -838,6 +856,7 @@ var pAllowedFieldAttr = []int{
 	POINTER,
 	SWITCH_TYPE,
 	GOEXT_DEFAULT_NULL,
+	DOC_STRING,
 }
 
 var pAllowedParamAttr = []int{
@@ -854,6 +873,7 @@ var pAllowedParamAttr = []int{
 	FORMAT_UTF8,
 	FORMAT_RUNE,
 	FORMAT_HEX,
+	FORMAT_PRESERVE_NULL,
 	FORMAT_MULTI_SIZE,
 	SWITCH_IS,
 	IGNORE,
@@ -880,12 +900,14 @@ var pAllowedTypeAttr = []int{
 	FORMAT_UTF8,
 	FORMAT_RUNE,
 	FORMAT_HEX,
+	FORMAT_PRESERVE_NULL,
 	FORMAT_MULTI_SIZE,
 	POINTER,
 	V1_ENUM,
 	RANGE,
 	DISABLE_CONSISTENCY_CHECK,
 	WIRE_MARSHAL,
+	DOC_STRING,
 }
 
 var pAllowedInterfaceAttr = []int{
@@ -926,6 +948,7 @@ func (a pAttr) Field() *FieldAttr {
 		a.NoSizeLimit,
 		a.IsLayout,
 		a.DefaultNull,
+		a.DocString,
 	}
 }
 
@@ -969,5 +992,6 @@ func (a pAttr) Type() *TypeAttr {
 		"",
 		a.Pad,
 		a.IsLayout,
+		a.DocString,
 	}
 }

@@ -8,7 +8,7 @@ import (
 
 func (p *TypeGenerator) GenStructUnmarshalNDR(ctx context.Context) {
 
-	trailingField := len(p.Struct().Fields) - 1
+	trailingField := p.Struct().LastFieldIndex()
 	if p.IsConformant() || p.IsVarying() {
 		trailingField--
 	}
@@ -33,6 +33,18 @@ func (p *TypeGenerator) GenStructUnmarshalNDR(ctx context.Context) {
 			p.P("//", "pad", p.Scope().Pad)
 			p.GenDoAlignmentUnmarshalNDR(ctx, int(p.Scope().Pad))
 		}
+
+		for _, field := range p.Struct().Fields {
+			if field.Attrs.Ignore && !field.DefaultValue.Empty() {
+				p.P("//", "default value for ignored field", field.Name)
+				expr := field.DefaultValue
+				p.P(p.EO(ctx, field.Name), "=", p.B(
+					p.GoFieldTypeName(ctx, p.Scope(), field),
+					p.GenExpr(ctx, expr, p.LookupExprField(ctx, expr), ""),
+				))
+			}
+		}
+
 		p.P("return nil")
 	})
 
@@ -128,7 +140,12 @@ func (p *TypeGenerator) GenFieldUnmarshalNDR(ctx context.Context, field *midl.Fi
 			p.CheckErr(p.B("w.ReadData", p.B(p.BPtr("ndr.Uint3264"), p.Amp(name))))
 		} else if field.Attrs.Format.Rune {
 			varName := "_" + p.ToVar(name)
-			p.P("var", varName, "uint16")
+			switch scopes.Kind() {
+			case midl.TypeChar, midl.TypeUChar, midl.TypeInt8, midl.TypeUint8:
+				p.P("var", varName, "uint8")
+			case midl.TypeWChar, midl.TypeUint16, midl.TypeInt16:
+				p.P("var", varName, "uint16")
+			}
 			p.CheckErr(p.B("w.ReadData", p.Amp(varName)))
 			p.P(name, "=", p.B("rune", varName))
 		} else {
@@ -325,12 +342,7 @@ func (p *TypeGenerator) GenFieldUnmarshalNDR(ctx context.Context, field *midl.Fi
 				}
 
 				// convert utf16/byte array back to string.
-				switch scopes := scopes.Next(); scopes.Kind() {
-				case midl.TypeWChar, midl.TypeUint16, midl.TypeInt16:
-					p.P(origName, "=", p.B("strings.TrimRight", p.B("string", p.B("utf16.Decode", name)), "ndr.ZeroString"))
-				case midl.TypeChar, midl.TypeUChar, midl.TypeInt8, midl.TypeUint8:
-					p.P(origName, "=", p.B("strings.TrimRight", p.B("string", name), "ndr.ZeroString"))
-				}
+				p.GenStringBufferUnmarshalNDR(ctx, field, scopes, name, origName)
 			}
 			break
 		}
@@ -363,12 +375,7 @@ func (p *TypeGenerator) GenFieldUnmarshalNDR(ctx context.Context, field *midl.Fi
 			}
 
 			// convert utf16/byte array back to string.
-			switch scopes := scopes.Next(); scopes.Kind() {
-			case midl.TypeWChar, midl.TypeUint16, midl.TypeInt16:
-				p.P(origName, "=", p.B("strings.TrimRight", p.B("string", p.B("utf16.Decode", name)), "ndr.ZeroString"))
-			case midl.TypeChar, midl.TypeUChar, midl.TypeInt8, midl.TypeUint8:
-				p.P(origName, "=", p.B("strings.TrimRight", p.B("string", name), "ndr.ZeroString"))
-			}
+			p.GenStringBufferUnmarshalNDR(ctx, field, scopes, name, origName)
 		}
 
 	case scopes.Is(midl.TypePipe):
@@ -426,4 +433,24 @@ func (p *TypeGenerator) GenFieldUnmarshalNDR(ctx context.Context, field *midl.Fi
 		p.P("_", "=", name)
 	}
 
+}
+
+func (p *TypeGenerator) GenStringBufferUnmarshalNDR(ctx context.Context, field *midl.Field, scopes *Scopes, name, origName string) {
+
+	// convert utf16/byte array back to string.
+	switch scopes := scopes.Next(); scopes.Kind() {
+	case midl.TypeWChar, midl.TypeUint16, midl.TypeInt16:
+		if !field.Attrs.Format.PreserveNull {
+			p.P(origName, "=", p.B("strings.TrimRight", p.B("string", p.B("utf16.Decode", name)), "ndr.ZeroString"))
+		} else {
+			p.P(origName, "=", p.B("string", p.B("utf16.Decode", name)))
+		}
+
+	case midl.TypeChar, midl.TypeUChar, midl.TypeInt8, midl.TypeUint8:
+		if !field.Attrs.Format.PreserveNull {
+			p.P(origName, "=", p.B("strings.TrimRight", p.B("string", name), "ndr.ZeroString"))
+		} else {
+			p.P(origName, "=", p.B("string", name))
+		}
+	}
 }

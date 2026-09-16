@@ -367,6 +367,11 @@ func (p *Generator) GenOperationStruct(ctx context.Context, op *midl.Operation, 
 				} else if param.Name == p.ReturnValue() {
 					p.P("//", p.ReturnValue()+":", "The", op.Name, "return value.")
 				}
+				if param.Attrs.DocString != "" {
+					p.P("//")
+					p.GenComment(ctx, []string{param.Attrs.DocString})
+				}
+
 			}
 			// generate structure field.
 			p.NewParamGenerator(ctx, param.Type).GenStructField(ctx, &midl.Field{

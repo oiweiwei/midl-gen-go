@@ -93,6 +93,10 @@ func (f Format) String() string {
 		ret = append(ret, "hex")
 	}
 
+	if f.PreserveNull {
+		ret = append(ret, "preserve_null")
+	}
+
 	if f.MultiSize {
 		ret = append(ret, "multi_size")
 	}
