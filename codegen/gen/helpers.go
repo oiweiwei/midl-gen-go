@@ -41,6 +41,17 @@ func Interface(ctx context.Context) *midl.Interface {
 	return iff
 }
 
+type nullMaskCtx struct{}
+
+func WithNullMask(ctx context.Context, mask string) context.Context {
+	return context.WithValue(ctx, nullMaskCtx{}, mask)
+}
+
+func Mask(ctx context.Context) string {
+	mask, _ := ctx.Value(nullMaskCtx{}).(string)
+	return mask
+}
+
 type fieldCtx struct{}
 
 func WithField(ctx context.Context, field *midl.Field) context.Context {
@@ -222,6 +233,10 @@ func (p *Generator) R(start, s, end string, count int) string {
 
 func (p *Generator) BufVar(name string) string {
 	return "_" + p.ToVar(name) + "_buf"
+}
+
+func (p *Generator) NullMask(name ...string) string {
+	return strings.Join(name, "") + "NullMask"
 }
 
 type varNameCtx struct{}

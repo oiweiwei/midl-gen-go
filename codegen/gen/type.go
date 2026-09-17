@@ -14,9 +14,10 @@ import (
 type TypeGenerator struct {
 	*Generator
 	*Scopes
-	GoTypeName string
-	Doc        *openspecs.Page
-	OrigType   *midl.Type
+	GoTypeName   string
+	GoMethodName string
+	Doc          *openspecs.Page
+	OrigType     *midl.Type
 }
 
 func (p *Generator) NewTypeGenerator(ctx context.Context, typ *midl.Type) *TypeGenerator {
@@ -537,7 +538,17 @@ func (p *TypeGenerator) GenStruct(ctx context.Context) {
 		p.P()
 		p.P("func", "(o *"+p.GoTypeName+")", GoName(ctx, n[0]), "()", "*"+names, "{", "return", p.B("(*"+names+")", "o"), "}")
 	} else {
+
+		mask := p.GenNullMask(ctx)
+		ctx = WithNullMask(ctx, mask)
+
 		p.Structure(p.GoTypeName, func() {
+			if mask != "" {
+				p.P()
+				p.P("//", mask, "is used to carry information on null-valued primitive values.")
+				p.P(p.NullMask(), mask)
+				p.P()
+			}
 			for _, field := range p.Struct().Fields {
 				p.GenStructField(ctx, field)
 			}
@@ -551,6 +562,36 @@ func (p *TypeGenerator) GenStruct(ctx context.Context) {
 	p.GenStructUnmarshalNDR(ctx)
 	p.GenSubTypes(ctx, p.Struct().Fields)
 
+}
+
+func (p *TypeGenerator) GenNullMask(ctx context.Context) string {
+
+	nullable := []*midl.Field{}
+
+	for _, field := range p.Struct().Fields {
+		if IsIgnoredPointer(ctx, field) && GoFieldName(ctx, field) != "_" {
+			nullable = append(nullable, field)
+		}
+	}
+
+	mask := p.GoTypeName + p.NullMask()
+
+	if len(nullable) == 0 {
+		return ""
+	}
+
+	p.P("type", mask, "ndr.NullMask")
+	p.P()
+	p.P("var", "(")
+	for i, field := range nullable {
+		p.P(mask+GoFieldName(ctx, field), mask, "=", "1", "<<", i)
+	}
+	p.P(")")
+	p.P()
+	p.P("func", p.B("", "o "+mask), "IsSet(v "+mask+") bool", "{ return o&v != 0 }")
+	p.P()
+
+	return mask
 }
 
 func (p *TypeGenerator) GenLayout(ctx context.Context) {
@@ -727,15 +768,11 @@ func (p *TypeGenerator) GenFieldMarshalNDR(ctx context.Context, field *midl.Fiel
 
 		// marshal pointer.
 
-		sizeChk := ""
-		if next := scopes.Next(); next.Is(midl.TypeArray) && !next.Dim().Size().Empty() {
-			// immitate memory allocation for conformance array.
-			sizeChk = fmt.Sprintf("|| %s > 0", p.GenExpr(ctx, next.Dim().Size().Is(), p.LookupExprField(ctx, next.Dim().Size().Is()), ""))
-		}
+		var nullChk string
 
 		if next := scopes.Next(); next.Type().IsPrimitiveType() {
+
 			if field.Attrs.DefaultNull != nil {
-				nullChk := ""
 				if len(field.Attrs.DefaultNull) > 0 {
 					for _, expr := range field.Attrs.DefaultNull {
 						chk := p.GenExpr(ctx, expr, p.LookupExprField(ctx, expr), "")
@@ -748,28 +785,41 @@ func (p *TypeGenerator) GenFieldMarshalNDR(ctx context.Context, field *midl.Fiel
 				} else {
 					nullChk = fmt.Sprintf("%s != %v", name, p.GoTypeZeroValue(ctx, p.Scope(), field, scopes))
 				}
+			}
 
-				p.If(nullChk, func() {
-					fN := "_ptr_" + field.Name
-					p.P(fN, ":=", "ndr.MarshalNDRFunc", "(", "func(ctx context.Context, w ndr.Writer) error {")
-					p.GenFieldMarshalNDR(ctx, field, scopes.Next(), index...)
-					p.P("return nil")
-					p.P("})")
-					p.CheckErr(p.B("w.WritePointer", p.Amp(name), fN))
-				}, p.Else(func() {
-					p.GenZeroPointerFieldMarshalNDR(ctx, field, scopes, index...)
-				}))
-			} else {
-				p.P("//", "XXX", "pointer to primitive type, default behavior is to write non-null pointer.")
-				p.P("//", "if this behavior is not desired, use goext_default_null([cond]) attribute.")
+			if mask := Mask(ctx); mask != "" {
+				if nullChk != "" {
+					nullChk += "&& "
+				}
+				nullChk += fmt.Sprintf("(%s & %s == 0)", p.O(p.NullMask()), Mask(ctx)+GoFieldName(ctx, field))
+			}
+
+			if nullChk == "" {
+				p.P("// XXX: pointer default mask was not generated as conditions")
+				p.P("// for automatic generation were not met.")
+				p.P("// If this behavior is not desired, use goext_default_null([cond]) attribute.")
+			}
+		}
+
+		if nullChk != "" {
+			p.If(nullChk, func() {
 				fN := "_ptr_" + field.Name
 				p.P(fN, ":=", "ndr.MarshalNDRFunc", "(", "func(ctx context.Context, w ndr.Writer) error {")
 				p.GenFieldMarshalNDR(ctx, field, scopes.Next(), index...)
 				p.P("return nil")
 				p.P("})")
 				p.CheckErr(p.B("w.WritePointer", p.Amp(name), fN))
-			}
+			}, p.Else(func() {
+				p.GenZeroPointerFieldMarshalNDR(ctx, field, scopes, index...)
+			}))
 		} else {
+
+			sizeChk := ""
+			if next := scopes.Next(); next.Is(midl.TypeArray) && !next.Dim().Size().Empty() {
+				// immitate memory allocation for conformance array.
+				sizeChk = fmt.Sprintf("|| %s > 0", p.GenExpr(ctx, next.Dim().Size().Is(), p.LookupExprField(ctx, next.Dim().Size().Is()), ""))
+			}
+
 			p.If(name, "!=", p.GoTypeZeroValue(ctx, p.Scope(), field, scopes), sizeChk, func() {
 				fN := "_ptr_" + field.Name
 				p.P(fN, ":=", "ndr.MarshalNDRFunc", "(", "func(ctx context.Context, w ndr.Writer) error {")
@@ -785,6 +835,8 @@ func (p *TypeGenerator) GenFieldMarshalNDR(ctx context.Context, field *midl.Fiel
 	case scopes.Is(midl.TypeArray):
 
 		// marshal array.
+
+		ctx := WithNullMask(ctx, "") /* clear null mask as arrays are unsupported */
 
 		if !p.GenMarshalSizeInfo(ctx, field, scopes, index...) {
 			break

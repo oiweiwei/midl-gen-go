@@ -41,6 +41,11 @@ func (p *Generator) GenOperation(ctx context.Context, op *midl.Operation) {
 		return
 	}
 	ctx = WithOp(ctx)
+
+	mask := p.GenOperationNullMask(ctx, op)
+
+	ctx = WithNullMask(ctx, mask)
+
 	p.GenOperationStruct(ctx, op, AnyParam)
 	p.GenOperationMarshalNDR(ctx, op, InParam)
 	p.GenOperationUnmarshalNDR(ctx, op, InParam)
@@ -96,11 +101,7 @@ func (p *Generator) GenOperationMarshalNDR(ctx context.Context, op *midl.Operati
 				continue
 			}
 
-			field := &midl.Field{
-				Name:  param.Name,
-				Type:  param.Type,
-				Attrs: param.Attrs.FieldAttr,
-			}
+			field := param.Field()
 
 			scopes := NewScopes(field.Scopes())
 			if scopes.Is(midl.TypePointer) &&
@@ -162,14 +163,10 @@ func (p *Generator) GenOperationUnmarshalNDR(ctx context.Context, op *midl.Opera
 				continue
 			}
 
-			field := &midl.Field{
-				Name:  param.Name,
-				Type:  param.Type,
-				Attrs: param.Attrs.FieldAttr,
-			}
+			field := param.Field()
 
 			scopes := NewScopes(field.Scopes())
-			if scopes.Is(midl.TypePointer) && (scopes.Scope().Pointer == midl.PointerTypeNone || scopes.Scope().Pointer == midl.PointerTypeRef || scopes.Scope().Pointer == midl.PointerTypeRefWeak) &&
+			if scopes.Is(midl.TypePointer) && scopes.Scope().Pointer.IsWeak(true) &&
 				// pointers to interfaces are always unique pointers.
 				!scopes.Next().Is(midl.TypeInterface) {
 				scopes = scopes.Next()
@@ -214,6 +211,16 @@ func (p *Generator) MethodName(ctx context.Context, op *midl.Operation) string {
 		n = "SetByRef" + n
 	}
 	return n
+}
+
+func (p *Generator) DirName(ctx context.Context, dir int) string {
+	switch dir {
+	case InParam:
+		return "Request"
+	case OutParam:
+		return "Response"
+	}
+	return ""
 }
 
 func (p *Generator) OpName(ctx context.Context, op *midl.Operation, dir int) string {
@@ -334,16 +341,22 @@ func (p *Generator) GenOperationStruct(ctx context.Context, op *midl.Operation, 
 
 	doc, _ := p.MSDN.GetPage(ctx, op.Name)
 
+	mask := Mask(ctx)
+
 	// generate go structure for the in/out/any parameters.
 	p.Structure(p.OpName(ctx, op, dir), func() {
+
+		if mask != "" {
+			p.P()
+			p.P("//", mask, "is used to carry information on null-valued primitive values.")
+			p.P(p.NullMask(), mask)
+			p.P()
+		}
+
 		if implicit := p.GetOutputParamImplicitDependents(ctx, op, dir); len(implicit) > 0 {
 			for _, param := range implicit {
 				p.P("//", "XXX:", param.Name, "is an implicit input depedency for output parameters")
-				p.NewParamGenerator(ctx, param.Type).GenStructField(ctx, &midl.Field{
-					Name:  param.Name,
-					Attrs: param.Attrs.FieldAttr,
-					Type:  param.Type,
-				})
+				p.NewParamGenerator(ctx, param.Type).GenStructField(ctx, param.Field())
 			}
 			p.P()
 		}
@@ -374,12 +387,9 @@ func (p *Generator) GenOperationStruct(ctx context.Context, op *midl.Operation, 
 
 			}
 			// generate structure field.
-			p.NewParamGenerator(ctx, param.Type).GenStructField(ctx, &midl.Field{
-				Name:  param.Name,
-				Attrs: param.Attrs.FieldAttr,
-				Type:  param.Type,
-			})
+			p.NewParamGenerator(ctx, param.Type).GenStructField(ctx, param.Field())
 		}
+
 	})
 
 	if dir == AnyParam {
@@ -388,8 +398,8 @@ func (p *Generator) GenOperationStruct(ctx context.Context, op *midl.Operation, 
 		return
 	}
 
-	p.GenOperationToOp(ctx, op, dir)
-	p.GenOperationFromOp(ctx, op, dir)
+	p.GenOperationToOp(ctx, op, dir, mask != "")
+	p.GenOperationFromOp(ctx, op, dir, mask != "")
 
 	dirN := ParamName(dir)
 
@@ -409,6 +419,54 @@ func (p *Generator) GenOperationStruct(ctx context.Context, op *midl.Operation, 
 		p.GenOpNum(ctx, op, dir)
 		p.GenOpName(ctx, op, dir)
 	}
+}
+
+func (p *Generator) GenOperationNullMask(ctx context.Context, op *midl.Operation) string {
+
+	var nullable []*midl.Param
+
+	for _, param := range p.OperationParams(ctx, op) {
+		if IsIgnoredPointer(ctx, param.Field()) {
+			nullable = append(nullable, param)
+		}
+	}
+
+	mask := p.MethodName(ctx, op) + p.NullMask()
+
+	if len(nullable) == 0 {
+		return ""
+	}
+
+	p.P()
+	p.P("type", mask, "ndr.NullMask")
+
+	p.P("var", "(")
+	in, out := []string{"0"}, []string{"0"}
+	for i, param := range nullable {
+		n := mask + GoFieldName(ctx, param.Field())
+		p.P(n, mask, "=", "1", "<<", i /* cannot use position here, using i */)
+
+		if param.Attrs.Direction.In {
+			in = append(in, n)
+		}
+
+		if param.Attrs.Direction.Out {
+			out = append(out, n)
+		}
+	}
+
+	p.P()
+	p.P(mask+p.DirName(ctx, InParam)+"All", mask, "=", strings.Join(in, " | "))
+	p.P(mask+p.DirName(ctx, OutParam)+"All", mask, "=", strings.Join(out, " | "))
+
+	p.P(")")
+	p.P()
+	p.P("func", p.B("", "o "+mask), "IsSet(v "+mask+") bool", "{ return o&v != 0 }")
+	p.P()
+	p.P("func", p.B("", "o "+mask), "Set(v "+mask+") "+mask, "{ return o|v }")
+	p.P()
+
+	return mask
 }
 
 func (p *Generator) GenMakeResponse(ctx context.Context, op *midl.Operation, dir int) {
@@ -449,7 +507,7 @@ func (p *Generator) GenOpName(ctx context.Context, op *midl.Operation, dir int) 
 		"}")
 }
 
-func (p *Generator) GenOperationToOp(ctx context.Context, op *midl.Operation, dir int) {
+func (p *Generator) GenOperationToOp(ctx context.Context, op *midl.Operation, dir int, mask bool) {
 
 	p.P()
 	p.P("func", "(o *"+p.OpName(ctx, op, dir)+")", p.XXX()+"ToOp(ctx context.Context, op *"+p.OpName(ctx, op, AnyParam), ")", "*"+p.OpName(ctx, op, AnyParam), "{")
@@ -492,11 +550,16 @@ func (p *Generator) GenOperationToOp(ctx context.Context, op *midl.Operation, di
 		p.P("op."+n, "=", p.O(n))
 
 	}
+
+	if mask {
+		p.P("op."+p.NullMask(), "=", p.O(p.NullMask()))
+	}
+
 	p.P("return", "op")
 	p.P("}")
 }
 
-func (p *Generator) GenOperationFromOp(ctx context.Context, op *midl.Operation, dir int) {
+func (p *Generator) GenOperationFromOp(ctx context.Context, op *midl.Operation, dir int, mask bool) {
 	p.P()
 	p.P("func", "(o *"+p.OpName(ctx, op, dir)+")", p.XXX()+"FromOp(ctx context.Context, op *"+p.OpName(ctx, op, AnyParam), ")", "{")
 	p.If("o == nil", func() {
@@ -523,7 +586,12 @@ func (p *Generator) GenOperationFromOp(ctx context.Context, op *midl.Operation, 
 			continue
 		}
 		p.P(p.O(n), "=", "op."+n)
-
 	}
+
+	if mask {
+		mask := p.NullMask(p.MethodName(ctx, op))
+		p.P(p.O(p.NullMask()), "=", p.B(mask, "op."+p.NullMask()), "&", mask+p.DirName(ctx, dir)+"All")
+	}
+
 	p.P("}")
 }

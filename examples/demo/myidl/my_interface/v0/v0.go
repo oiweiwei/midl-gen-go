@@ -45,6 +45,9 @@ type MyInterfaceClient interface {
 	// TestCall operation.
 	TestCall(context.Context, *TestCallRequest, ...dcerpc.CallOption) (*TestCallResponse, error)
 
+	// TestCall2 operation.
+	TestCall2(context.Context, *TestCall2Request, ...dcerpc.CallOption) (*TestCall2Response, error)
+
 	// AlterContext alters the client context.
 	AlterContext(context.Context, ...dcerpc.Option) error
 
@@ -69,6 +72,19 @@ func (o *xxx_DefaultMyInterfaceClient) TestCall(ctx context.Context, in *TestCal
 	return out, nil
 }
 
+func (o *xxx_DefaultMyInterfaceClient) TestCall2(ctx context.Context, in *TestCall2Request, opts ...dcerpc.CallOption) (*TestCall2Response, error) {
+	op := in.xxx_ToOp(ctx, nil)
+	if err := o.cc.Invoke(ctx, op, opts...); err != nil {
+		return nil, err
+	}
+	out := &TestCall2Response{}
+	out.xxx_FromOp(ctx, op)
+	if op.Return != uint32(0) {
+		return out, fmt.Errorf("%s: %w", op.OpName(), o.cc.Error(ctx, op.Return))
+	}
+	return out, nil
+}
+
 func (o *xxx_DefaultMyInterfaceClient) AlterContext(ctx context.Context, opts ...dcerpc.Option) error {
 	return o.cc.AlterContext(ctx, opts...)
 }
@@ -85,11 +101,29 @@ func NewMyInterfaceClient(ctx context.Context, cc dcerpc.Conn, opts ...dcerpc.Op
 	return &xxx_DefaultMyInterfaceClient{cc: cc}, nil
 }
 
+type TestCallNullMask ndr.NullMask
+
+var (
+	TestCallNullMaskDwordPointer TestCallNullMask = 1 << 0
+
+	TestCallNullMaskRequestAll  TestCallNullMask = 0 | TestCallNullMaskDwordPointer
+	TestCallNullMaskResponseAll TestCallNullMask = 0
+)
+
+func (o TestCallNullMask) IsSet(v TestCallNullMask) bool { return o&v != 0 }
+
+func (o TestCallNullMask) Set(v TestCallNullMask) TestCallNullMask { return o | v }
+
 // xxx_TestCallOperation structure represents the TestCall operation
 type xxx_TestCallOperation struct {
+
+	// TestCallNullMask is used to carry information on null-valued primitive values.
+	NullMask TestCallNullMask
+
 	Input                 string                   `idl:"name:input;string;pointer:unique" json:"input"`
 	Input2                *dtyp.UnicodeString      `idl:"name:input2;pointer:unique" json:"input2"`
 	Output                string                   `idl:"name:output;string;pointer:unique" json:"output"`
+	DwordPointer          uint32                   `idl:"name:dword_pointer;pointer:unique" json:"dword_pointer"`
 	MyStructOutput        *myidl.MyInterfaceStruct `idl:"name:my_struct_output;pointer:unique" json:"my_struct_output"`
 	MyUnicodeStringOutput *myidl.MyUnicodeString   `idl:"name:my_unicode_string_output;pointer:unique" json:"my_unicode_string_output"`
 	Return                uint32                   `idl:"name:Return" json:"return"`
@@ -162,6 +196,27 @@ func (o *xxx_TestCallOperation) MarshalNDRRequest(ctx context.Context, w ndr.Wri
 			return err
 		}
 	}
+	// dword_pointer {in} (1:{pointer=unique}*(1))(2:{alias=DWORD}(uint32))
+	{
+		if o.NullMask&TestCallNullMaskDwordPointer == 0 {
+			_ptr_dword_pointer := ndr.MarshalNDRFunc(func(ctx context.Context, w ndr.Writer) error {
+				if err := w.WriteData(o.DwordPointer); err != nil {
+					return err
+				}
+				return nil
+			})
+			if err := w.WritePointer(&o.DwordPointer, _ptr_dword_pointer); err != nil {
+				return err
+			}
+		} else {
+			if err := w.WritePointer(nil); err != nil {
+				return err
+			}
+		}
+		if err := w.WriteDeferred(); err != nil {
+			return err
+		}
+	}
 	return nil
 }
 
@@ -195,6 +250,23 @@ func (o *xxx_TestCallOperation) UnmarshalNDRRequest(ctx context.Context, w ndr.R
 		})
 		_s_input2 := func(ptr interface{}) { o.Input2 = *ptr.(**dtyp.UnicodeString) }
 		if err := w.ReadPointer(&o.Input2, _s_input2, _ptr_input2); err != nil {
+			return err
+		}
+		if err := w.ReadDeferred(); err != nil {
+			return err
+		}
+	}
+	// dword_pointer {in} (1:{pointer=unique}*(1))(2:{alias=DWORD}(uint32))
+	{
+		_ptr_dword_pointer := ndr.UnmarshalNDRFunc(func(ctx context.Context, w ndr.Reader) error {
+			if err := w.ReadData(&o.DwordPointer); err != nil {
+				return err
+			}
+			return nil
+		})
+		_s_dword_pointer := func(ptr interface{}) { o.DwordPointer = *ptr.(*uint32) }
+		_m_dword_pointer := func() { o.NullMask |= TestCallNullMaskDwordPointer }
+		if err := w.ReadPointerWithHook(&o.DwordPointer, ndr.PointerHook{_s_dword_pointer, _m_dword_pointer}, _ptr_dword_pointer); err != nil {
 			return err
 		}
 		if err := w.ReadDeferred(); err != nil {
@@ -367,8 +439,13 @@ func (o *xxx_TestCallOperation) UnmarshalNDRResponse(ctx context.Context, w ndr.
 
 // TestCallRequest structure represents the TestCall operation request
 type TestCallRequest struct {
-	Input  string              `idl:"name:input;string;pointer:unique" json:"input"`
-	Input2 *dtyp.UnicodeString `idl:"name:input2;pointer:unique" json:"input2"`
+
+	// TestCallNullMask is used to carry information on null-valued primitive values.
+	NullMask TestCallNullMask
+
+	Input        string              `idl:"name:input;string;pointer:unique" json:"input"`
+	Input2       *dtyp.UnicodeString `idl:"name:input2;pointer:unique" json:"input2"`
+	DwordPointer uint32              `idl:"name:dword_pointer;pointer:unique" json:"dword_pointer"`
 }
 
 func (o *TestCallRequest) xxx_ToOp(ctx context.Context, op *xxx_TestCallOperation) *xxx_TestCallOperation {
@@ -380,6 +457,8 @@ func (o *TestCallRequest) xxx_ToOp(ctx context.Context, op *xxx_TestCallOperatio
 	}
 	op.Input = o.Input
 	op.Input2 = o.Input2
+	op.DwordPointer = o.DwordPointer
+	op.NullMask = o.NullMask
 	return op
 }
 
@@ -389,6 +468,8 @@ func (o *TestCallRequest) xxx_FromOp(ctx context.Context, op *xxx_TestCallOperat
 	}
 	o.Input = op.Input
 	o.Input2 = op.Input2
+	o.DwordPointer = op.DwordPointer
+	o.NullMask = TestCallNullMask(op.NullMask) & TestCallNullMaskRequestAll
 }
 func (o *TestCallRequest) MarshalNDR(ctx context.Context, w ndr.Writer) error {
 	return o.xxx_ToOp(ctx, nil).MarshalNDRRequest(ctx, w)
@@ -415,6 +496,10 @@ func (o *TestCallRequest) OpName() string { return "/my_interface/v0/TestCall" }
 
 // TestCallResponse structure represents the TestCall operation response
 type TestCallResponse struct {
+
+	// TestCallNullMask is used to carry information on null-valued primitive values.
+	NullMask TestCallNullMask
+
 	Output                string                   `idl:"name:output;string;pointer:unique" json:"output"`
 	MyStructOutput        *myidl.MyInterfaceStruct `idl:"name:my_struct_output;pointer:unique" json:"my_struct_output"`
 	MyUnicodeStringOutput *myidl.MyUnicodeString   `idl:"name:my_unicode_string_output;pointer:unique" json:"my_unicode_string_output"`
@@ -433,6 +518,7 @@ func (o *TestCallResponse) xxx_ToOp(ctx context.Context, op *xxx_TestCallOperati
 	op.MyStructOutput = o.MyStructOutput
 	op.MyUnicodeStringOutput = o.MyUnicodeStringOutput
 	op.Return = o.Return
+	op.NullMask = o.NullMask
 	return op
 }
 
@@ -444,12 +530,240 @@ func (o *TestCallResponse) xxx_FromOp(ctx context.Context, op *xxx_TestCallOpera
 	o.MyStructOutput = op.MyStructOutput
 	o.MyUnicodeStringOutput = op.MyUnicodeStringOutput
 	o.Return = op.Return
+	o.NullMask = TestCallNullMask(op.NullMask) & TestCallNullMaskResponseAll
 }
 func (o *TestCallResponse) MarshalNDR(ctx context.Context, w ndr.Writer) error {
 	return o.xxx_ToOp(ctx, nil).MarshalNDRResponse(ctx, w)
 }
 func (o *TestCallResponse) UnmarshalNDR(ctx context.Context, r ndr.Reader) error {
 	_o := &xxx_TestCallOperation{}
+	if err := _o.UnmarshalNDRResponse(ctx, r); err != nil {
+		return err
+	}
+	o.xxx_FromOp(ctx, _o)
+	return nil
+}
+
+type TestCall2NullMask ndr.NullMask
+
+var (
+	TestCall2NullMaskDwordPointer TestCall2NullMask = 1 << 0
+
+	TestCall2NullMaskRequestAll  TestCall2NullMask = 0 | TestCall2NullMaskDwordPointer
+	TestCall2NullMaskResponseAll TestCall2NullMask = 0
+)
+
+func (o TestCall2NullMask) IsSet(v TestCall2NullMask) bool { return o&v != 0 }
+
+func (o TestCall2NullMask) Set(v TestCall2NullMask) TestCall2NullMask { return o | v }
+
+// xxx_TestCall2Operation structure represents the TestCall2 operation
+type xxx_TestCall2Operation struct {
+
+	// TestCall2NullMask is used to carry information on null-valued primitive values.
+	NullMask TestCall2NullMask
+
+	NoPointer    uint32 `idl:"name:no_pointer;pointer:ref" json:"no_pointer"`
+	DwordPointer uint32 `idl:"name:dword_pointer;pointer:unique" json:"dword_pointer"`
+	Return       uint32 `idl:"name:Return" json:"return"`
+}
+
+// OpNum returns the operation number of TestCall2 operation.
+func (o *xxx_TestCall2Operation) OpNum() int { return 1 }
+
+// OpName returns the operation name of TestCall2 operation.
+func (o *xxx_TestCall2Operation) OpName() string { return "/my_interface/v0/TestCall2" }
+
+func (o *xxx_TestCall2Operation) xxx_PrepareRequestPayload(ctx context.Context) error {
+	if hook, ok := (interface{})(o).(interface{ AfterPrepareRequestPayload(context.Context) error }); ok {
+		if err := hook.AfterPrepareRequestPayload(ctx); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func (o *xxx_TestCall2Operation) MarshalNDRRequest(ctx context.Context, w ndr.Writer) error {
+	if err := o.xxx_PrepareRequestPayload(ctx); err != nil {
+		return err
+	}
+	// no_pointer {in} (1:{pointer=ref}*(1))(2:{alias=DWORD}(uint32))
+	{
+		if err := w.WriteData(o.NoPointer); err != nil {
+			return err
+		}
+	}
+	// dword_pointer {in} (1:{pointer=unique}*(1))(2:{alias=DWORD}(uint32))
+	{
+		if o.NullMask&TestCall2NullMaskDwordPointer == 0 {
+			_ptr_dword_pointer := ndr.MarshalNDRFunc(func(ctx context.Context, w ndr.Writer) error {
+				if err := w.WriteData(o.DwordPointer); err != nil {
+					return err
+				}
+				return nil
+			})
+			if err := w.WritePointer(&o.DwordPointer, _ptr_dword_pointer); err != nil {
+				return err
+			}
+		} else {
+			if err := w.WritePointer(nil); err != nil {
+				return err
+			}
+		}
+		if err := w.WriteDeferred(); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func (o *xxx_TestCall2Operation) UnmarshalNDRRequest(ctx context.Context, w ndr.Reader) error {
+	// no_pointer {in} (1:{pointer=ref}*(1))(2:{alias=DWORD}(uint32))
+	{
+		if err := w.ReadData(&o.NoPointer); err != nil {
+			return err
+		}
+	}
+	// dword_pointer {in} (1:{pointer=unique}*(1))(2:{alias=DWORD}(uint32))
+	{
+		_ptr_dword_pointer := ndr.UnmarshalNDRFunc(func(ctx context.Context, w ndr.Reader) error {
+			if err := w.ReadData(&o.DwordPointer); err != nil {
+				return err
+			}
+			return nil
+		})
+		_s_dword_pointer := func(ptr interface{}) { o.DwordPointer = *ptr.(*uint32) }
+		_m_dword_pointer := func() { o.NullMask |= TestCall2NullMaskDwordPointer }
+		if err := w.ReadPointerWithHook(&o.DwordPointer, ndr.PointerHook{_s_dword_pointer, _m_dword_pointer}, _ptr_dword_pointer); err != nil {
+			return err
+		}
+		if err := w.ReadDeferred(); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func (o *xxx_TestCall2Operation) xxx_PrepareResponsePayload(ctx context.Context) error {
+	if hook, ok := (interface{})(o).(interface{ AfterPrepareResponsePayload(context.Context) error }); ok {
+		if err := hook.AfterPrepareResponsePayload(ctx); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func (o *xxx_TestCall2Operation) MarshalNDRResponse(ctx context.Context, w ndr.Writer) error {
+	if err := o.xxx_PrepareResponsePayload(ctx); err != nil {
+		return err
+	}
+	// Return {out} (1:(error_status_t))
+	{
+		if err := w.WriteData(o.Return); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func (o *xxx_TestCall2Operation) UnmarshalNDRResponse(ctx context.Context, w ndr.Reader) error {
+	// Return {out} (1:(error_status_t))
+	{
+		if err := w.ReadData(&o.Return); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+// TestCall2Request structure represents the TestCall2 operation request
+type TestCall2Request struct {
+
+	// TestCall2NullMask is used to carry information on null-valued primitive values.
+	NullMask TestCall2NullMask
+
+	NoPointer    uint32 `idl:"name:no_pointer;pointer:ref" json:"no_pointer"`
+	DwordPointer uint32 `idl:"name:dword_pointer;pointer:unique" json:"dword_pointer"`
+}
+
+func (o *TestCall2Request) xxx_ToOp(ctx context.Context, op *xxx_TestCall2Operation) *xxx_TestCall2Operation {
+	if op == nil {
+		op = &xxx_TestCall2Operation{}
+	}
+	if o == nil {
+		return op
+	}
+	op.NoPointer = o.NoPointer
+	op.DwordPointer = o.DwordPointer
+	op.NullMask = o.NullMask
+	return op
+}
+
+func (o *TestCall2Request) xxx_FromOp(ctx context.Context, op *xxx_TestCall2Operation) {
+	if o == nil {
+		return
+	}
+	o.NoPointer = op.NoPointer
+	o.DwordPointer = op.DwordPointer
+	o.NullMask = TestCall2NullMask(op.NullMask) & TestCall2NullMaskRequestAll
+}
+func (o *TestCall2Request) MarshalNDR(ctx context.Context, w ndr.Writer) error {
+	return o.xxx_ToOp(ctx, nil).MarshalNDRRequest(ctx, w)
+}
+func (o *TestCall2Request) UnmarshalNDR(ctx context.Context, r ndr.Reader) error {
+	_o := &xxx_TestCall2Operation{}
+	if err := _o.UnmarshalNDRRequest(ctx, r); err != nil {
+		return err
+	}
+	o.xxx_FromOp(ctx, _o)
+	return nil
+}
+
+// MakeTestCall2Request build a response structure from the given request structure.
+func (o *TestCall2Request) MakeResponse() *TestCall2Response {
+	return &TestCall2Response{}
+}
+
+// OpNum returns the operation number of TestCall2 operation.
+func (o *TestCall2Request) OpNum() int { return 1 }
+
+// OpName returns the operation name of TestCall2 operation.
+func (o *TestCall2Request) OpName() string { return "/my_interface/v0/TestCall2" }
+
+// TestCall2Response structure represents the TestCall2 operation response
+type TestCall2Response struct {
+
+	// TestCall2NullMask is used to carry information on null-valued primitive values.
+	NullMask TestCall2NullMask
+
+	// Return: The TestCall2 return value.
+	Return uint32 `idl:"name:Return" json:"return"`
+}
+
+func (o *TestCall2Response) xxx_ToOp(ctx context.Context, op *xxx_TestCall2Operation) *xxx_TestCall2Operation {
+	if op == nil {
+		op = &xxx_TestCall2Operation{}
+	}
+	if o == nil {
+		return op
+	}
+	op.Return = o.Return
+	op.NullMask = o.NullMask
+	return op
+}
+
+func (o *TestCall2Response) xxx_FromOp(ctx context.Context, op *xxx_TestCall2Operation) {
+	if o == nil {
+		return
+	}
+	o.Return = op.Return
+	o.NullMask = TestCall2NullMask(op.NullMask) & TestCall2NullMaskResponseAll
+}
+func (o *TestCall2Response) MarshalNDR(ctx context.Context, w ndr.Writer) error {
+	return o.xxx_ToOp(ctx, nil).MarshalNDRResponse(ctx, w)
+}
+func (o *TestCall2Response) UnmarshalNDR(ctx context.Context, r ndr.Reader) error {
+	_o := &xxx_TestCall2Operation{}
 	if err := _o.UnmarshalNDRResponse(ctx, r); err != nil {
 		return err
 	}
