@@ -193,6 +193,7 @@ type pAttr struct {
 	IIDIs                   Expr
 	Retval                  bool
 	HelpString              string
+	HelpContext             string
 	DocString               string
 	Dual                    bool
 	PropGet                 bool
@@ -220,6 +221,7 @@ type pAttr struct {
 	NoSizeLimit             bool
 	IsLayout                bool
 	DefaultNull             []Expr
+	DLLName                 string
 }
 
 func (a pAttr) Set(at pAttrType) pAttr {
@@ -310,6 +312,8 @@ func (a pAttr) Set(at pAttrType) pAttr {
 		a.IIDIs = at.Attr.IIDIs
 	case HELP_STRING:
 		a.HelpString = at.Attr.HelpString
+	case HELP_CONTEXT:
+		a.HelpString = at.Attr.HelpString
 	case DOC_STRING:
 		a.DocString = at.Attr.DocString
 	case DUAL:
@@ -356,6 +360,8 @@ func (a pAttr) Set(at pAttrType) pAttr {
 		a.NoSizeLimit = at.Attr.NoSizeLimit
 	case GOEXT_DEFAULT_NULL:
 		a.DefaultNull = at.Attr.DefaultNull
+	case DLLNAME:
+		a.DLLName = at.Attr.DLLName
 	default:
 		panic(fmt.Sprintf("unknown attribute: %d", at.Type))
 	}
@@ -490,6 +496,9 @@ func (a pAttr) MapAttr() map[int]interface{} {
 	if a.HelpString != "" {
 		ret[HELP_STRING] = a.HelpString
 	}
+	if a.HelpContext != "" {
+		ret[HELP_CONTEXT] = a.HelpContext
+	}
 	if len(a.DocString) > 0 {
 		ret[DOC_STRING] = a.DocString
 	}
@@ -565,6 +574,10 @@ func (a pAttr) MapAttr() map[int]interface{} {
 
 	if a.DefaultNull != nil {
 		ret[GOEXT_DEFAULT_NULL] = a.DefaultNull
+	}
+
+	if a.DLLName != "" {
+		ret[DLLNAME] = a.DLLName
 	}
 
 	return ret
@@ -695,6 +708,9 @@ func (a pAttr) Merge(ma pAttr) pAttr {
 	if ma.HelpString != "" {
 		a.HelpString = ma.HelpString
 	}
+	if ma.HelpContext != "" {
+		a.HelpContext = ma.HelpContext
+	}
 	if len(ma.DocString) > 0 {
 		a.DocString = ma.DocString
 	}
@@ -770,6 +786,9 @@ func (a pAttr) Merge(ma pAttr) pAttr {
 	if ma.DefaultNull != nil {
 		a.DefaultNull = ma.DefaultNull
 	}
+	if ma.DLLName != "" {
+		a.DLLName = ma.DLLName
+	}
 
 	return a
 }
@@ -812,6 +831,17 @@ func (a pAttr) ComClass() *ComClassAttr {
 	return &ComClassAttr{
 		a.Interface(),
 		a.AppObject,
+	}
+}
+
+func (a pAttr) Module() *ModuleAttr {
+	return &ModuleAttr{
+		a.UUID,
+		a.Version,
+		a.HelpString,
+		a.HelpContext,
+		a.Hidden,
+		a.DLLName,
 	}
 }
 
@@ -925,6 +955,15 @@ var pAllowedInterfaceAttr = []int{
 	NONEXTENSIBLE,
 	ODL,
 	OLEAUTOMATION,
+}
+
+var pAllowedModuleAttr = []int{
+	UUID,
+	VERSION,
+	HELP_STRING,
+	HELP_CONTEXT,
+	HIDDEN,
+	DLLNAME,
 }
 
 // Field function returns field attributes.

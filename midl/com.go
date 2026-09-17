@@ -1,5 +1,7 @@
 package midl
 
+import "github.com/oiweiwei/midl-gen-go/midl/uuid"
+
 type Library struct {
 	Name  string       `json:"name"`
 	Attrs *LibraryAttr `json:"attr,omitempty"`
@@ -11,6 +13,7 @@ type LibraryBody struct {
 	ComClasses []*ComClass  `json:"com_classes,omitempty"`
 	Interfaces []*Interface `json:"interfaces,omitempty"`
 	ImportLibs []*ImportLib `json:"import_libs,omitempty"`
+	Modules    []*Module    `json:"modules,omitempty"`
 }
 
 type ImportLib struct {
@@ -69,4 +72,24 @@ type LibraryAttr struct {
 type ComInterfaceAttr struct {
 	Default bool
 	Source  bool
+}
+
+type Module struct {
+	Name    string          `json:"name,omitempty"`
+	Attrs   *ModuleAttr     `json:"attrs,omitempty"`
+	Members []*ModuleMember `json:"members,omitempty"`
+}
+
+type ModuleAttr struct {
+	UUID        *uuid.UUID
+	Version     *Version
+	HelpString  string
+	HelpContext string
+	Hidden      bool
+	DLLName     string
+}
+
+type ModuleMember struct {
+	Const *Const     `json:"const,omitempty"`
+	Func  *Operation `json:"func,omitempty"`
 }

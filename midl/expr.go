@@ -752,6 +752,12 @@ func (e Expr) Coerce(kind Kind) (Expr, error) {
 			return ret, fmt.Errorf("cannot coerce the expression to the string type")
 		}
 		val = v
+	case TypeWChar:
+		v, ok := e.Str()
+		if !ok {
+			return ret, fmt.Errorf("cannot coerce the expression to the wchar type")
+		}
+		val = v
 	case TypeBoolean:
 		val = e.Bool()
 	case TypeChar:

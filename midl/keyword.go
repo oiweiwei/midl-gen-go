@@ -99,6 +99,7 @@ var (
 		MS_UNION:                   "ms_union",
 		CALLBACK:                   "callback",
 		HELP_STRING:                "helpstring",
+		HELP_CONTEXT:               "helpcontext",
 		DOC_STRING:                 "doc_string",
 		ID:                         "id",
 		PROPGET:                    "propget",
@@ -114,6 +115,7 @@ var (
 		OBJECT:                     "object",
 		APPOBJECT:                  "appobject",
 		DISPINTERFACE:              "dispinterface",
+		MODULE:                     "module",
 		V1_ENUM:                    "v1_enum",
 		ACS_BYTE_COUNT:             "byte_count",
 		STRICT_CONTEXT_HANDLE:      "strict_context_handle",
@@ -123,6 +125,7 @@ var (
 		PRAGMA_CPP_QUOTE:           "cpp_quote",
 		RETVAL:                     "retval",
 		IID_IS:                     "iid_is",
+		DLLNAME:                    "dllname",
 	}
 
 	SQBReservedTok = map[int]struct{}{
@@ -137,6 +140,7 @@ var (
 		FIRST_IS:                   {},
 		HANDLE:                     {},
 		HELP_STRING:                {},
+		HELP_CONTEXT:               {},
 		DOC_STRING:                 {},
 		HIDDEN:                     {},
 		ID:                         {},
@@ -189,6 +193,7 @@ var (
 		GOEXT_LAYOUT:               {},
 		GOEXT_DEFAULT_NULL:         {},
 		SAFEARRAY:                  {},
+		DLLNAME:                    {},
 	}
 
 	ReservedTok = map[int]struct{}{
@@ -235,6 +240,7 @@ var (
 		IMPORTLIB:        {},
 		COCLASS:          {},
 		DISPINTERFACE:    {},
+		MODULE:           {},
 		PROPERTIES:       {},
 		METHODS:          {},
 	}
