@@ -45,10 +45,35 @@ func (i *Scopes) EnumType() midl.Kind {
 	return i.scopes[0].Attr.EnumType()
 }
 
+type Scoper interface {
+	Scopes() []*midl.Scope
+}
+
+func IsIgnoredPointer(ctx context.Context, scoper Scoper) bool {
+	return NewScopes(scoper.Scopes()).IsIgnoredPointer(ctx)
+}
+
 // NewScope function ...
 func NewScopes(scopes []*midl.Scope) *Scopes {
 	i := &Scopes{scopes: scopes, typePos: -1}
 	return i.Next()
+}
+
+func (i *Scopes) IsIgnoredPointer(ctx context.Context) bool {
+	for ; i != nil; i = i.Next() {
+		if i.Is(midl.TypePointer) {
+			if i.Scope().Pointer.IsWeak(IsOp(ctx)) {
+				continue
+			}
+			if next := i.Next(); next.Is(midl.TypePointer) {
+				continue
+			} else if next.Type().IsPrimitiveType() {
+				return true
+			}
+			break
+		}
+	}
+	return false
 }
 
 func (i *Scopes) Base() *Scopes {

@@ -474,7 +474,20 @@ func (o *MyStructWithUnion) UnmarshalNDR(ctx context.Context, w ndr.Reader) erro
 }
 
 // MyInterfaceStruct structure represents MY_INTERFACE_STRUCT RPC structure.
+type MyInterfaceStructNullMask ndr.NullMask
+
+var (
+	MyInterfaceStructNullMaskRune1 MyInterfaceStructNullMask = 1 << 0
+	MyInterfaceStructNullMaskRune2 MyInterfaceStructNullMask = 1 << 1
+)
+
+func (o MyInterfaceStructNullMask) IsSet(v MyInterfaceStructNullMask) bool { return o&v != 0 }
+
 type MyInterfaceStruct struct {
+
+	// MyInterfaceStructNullMask is used to carry information on null-valued primitive values.
+	NullMask MyInterfaceStructNullMask
+
 	Str1  string              `idl:"name:str1" json:"str1"`
 	Str2  *dtyp.UnicodeString `idl:"name:str2" json:"str2"`
 	Cstr1 string              `idl:"name:cstr1" json:"cstr1"`
@@ -550,27 +563,35 @@ func (o *MyInterfaceStruct) MarshalNDR(ctx context.Context, w ndr.Writer) error 
 			return err
 		}
 	}
-	// XXX pointer to primitive type, default behavior is to write non-null pointer.
-	// if this behavior is not desired, use goext_default_null([cond]) attribute.
-	_ptr_rune1 := ndr.MarshalNDRFunc(func(ctx context.Context, w ndr.Writer) error {
-		if err := w.WriteData(uint8(o.Rune1)); err != nil {
+	if o.NullMask&MyInterfaceStructNullMaskRune1 == 0 {
+		_ptr_rune1 := ndr.MarshalNDRFunc(func(ctx context.Context, w ndr.Writer) error {
+			if err := w.WriteData(uint8(o.Rune1)); err != nil {
+				return err
+			}
+			return nil
+		})
+		if err := w.WritePointer(&o.Rune1, _ptr_rune1); err != nil {
 			return err
 		}
-		return nil
-	})
-	if err := w.WritePointer(&o.Rune1, _ptr_rune1); err != nil {
-		return err
+	} else {
+		if err := w.WritePointer(nil); err != nil {
+			return err
+		}
 	}
-	// XXX pointer to primitive type, default behavior is to write non-null pointer.
-	// if this behavior is not desired, use goext_default_null([cond]) attribute.
-	_ptr_rune2 := ndr.MarshalNDRFunc(func(ctx context.Context, w ndr.Writer) error {
-		if err := w.WriteData(uint16(o.Rune2)); err != nil {
+	if o.NullMask&MyInterfaceStructNullMaskRune2 == 0 {
+		_ptr_rune2 := ndr.MarshalNDRFunc(func(ctx context.Context, w ndr.Writer) error {
+			if err := w.WriteData(uint16(o.Rune2)); err != nil {
+				return err
+			}
+			return nil
+		})
+		if err := w.WritePointer(&o.Rune2, _ptr_rune2); err != nil {
 			return err
 		}
-		return nil
-	})
-	if err := w.WritePointer(&o.Rune2, _ptr_rune2); err != nil {
-		return err
+	} else {
+		if err := w.WritePointer(nil); err != nil {
+			return err
+		}
 	}
 	return nil
 }
@@ -620,7 +641,8 @@ func (o *MyInterfaceStruct) UnmarshalNDR(ctx context.Context, w ndr.Reader) erro
 		return nil
 	})
 	_s_rune1 := func(ptr interface{}) { o.Rune1 = *ptr.(*rune) }
-	if err := w.ReadPointer(&o.Rune1, _s_rune1, _ptr_rune1); err != nil {
+	_m_rune1 := func() { o.NullMask |= MyInterfaceStructNullMaskRune1 }
+	if err := w.ReadPointerWithHook(&o.Rune1, ndr.PointerHook{_s_rune1, _m_rune1}, _ptr_rune1); err != nil {
 		return err
 	}
 	_ptr_rune2 := ndr.UnmarshalNDRFunc(func(ctx context.Context, w ndr.Reader) error {
@@ -632,7 +654,8 @@ func (o *MyInterfaceStruct) UnmarshalNDR(ctx context.Context, w ndr.Reader) erro
 		return nil
 	})
 	_s_rune2 := func(ptr interface{}) { o.Rune2 = *ptr.(*rune) }
-	if err := w.ReadPointer(&o.Rune2, _s_rune2, _ptr_rune2); err != nil {
+	_m_rune2 := func() { o.NullMask |= MyInterfaceStructNullMaskRune2 }
+	if err := w.ReadPointerWithHook(&o.Rune2, ndr.PointerHook{_s_rune2, _m_rune2}, _ptr_rune2); err != nil {
 		return err
 	}
 	return nil

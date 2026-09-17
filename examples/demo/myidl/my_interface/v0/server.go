@@ -28,6 +28,9 @@ type MyInterfaceServer interface {
 
 	// TestCall operation.
 	TestCall(context.Context, *TestCallRequest) (*TestCallResponse, error)
+
+	// TestCall2 operation.
+	TestCall2(context.Context, *TestCall2Request) (*TestCall2Response, error)
 }
 
 func RegisterMyInterfaceServer(conn dcerpc.Conn, o MyInterfaceServer, opts ...dcerpc.Option) {
@@ -51,6 +54,15 @@ func MyInterfaceServerHandle(ctx context.Context, o MyInterfaceServer, opNum int
 		req.xxx_FromOp(ctx, op)
 		resp, err := o.TestCall(ctx, req)
 		return resp.xxx_ToOp(ctx, op), err
+	case 1: // TestCall2
+		op := &xxx_TestCall2Operation{}
+		if err := op.UnmarshalNDRRequest(ctx, r); err != nil {
+			return nil, err
+		}
+		req := &TestCall2Request{}
+		req.xxx_FromOp(ctx, op)
+		resp, err := o.TestCall2(ctx, req)
+		return resp.xxx_ToOp(ctx, op), err
 	}
 	return nil, nil
 }
@@ -60,6 +72,9 @@ type UnimplementedMyInterfaceServer struct {
 }
 
 func (UnimplementedMyInterfaceServer) TestCall(context.Context, *TestCallRequest) (*TestCallResponse, error) {
+	return nil, dcerpc.ErrNotImplemented
+}
+func (UnimplementedMyInterfaceServer) TestCall2(context.Context, *TestCall2Request) (*TestCall2Response, error) {
 	return nil, dcerpc.ErrNotImplemented
 }
 

@@ -212,12 +212,22 @@ func (p *TypeGenerator) GenFieldUnmarshalNDR(ctx context.Context, field *midl.Fi
 		decl := p.GoScopeTypeName(ctx, p.Scope(), field, scopes)
 		p.P(sN, ":=", "func(ptr interface{}) {", name, "=", "*ptr.(*", decl, ")", "}")
 
-		// read the pointer.
-		p.CheckErr(p.B("w.ReadPointer", p.Amp(name), sN, fN))
+		mN := "_m" + "_" + field.Name
+
+		if mask := Mask(ctx); mask != "" && scopes.Next().Type().IsPrimitiveType() {
+			p.P(mN, ":=", "func() {", p.O(p.NullMask()), "|=", mask+GoFieldName(ctx, field), "}")
+			// read the pointer.
+			p.CheckErr(p.B("w.ReadPointerWithHook", p.Amp(name), "ndr.PointerHook{"+sN+","+mN+"}", fN))
+		} else {
+			// read the pointer.
+			p.CheckErr(p.B("w.ReadPointer", p.Amp(name), sN, fN))
+		}
 
 	case scopes.Is(midl.TypeArray):
 
 		// marshal array.
+
+		ctx := WithNullMask(ctx, "") /* clear null mask as arrays are unsupported */
 
 		isConformant, isVarying := scopes.IsConformant(), scopes.IsVarying()
 

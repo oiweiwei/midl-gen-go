@@ -127,6 +127,14 @@ type Param struct {
 	Attrs *ParamAttr `json:"attrs,omitempty"`
 }
 
+func (p *Param) Field() *Field {
+	return &Field{
+		Name:  p.Name,
+		Type:  p.Type,
+		Attrs: p.Attrs.FieldAttr,
+	}
+}
+
 func (p *Param) IsPipe() bool {
 	for _, t := range p.Type.flat() {
 		if t.Is(TypePipe) {
@@ -747,6 +755,10 @@ type Range struct {
 }
 
 type PointerType int
+
+func (p PointerType) IsWeak(operation bool) bool {
+	return (p == PointerTypeNone && operation) || p == PointerTypeRef || p == PointerTypeRefWeak
+}
 
 const (
 	PointerTypeNone PointerType = iota

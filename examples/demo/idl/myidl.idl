@@ -52,8 +52,14 @@ typedef struct _MY_STRUCT {
         [in, unique, string] wchar_t * input,
         [in, unique] PRPC_UNICODE_STRING input2,
         [out, unique, string] wchar_t * output,
+        [in, unique] DWORD * dword_pointer,
         [out, unique] PMY_INTERFACE_STRUCT my_struct_output,
         [out, unique] PMY_UNICODE_STRING my_unicode_string_output
+    );
+
+    error_status_t TestCall2(
+        [in, ref] DWORD * no_pointer,
+        [in, unique] DWORD * dword_pointer
     );
 }
      
