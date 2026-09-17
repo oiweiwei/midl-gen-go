@@ -62,6 +62,9 @@ var (
     ComInterface          *ComInterface
     DispatchInterface     DispatchInterface
     DispatchInterfaceBody DispatchInterfaceBody
+    Module                Module
+    ModuleMembers         []*ModuleMember
+    ModuleMember          ModuleMember
 }
 
 %type <File> external file
@@ -72,6 +75,10 @@ var (
 %type <ComClass> coclass coclass_header
 %type <ComInterfaces> coclass_member_list
 %type <ComInterface> coclass_member
+%type <Module> module
+%type <Module> module_header
+%type <ModuleMembers> module_member_list
+%type <ModuleMember> module_member
 %type <DispatchInterface> dispinterface dispinterface_header
 %type <DispatchInterfaceBody> dispinterface_body dispinterface_component
 %type <Operations> method_list
@@ -303,6 +310,7 @@ var (
 %token <Token> PRAGMA_CPP_QUOTE
 %token <Token> CALLBACK
 %token <Token> HELP_STRING
+%token <Token> HELP_CONTEXT
 %token <Token> DOC_STRING
 %token <Token> DUAL
 %token <Token> PROPGET
@@ -328,10 +336,12 @@ var (
 %token <Token> PUBLIC
 %token <Token> SOURCE
 %token <Token> DISPINTERFACE
+%token <Token> MODULE
 %token <Token> METHODS
 %token <Token> PROPERTIES
 %token <Token> COCLASS
 %token <Token> LIBRARY
+%token <Token> DLLNAME
 
 %token <Token> ACS_BYTE_COUNT
 // XXX: __midl_end__
@@ -517,6 +527,9 @@ library_body            : library_element semicolon
                                 if len($2.ImportLibs) > 0 {
                                     $$.Body.ImportLibs = append($$.Body.ImportLibs, $2.ImportLibs...)
                                 }
+                                if len($2.Modules) > 0 {
+                                    $$.Body.Modules = append($$.Body.Modules, $2.Modules...)
+                                }
                             }
                         ;
 
@@ -535,11 +548,50 @@ library_element         : coclass
                                 cc := $1
                                 $$ = LibraryBody{ImportLibs: []*ImportLib{&cc}}
                             }
+                        | module
+                            {
+                                cc := $1
+                                $$ = LibraryBody{Modules: []*Module{&cc}}
+                            }
                         ;
 
 importlib               : IMPORTLIB '(' string_literal ')'
                             {
                                 $$ = ImportLib{Name: $3}
+                            }
+                        ;
+
+module                  : module_header '{' module_member_list '}'
+                            {
+                                $$ = Module{Name: $1.Name, Attrs: $1.Attrs, Members: $3}
+                            }
+                        ;
+
+module_header           : attributes0 MODULE IDENT
+                            {
+                                $$ = Module{Name: $3, Attrs: $1.Module()}
+                            }
+                        ;
+
+module_member_list      : module_member ';'
+                            {
+                                cc := $1
+                                $$ = []*ModuleMember{&cc}
+                            }
+                        | module_member_list module_member ';'
+                            {
+                                cc := $2
+                                $$ = append($$, &cc)
+                            }
+                        ;
+
+module_member           : const_declarator
+                            {
+                                $$ = ModuleMember{Const: $1}
+                            }
+                        | op_declarator
+                            {
+                                $$ = ModuleMember{Func: $1}
                             }
                         ;
 
@@ -897,6 +949,14 @@ attribute               : FIRST_IS '(' attr_var_list ')'
                         | HELP_STRING '(' string_literal ')'
                             {
                                 $$ = pAttrType{HELP_STRING, pAttr{HelpString: $3}}
+                            }
+                        | HELP_CONTEXT '(' string_literal ')'
+                            {
+                                $$ = pAttrType{HELP_CONTEXT, pAttr{HelpContext: $3}}
+                            }
+                        | DLLNAME '(' string_literal ')'
+                            {
+                                $$ = pAttrType{DLLNAME, pAttr{DLLName: $3}}
                             }
                         | DOC_STRING '(' string_literal ')'
                             {

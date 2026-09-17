@@ -41,11 +41,11 @@ func (iff *Interface) Exports() []*Export {
 // InterfaceBody structure represents the interface body definitions.
 type InterfaceBody struct {
 	// Imports is a list of file paths for the imported symbols.
-	Imports []string `json:"imports"`
+	Imports []string `json:"imports,omitempty"`
 	// Export is a map for the exported symbols.
-	Export map[string]*Export `json:"exports"`
+	Export map[string]*Export `json:"exports,omitempty"`
 	// Operations is a list of the interface operations.
-	Operations []*Operation `json:"operations"`
+	Operations []*Operation `json:"operations,omitempty"`
 }
 
 // Exports function ...

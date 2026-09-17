@@ -489,6 +489,41 @@ func (a *ParamAttr) String() string {
 	return strings.Join(ret, ", ")
 }
 
+func (a ModuleAttr) String() string {
+
+	ret := []string{}
+
+	if a.UUID != nil {
+		ret = append(ret, fmt.Sprintf("uuid=%s", a.UUID))
+	}
+
+	if a.Version != nil {
+		ret = append(ret, fmt.Sprintf("version=%d.%d", a.Version.Major, a.Version.Minor))
+	}
+
+	if a.HelpString != "" {
+		ret = append(ret, fmt.Sprintf("helpstring=%q", a.HelpString))
+	}
+
+	if a.HelpContext != "" {
+		ret = append(ret, fmt.Sprintf("helpcontext=%q", a.HelpContext))
+	}
+
+	if a.Hidden {
+		ret = append(ret, "hidden")
+	}
+
+	if a.DLLName != "" {
+		ret = append(ret, fmt.Sprintf("dllname=%s", a.DLLName))
+	}
+
+	return strings.Join(ret, ", ")
+}
+
+func (a ModuleAttr) MarshalJSON() ([]byte, error) {
+	return json.Marshal(a.String())
+}
+
 func (d Direction) String() string {
 
 	var ret []string
