@@ -114,6 +114,8 @@ func (o TestCallNullMask) IsSet(v TestCallNullMask) bool { return o&v != 0 }
 
 func (o TestCallNullMask) Set(v TestCallNullMask) TestCallNullMask { return o | v }
 
+func (o TestCallNullMask) Unset(v TestCallNullMask) TestCallNullMask { return o &^ v }
+
 // xxx_TestCallOperation structure represents the TestCall operation
 type xxx_TestCallOperation struct {
 
@@ -198,7 +200,7 @@ func (o *xxx_TestCallOperation) MarshalNDRRequest(ctx context.Context, w ndr.Wri
 	}
 	// dword_pointer {in} (1:{pointer=unique}*(1))(2:{alias=DWORD}(uint32))
 	{
-		if o.NullMask&TestCallNullMaskDwordPointer == 0 {
+		if o.NullMask&TestCallNullMaskDwordPointer == 0 || DwordPointer != uint32(0) {
 			_ptr_dword_pointer := ndr.MarshalNDRFunc(func(ctx context.Context, w ndr.Writer) error {
 				if err := w.WriteData(o.DwordPointer); err != nil {
 					return err
@@ -557,6 +559,8 @@ func (o TestCall2NullMask) IsSet(v TestCall2NullMask) bool { return o&v != 0 }
 
 func (o TestCall2NullMask) Set(v TestCall2NullMask) TestCall2NullMask { return o | v }
 
+func (o TestCall2NullMask) Unset(v TestCall2NullMask) TestCall2NullMask { return o &^ v }
+
 // xxx_TestCall2Operation structure represents the TestCall2 operation
 type xxx_TestCall2Operation struct {
 
@@ -595,7 +599,7 @@ func (o *xxx_TestCall2Operation) MarshalNDRRequest(ctx context.Context, w ndr.Wr
 	}
 	// dword_pointer {in} (1:{pointer=unique}*(1))(2:{alias=DWORD}(uint32))
 	{
-		if o.NullMask&TestCall2NullMaskDwordPointer == 0 {
+		if o.NullMask&TestCall2NullMaskDwordPointer == 0 || DwordPointer != uint32(0) {
 			_ptr_dword_pointer := ndr.MarshalNDRFunc(func(ctx context.Context, w ndr.Writer) error {
 				if err := w.WriteData(o.DwordPointer); err != nil {
 					return err
