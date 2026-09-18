@@ -200,7 +200,7 @@ func (o *xxx_TestCallOperation) MarshalNDRRequest(ctx context.Context, w ndr.Wri
 	}
 	// dword_pointer {in} (1:{pointer=unique}*(1))(2:{alias=DWORD}(uint32))
 	{
-		if o.NullMask&TestCallNullMaskDwordPointer == 0 || DwordPointer != uint32(0) {
+		if o.NullMask&TestCallNullMaskDwordPointer == 0 || o.DwordPointer != uint32(0) {
 			_ptr_dword_pointer := ndr.MarshalNDRFunc(func(ctx context.Context, w ndr.Writer) error {
 				if err := w.WriteData(o.DwordPointer); err != nil {
 					return err
@@ -599,7 +599,7 @@ func (o *xxx_TestCall2Operation) MarshalNDRRequest(ctx context.Context, w ndr.Wr
 	}
 	// dword_pointer {in} (1:{pointer=unique}*(1))(2:{alias=DWORD}(uint32))
 	{
-		if o.NullMask&TestCall2NullMaskDwordPointer == 0 || DwordPointer != uint32(0) {
+		if o.NullMask&TestCall2NullMaskDwordPointer == 0 || o.DwordPointer != uint32(0) {
 			_ptr_dword_pointer := ndr.MarshalNDRFunc(func(ctx context.Context, w ndr.Writer) error {
 				if err := w.WriteData(o.DwordPointer); err != nil {
 					return err

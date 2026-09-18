@@ -571,7 +571,7 @@ func (o *MyInterfaceStruct) MarshalNDR(ctx context.Context, w ndr.Writer) error 
 			return err
 		}
 	}
-	if o.NullMask&MyInterfaceStructNullMaskRune1 == 0 || Rune1 != rune(0) {
+	if o.NullMask&MyInterfaceStructNullMaskRune1 == 0 || o.Rune1 != rune(0) {
 		_ptr_rune1 := ndr.MarshalNDRFunc(func(ctx context.Context, w ndr.Writer) error {
 			if err := w.WriteData(uint8(o.Rune1)); err != nil {
 				return err
@@ -586,7 +586,7 @@ func (o *MyInterfaceStruct) MarshalNDR(ctx context.Context, w ndr.Writer) error 
 			return err
 		}
 	}
-	if o.NullMask&MyInterfaceStructNullMaskRune2 == 0 || Rune2 != rune(0) {
+	if o.NullMask&MyInterfaceStructNullMaskRune2 == 0 || o.Rune2 != rune(0) {
 		_ptr_rune2 := ndr.MarshalNDRFunc(func(ctx context.Context, w ndr.Writer) error {
 			if err := w.WriteData(uint16(o.Rune2)); err != nil {
 				return err

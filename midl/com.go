@@ -5,15 +5,7 @@ import "github.com/oiweiwei/midl-gen-go/midl/uuid"
 type Library struct {
 	Name  string       `json:"name"`
 	Attrs *LibraryAttr `json:"attr,omitempty"`
-	Body  LibraryBody  `json:"body,omitempty"`
-}
-
-// LibraryBody ...
-type LibraryBody struct {
-	ComClasses []*ComClass  `json:"com_classes,omitempty"`
-	Interfaces []*Interface `json:"interfaces,omitempty"`
-	ImportLibs []*ImportLib `json:"import_libs,omitempty"`
-	Modules    []*Module    `json:"modules,omitempty"`
+	Body  *File        `json:"body,omitempty"`
 }
 
 type ImportLib struct {
@@ -78,6 +70,15 @@ type Module struct {
 	Name    string          `json:"name,omitempty"`
 	Attrs   *ModuleAttr     `json:"attrs,omitempty"`
 	Members []*ModuleMember `json:"members,omitempty"`
+}
+
+func (m *Module) HasConstants() bool {
+	for _, m := range m.Members {
+		if m.Const != nil {
+			return true
+		}
+	}
+	return false
 }
 
 type ModuleAttr struct {

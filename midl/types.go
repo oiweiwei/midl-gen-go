@@ -27,6 +27,8 @@ type Interface struct {
 	Attrs *InterfaceAttr `json:"attrs,omitempty"`
 	// Body is an interface body (including export symbols and function calls).
 	Body InterfaceBody `json:"body,omitempty"`
+	// ForwardDeclarator.
+	ForwardDeclarator bool `json:"forward_declarator,omitempty"`
 }
 
 func (iff *Interface) IsObject() bool {

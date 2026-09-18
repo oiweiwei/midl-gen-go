@@ -796,7 +796,7 @@ func (p *TypeGenerator) GenFieldMarshalNDR(ctx context.Context, field *midl.Fiel
 					nullChk += "&& "
 				}
 				nullChk += fmt.Sprintf("(%s & %s == 0 || %s != %s)", p.O(p.NullMask()), Mask(ctx)+GoFieldName(ctx, field),
-					GoFieldName(ctx, field), p.GoTypeZeroValue(ctx, p.Scope(), field, scopes))
+					name, p.GoTypeZeroValue(ctx, p.Scope(), field, scopes))
 			}
 
 			if nullChk == "" {

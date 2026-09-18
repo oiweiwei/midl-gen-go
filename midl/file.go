@@ -50,6 +50,20 @@ func (f *File) Load() (*File, error) {
 
 	*f = *rf
 
+	// process lib files.
+	for _, lib := range f.Libraries {
+		dir, pkg := filepath.Dir(rf.FullPath), strings.ToLower(lib.Name)
+		pkgFile := pkg + ".idl"
+		ff := lib.Body
+		ff.FullPath = filepath.Join(dir, f.GoPkg, pkgFile)
+		ff.GoPkg = filepath.Join(f.GoPkg, pkg)
+		ff.GoPkgBase = f.GoPkgBase
+		ff.Path = filepath.Join(f.GoPkg, pkgFile)
+		ff.MIDLConfig = f.MIDLConfig
+
+		FileStore(ff.FullPath, ff)
+	}
+
 	FileStore(path.File, f)
 
 	return f, nil
@@ -246,10 +260,41 @@ type File struct {
 	ComClasses []*ComClass `json:"com_classes,omitempty"`
 	// DispatchInterfaces ...
 	DispatchInterfaces []*DispatchInterface `json:"dispatch_interfaces,omitempty"`
+	// ImportLibs ...
+	ImportLibs []*ImportLib `json:"import_libs,omitempty"`
+	// Modules ...
+	Modules []*Module `json:"modules,omitempty"`
 	// Libraries ...
 	Libraries []*Library `json:"libraries,omitempty"`
 	// exportSyms ...
 	exportSyms map[string]*Export `json:"-"`
+}
+
+func (f *File) IsEmpty() bool {
+
+	for _, e := range f.Export {
+		if e.Const != nil || e.Type != nil {
+			return false
+		}
+	}
+
+	if len(f.ComClasses) > 0 || len(f.Libraries) > 0 {
+		return false
+	}
+
+	for _, iff := range f.Interfaces {
+		if !iff.ForwardDeclarator {
+			return false
+		}
+	}
+
+	for _, m := range f.Modules {
+		if m.HasConstants() {
+			return false
+		}
+	}
+
+	return true
 }
 
 func (f *File) Namer() *go_names.Namer {
@@ -301,6 +346,7 @@ func (f *File) LookupAlias(n string) []string {
 			return typ.Aliases
 		}
 	}
+
 	return nil
 }
 

@@ -861,7 +861,6 @@ func (d Dim) String() string {
 }
 
 func InterfaceToExport(iff *Interface) *Type {
-
 	return &Type{
 		Kind:  TypeAttribute,
 		Attrs: &TypeAttr{Alias: iff.Name},
