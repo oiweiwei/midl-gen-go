@@ -465,6 +465,8 @@ func (p *Generator) GenOperationNullMask(ctx context.Context, op *midl.Operation
 	p.P()
 	p.P("func", p.B("", "o "+mask), "Set(v "+mask+") "+mask, "{ return o|v }")
 	p.P()
+	p.P("func", p.B("", "o "+mask), "Unset(v "+mask+") "+mask, "{ return o&^v }")
+	p.P()
 
 	return mask
 }

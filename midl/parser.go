@@ -34,6 +34,10 @@ func Parse(s string) (*File, error) {
 		return nil, p.errLex
 	}
 
+	if p.result == nil {
+		return &File{}, nil
+	}
+
 	// save exportSyms to the file for further reference.
 	p.result.exportSyms = p.exportSyms
 

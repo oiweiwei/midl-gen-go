@@ -590,6 +590,10 @@ func (p *TypeGenerator) GenNullMask(ctx context.Context) string {
 	p.P()
 	p.P("func", p.B("", "o "+mask), "IsSet(v "+mask+") bool", "{ return o&v != 0 }")
 	p.P()
+	p.P("func", p.B("", "o "+mask), "Set(v "+mask+") "+mask, "{ return o|v }")
+	p.P()
+	p.P("func", p.B("", "o "+mask), "Unset(v "+mask+") "+mask, "{ return o&^v }")
+	p.P()
 
 	return mask
 }
@@ -791,7 +795,8 @@ func (p *TypeGenerator) GenFieldMarshalNDR(ctx context.Context, field *midl.Fiel
 				if nullChk != "" {
 					nullChk += "&& "
 				}
-				nullChk += fmt.Sprintf("(%s & %s == 0)", p.O(p.NullMask()), Mask(ctx)+GoFieldName(ctx, field))
+				nullChk += fmt.Sprintf("(%s & %s == 0 || %s != %s)", p.O(p.NullMask()), Mask(ctx)+GoFieldName(ctx, field),
+					name, p.GoTypeZeroValue(ctx, p.Scope(), field, scopes))
 			}
 
 			if nullChk == "" {

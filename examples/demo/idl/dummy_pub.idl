@@ -1,0 +1,64 @@
+// dummy_pub.idl
+// Dummy DCOM subscription interface: client calls Subscribe(sink), server
+// periodically calls back sink.Indicate(message) until Unsubscribe.
+//
+// oleautomation is used on both interfaces so the universal marshaler
+// (oleaut32) can marshal calls without a compiled proxy/stub DLL, as long
+// as the typelib produced here is registered on both ends.
+
+import "ocidl.idl";
+import "oaidl.idl";
+
+[
+    uuid(12345678-1234-1234-1234-123456789abc),
+    version(1.0),
+    helpstring("Dummy Subscription Library")
+]
+library DummySubLib
+{
+    importlib("stdole2.tlb");
+
+    [
+        object,
+        uuid(87654321-4321-4321-4321-abcdef123456),
+        oleautomation,
+        pointer_default(unique),
+        helpstring("Client-implemented sink that receives pushed events")
+    ]
+    interface ISubscriberSink : IUnknown
+    {
+        HRESULT Indicate([in] BSTR message);
+    };
+
+    [
+        object,
+        uuid(11111111-2222-3333-4444-555555555555),
+        oleautomation,
+        pointer_default(unique),
+        helpstring("Publisher: Subscribe/Unsubscribe for pushed events")
+    ]
+    interface IPublisher : IUnknown
+    {
+        HRESULT Subscribe(
+            [in] ISubscriberSink* sink,
+            [out, retval] LONG* subscriptionId);
+
+        HRESULT Unsubscribe([in] LONG subscriptionId);
+
+        HRESULT Echo(
+            [in] BSTR input,
+            [out, retval] BSTR* output);
+    };
+
+    [
+        uuid(99999999-8888-7777-6666-555555555555),
+        helpstring("Publisher Coclass")
+    ]
+    coclass Publisher
+    {
+        [default] interface IPublisher;
+    };
+    module MyModule {
+        const DWORD MyTestConst = 1;
+    }
+};

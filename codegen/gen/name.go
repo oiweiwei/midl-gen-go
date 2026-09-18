@@ -349,6 +349,7 @@ func GoPackage(ctx context.Context, n string) (*Package, bool) {
 				File: f,
 			}, true
 		}
+
 		for _, iff := range f.Interfaces {
 			if _, ok := iff.Body.Export[n]; ok {
 				// type is local to interface.

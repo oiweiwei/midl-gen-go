@@ -95,7 +95,7 @@ var (
 )
 
 func (p *Generator) GenPackage(ctx context.Context, f *midl.File) {
-	p.P("package", p.out.PackageName)
+	p.P("package", p.out.PackageName[strings.LastIndex(p.out.PackageName, "/")+1:])
 }
 
 func (p *Generator) GenImports(ctx context.Context) {

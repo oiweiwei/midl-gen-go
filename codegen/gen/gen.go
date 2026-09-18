@@ -62,13 +62,18 @@ func (p *Generator) Reset(ctx context.Context, source interface{}, n ...string) 
 	case *midl.File:
 		path := filepath.Join(append([]string{trimExt(source.Path)}, n...)...)
 		p.out = NewFileBuffer(path, source.GoPkg)
-		if len(n) == 0 {
+		if len(n) == 0 && len(p.Files) == 0 {
 			p.out.IsRoot = true
 		}
 	case *midl.Interface:
 		path := filepath.Join(trimExt(File(ctx).Path), strings.ToLower(source.Name), source.Attrs.Version.String())
 		p.out = NewFileBuffer(path, strings.ToLower(source.Name), n...)
+	case *midl.Module:
+		path := filepath.Join(trimExt(File(ctx).Path), strings.ToLower(source.Name))
+		p.out = NewFileBuffer(path, strings.ToLower(source.Name), n...)
 	}
+
+	p.out.File = File(ctx)
 }
 
 func (p *Generator) P(args ...interface{}) {
@@ -110,7 +115,26 @@ func (p *Generator) Gen(ctx context.Context, fn string) error {
 		return err
 	}
 
+	if err := p.GenFile(ctx, fn, f); err != nil {
+		return err
+	}
+
+	for _, lib := range f.Libraries {
+		if err := p.GenFile(ctx, fn, lib.Body); err != nil {
+			return err
+		}
+	}
+
+	return p.Finalize(ctx)
+}
+
+func (p *Generator) GenFile(ctx context.Context, fn string, f *midl.File) error {
+
 	ctx = go_names.WithNamer(ctx, f.Namer())
+
+	if f.IsEmpty() {
+		return nil
+	}
 
 	if p.MSDNIndexerFile != "" {
 		indexer, err := openspecs.NewProtocolIndexerFromFile(p.MSDNIndexerFile)
@@ -149,7 +173,7 @@ func (p *Generator) Gen(ctx context.Context, fn string) error {
 		}
 	}
 
-	if len(f.ComClasses) > 0 {
+	if len(f.ComClasses) > 0 || len(f.Libraries) > 0 {
 		_ = p.GoPackageName(ctx, NewScopes(midl.LookupType("CLSID").Scopes()))
 	}
 
@@ -160,43 +184,23 @@ func (p *Generator) Gen(ctx context.Context, fn string) error {
 		}
 	}
 
+	for _, lib := range f.Libraries {
+		if lib.Attrs.UUID != nil {
+			p.P("//", lib.Name, "class", "identifier", lib.Attrs.UUID)
+			p.P("var", GoName(ctx, lib.Name)+"LibraryID", "=", "&dcom.ClassID", UUIDToGUID(lib.Attrs.UUID))
+		}
+	}
+
 	for _, iff := range f.Interfaces {
-
-		ctx := WithInterface(ctx, iff)
-
-		p.Reset(ctx, iff)
-
-		p.GenInterfaceID(ctx, iff)
-		p.GenClientInterface(ctx, iff)
-
-		for _, sym := range iff.Exports() {
-			if sym.Const != nil {
-				p.GenConst(ctx, sym.Const)
-			}
+		if !iff.ForwardDeclarator {
+			p.GenInterface(ctx, iff)
 		}
+	}
 
-		for _, sym := range iff.Exports() {
-			if sym.Type != nil {
-				p.GenType(ctx, sym.Type)
-			}
+	for _, module := range f.Modules {
+		if module.HasConstants() {
+			p.GenModule(ctx, module)
 		}
-
-		if iff.Attrs.UUID == nil {
-			p.P("//", "XXX: no declaration")
-			continue
-		}
-
-		p.GenClient(ctx, iff)
-
-		for _, op := range iff.Body.Operations {
-			p.GenOperation(ctx, op)
-		}
-
-		p.Reset(ctx, iff, "server")
-
-		p.GenServerInterface(ctx, iff)
-		p.GenServerHandle(ctx, iff)
-		p.GenUnplementedServer(ctx, iff)
 	}
 
 	if f.IsDCOM() {
@@ -204,12 +208,21 @@ func (p *Generator) Gen(ctx context.Context, fn string) error {
 		p.GenClientSet(ctx, f)
 	}
 
+	return nil
+}
+
+func (p *Generator) Finalize(ctx context.Context) error {
+
+	var err error
+
 	p.Reset(ctx, nil)
 
 	for _, file := range p.Files {
 
 		b := file.Reset()
 		p.out = file
+
+		ctx := WithFile(ctx, p.out.File)
 
 		if p.out.IsRoot {
 			p.P("//", "The", p.out.PackageName, "package", "implements", "the", strings.ToUpper(p.out.PackageName), "client", "protocol.")
@@ -227,7 +240,7 @@ func (p *Generator) Gen(ctx context.Context, fn string) error {
 			}
 		}
 
-		p.GenPackage(ctx, f)
+		p.GenPackage(ctx, p.out.File)
 		p.GenImports(ctx)
 		p.GenImportGuards(ctx)
 
@@ -276,6 +289,57 @@ func (p *Generator) Gen(ctx context.Context, fn string) error {
 
 func (p *Generator) XXX() string {
 	return "xxx_"
+}
+
+func (p *Generator) GenModule(ctx context.Context, module *midl.Module) {
+
+	p.Reset(ctx, module)
+
+	for _, sym := range module.Members {
+		if sym.Const != nil {
+			p.GenConst(ctx, sym.Const)
+		}
+	}
+
+}
+
+func (p *Generator) GenInterface(ctx context.Context, iff *midl.Interface) {
+
+	ctx = WithInterface(ctx, iff)
+
+	p.Reset(ctx, iff)
+
+	p.GenInterfaceID(ctx, iff)
+	p.GenClientInterface(ctx, iff)
+
+	for _, sym := range iff.Exports() {
+		if sym.Const != nil {
+			p.GenConst(ctx, sym.Const)
+		}
+	}
+
+	for _, sym := range iff.Exports() {
+		if sym.Type != nil {
+			p.GenType(ctx, sym.Type)
+		}
+	}
+
+	if iff.Attrs.UUID == nil {
+		p.P("//", "XXX: no declaration")
+		return
+	}
+
+	p.GenClient(ctx, iff)
+
+	for _, op := range iff.Body.Operations {
+		p.GenOperation(ctx, op)
+	}
+
+	p.Reset(ctx, iff, "server")
+
+	p.GenServerInterface(ctx, iff)
+	p.GenServerHandle(ctx, iff)
+	p.GenUnplementedServer(ctx, iff)
 }
 
 func (p *Generator) GenConst(ctx context.Context, c *midl.Const) {

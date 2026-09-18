@@ -56,7 +56,6 @@ var (
     TagIDs                []pTagID
     ComClass              ComClass
     Library               Library
-    LibraryBody           LibraryBody
     ImportLib             ImportLib
     ComInterfaces         []*ComInterface
     ComInterface          *ComInterface
@@ -68,8 +67,8 @@ var (
 }
 
 %type <File> external file
-%type <Library> library library_header library_body
-%type <LibraryBody> library_element
+%type <File> library_body
+%type <Library> library library_header
 %type <ImportLib> importlib
 %type <Interface> interface interface_header
 %type <ComClass> coclass coclass_header
@@ -386,6 +385,7 @@ main                    : /* empty */
 file                    : external
                             {
                                 $$ = $1
+
                                 if len($$.Interfaces) > 0 {
                                     if $$.Export == nil {
                                         $$.Export = make(map[string]*Export)
@@ -429,6 +429,12 @@ file                    : external
                                 if len($2.DispatchInterfaces) > 0 {
                                     $$.DispatchInterfaces = append($$.DispatchInterfaces, $2.DispatchInterfaces...)
                                 }
+                                if len($2.ImportLibs) > 0 {
+                                    $$.ImportLibs = append($$.ImportLibs, $2.ImportLibs...)
+                                }
+                                if len($2.Modules) > 0 {
+                                    $$.Modules = append($$.Modules, $2.Modules...)
+                                }
                                 if len($2.Libraries) > 0 {
                                     $$.Libraries = append($$.Libraries, $2.Libraries...)
                                 }
@@ -451,6 +457,7 @@ external                : import1
                             }
                         | interface semicolon
                             {
+                                $$ = File{}
                                 iff := $1
                                 if iff.Attrs != nil {
                                     $$ = File{Interfaces: []*Interface{&iff}}
@@ -476,7 +483,9 @@ external                : import1
                                         }
                                     }
                                 }
-                                exportSyms(RPClex, iff.Name, &Export{Type: InterfaceToExport(&iff)})
+                                if !$1.ForwardDeclarator {
+                                    exportSyms(RPClex, iff.Name, &Export{Type: InterfaceToExport(&iff)})
+                                }
                             }
                         | coclass semicolon
                             {
@@ -488,10 +497,20 @@ external                : import1
                                 di := $1
                                 $$ = File{DispatchInterfaces: []*DispatchInterface{&di}}
                             }
+                        | importlib semicolon
+                            {
+                                cc := $1
+                                $$ = File{ImportLibs: []*ImportLib{&cc}}
+                            }
                         | library semicolon
                             {
                                 lib := $1
                                 $$ = File{Libraries: []*Library{&lib}}
+                            }
+                        | module semicolon
+                            {
+                                cc := $1
+                                $$ = File{Modules: []*Module{&cc}}
                             }
                         ;
 
@@ -501,7 +520,8 @@ semicolon               : /* empty */
 
 library                 : library_header '{' library_body '}'
                             {
-                                $$ = Library{Attrs: $1.Attrs, Name: $1.Name, Body: $3.Body}
+                                cc := $3
+                                $$ = Library{Attrs: $1.Attrs, Name: $1.Name, Body: &cc}
                             }
                         ;
 
@@ -511,47 +531,9 @@ library_header          : attributes0 LIBRARY IDENT
                             }
                         ;
 
-library_body            : library_element semicolon
+library_body            : file
                             {
-                                $$ = Library{Body: $1}
-                            }
-                        | library_body library_element semicolon
-                            {
-
-                                if len($2.ComClasses) > 0 {
-                                    $$.Body.ComClasses = append($$.Body.ComClasses, $2.ComClasses...)
-                                }
-                                if len($2.Interfaces) > 0 {
-                                    $$.Body.Interfaces = append($$.Body.Interfaces, $2.Interfaces...)
-                                }
-                                if len($2.ImportLibs) > 0 {
-                                    $$.Body.ImportLibs = append($$.Body.ImportLibs, $2.ImportLibs...)
-                                }
-                                if len($2.Modules) > 0 {
-                                    $$.Body.Modules = append($$.Body.Modules, $2.Modules...)
-                                }
-                            }
-                        ;
-
-library_element         : coclass
-                            {
-                                cc := $1
-                                $$ = LibraryBody{ComClasses: []*ComClass{&cc}}
-                            }
-                        | interface_header
-                            {
-                                cc := $1
-                                $$ = LibraryBody{Interfaces: []*Interface{&cc}}
-                            }
-                        | importlib
-                            {
-                                cc := $1
-                                $$ = LibraryBody{ImportLibs: []*ImportLib{&cc}}
-                            }
-                        | module
-                            {
-                                cc := $1
-                                $$ = LibraryBody{Modules: []*Module{&cc}}
+                                $$ = $1
                             }
                         ;
 
@@ -744,7 +726,7 @@ interface               : interface_header '{' interface_body '}'
                             }
                         | interface_header
                             {
-                                $$ = Interface{Name: $1.Name, Attrs: $1.Attrs, BaseName: $1.BaseName}
+                                $$ = Interface{Name: $1.Name, Attrs: $1.Attrs, BaseName: $1.BaseName, ForwardDeclarator: true}
                             }
                         | interface_header '{' '}'
                             {

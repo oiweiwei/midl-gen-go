@@ -4,6 +4,8 @@ import (
 	"bytes"
 	"path/filepath"
 	"strings"
+
+	"github.com/oiweiwei/midl-gen-go/midl"
 )
 
 type FileBuffer struct {
@@ -13,6 +15,7 @@ type FileBuffer struct {
 	Imports     []Import
 	FileName    string
 	IsRoot      bool
+	File        *midl.File
 }
 
 func (f *FileBuffer) Reset() []byte {
