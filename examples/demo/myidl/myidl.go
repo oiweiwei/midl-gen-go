@@ -160,7 +160,18 @@ func (o *MyUnicodeString) UnmarshalNDR(ctx context.Context, w ndr.Reader) error 
 		o.Buffer = strings.TrimRight(string(utf16.Decode(_Buffer_buf)), ndr.ZeroString)
 		return nil
 	})
-	_s_Buffer := func(ptr interface{}) { o.Buffer = *ptr.(*string) }
+	_s_Buffer := func(ptr any) {
+		switch ptr := ptr.(type) {
+		case *string:
+			if ptr == nil {
+				o.Buffer = ""
+			} else {
+				o.Buffer = *ptr
+			}
+		default:
+			w.SetErr(fmt.Errorf("invalid pointer type %T for field o.Buffer", ptr))
+		}
+	}
 	if err := w.ReadPointer(&o.Buffer, _s_Buffer, _ptr_Buffer); err != nil {
 		return err
 	}
@@ -412,7 +423,18 @@ func (o *MyUnion_Str1) UnmarshalNDR(ctx context.Context, w ndr.Reader) error {
 		}
 		return nil
 	})
-	_s_str1 := func(ptr interface{}) { o.Str1 = *ptr.(*string) }
+	_s_str1 := func(ptr any) {
+		switch ptr := ptr.(type) {
+		case *string:
+			if ptr == nil {
+				o.Str1 = ""
+			} else {
+				o.Str1 = *ptr
+			}
+		default:
+			w.SetErr(fmt.Errorf("invalid pointer type %T for field o.Str1", ptr))
+		}
+	}
 	if err := w.ReadPointer(&o.Str1, _s_str1, _ptr_str1); err != nil {
 		return err
 	}
@@ -613,7 +635,18 @@ func (o *MyInterfaceStruct) UnmarshalNDR(ctx context.Context, w ndr.Reader) erro
 		}
 		return nil
 	})
-	_s_str1 := func(ptr interface{}) { o.Str1 = *ptr.(*string) }
+	_s_str1 := func(ptr any) {
+		switch ptr := ptr.(type) {
+		case *string:
+			if ptr == nil {
+				o.Str1 = ""
+			} else {
+				o.Str1 = *ptr
+			}
+		default:
+			w.SetErr(fmt.Errorf("invalid pointer type %T for field o.Str1", ptr))
+		}
+	}
 	if err := w.ReadPointer(&o.Str1, _s_str1, _ptr_str1); err != nil {
 		return err
 	}
@@ -626,7 +659,18 @@ func (o *MyInterfaceStruct) UnmarshalNDR(ctx context.Context, w ndr.Reader) erro
 		}
 		return nil
 	})
-	_s_str2 := func(ptr interface{}) { o.Str2 = *ptr.(**dtyp.UnicodeString) }
+	_s_str2 := func(ptr any) {
+		switch ptr := ptr.(type) {
+		case **dtyp.UnicodeString:
+			if ptr == nil {
+				o.Str2 = nil
+			} else {
+				o.Str2 = *ptr
+			}
+		default:
+			w.SetErr(fmt.Errorf("invalid pointer type %T for field o.Str2", ptr))
+		}
+	}
 	if err := w.ReadPointer(&o.Str2, _s_str2, _ptr_str2); err != nil {
 		return err
 	}
@@ -636,7 +680,18 @@ func (o *MyInterfaceStruct) UnmarshalNDR(ctx context.Context, w ndr.Reader) erro
 		}
 		return nil
 	})
-	_s_cstr1 := func(ptr interface{}) { o.Cstr1 = *ptr.(*string) }
+	_s_cstr1 := func(ptr any) {
+		switch ptr := ptr.(type) {
+		case *string:
+			if ptr == nil {
+				o.Cstr1 = ""
+			} else {
+				o.Cstr1 = *ptr
+			}
+		default:
+			w.SetErr(fmt.Errorf("invalid pointer type %T for field o.Cstr1", ptr))
+		}
+	}
 	if err := w.ReadPointer(&o.Cstr1, _s_cstr1, _ptr_cstr1); err != nil {
 		return err
 	}
@@ -648,7 +703,18 @@ func (o *MyInterfaceStruct) UnmarshalNDR(ctx context.Context, w ndr.Reader) erro
 		o.Rune1 = rune(_Rune1)
 		return nil
 	})
-	_s_rune1 := func(ptr interface{}) { o.Rune1 = *ptr.(*rune) }
+	_s_rune1 := func(ptr any) {
+		switch ptr := ptr.(type) {
+		case *rune:
+			if ptr == nil {
+				o.Rune1 = rune(0)
+			} else {
+				o.Rune1 = *ptr
+			}
+		default:
+			w.SetErr(fmt.Errorf("invalid pointer type %T for field o.Rune1", ptr))
+		}
+	}
 	_m_rune1 := func() { o.NullMask |= MyInterfaceStructNullMaskRune1 }
 	if err := w.ReadPointerWithHook(&o.Rune1, ndr.PointerHook{_s_rune1, _m_rune1}, _ptr_rune1); err != nil {
 		return err
@@ -661,7 +727,18 @@ func (o *MyInterfaceStruct) UnmarshalNDR(ctx context.Context, w ndr.Reader) erro
 		o.Rune2 = rune(_Rune2)
 		return nil
 	})
-	_s_rune2 := func(ptr interface{}) { o.Rune2 = *ptr.(*rune) }
+	_s_rune2 := func(ptr any) {
+		switch ptr := ptr.(type) {
+		case *rune:
+			if ptr == nil {
+				o.Rune2 = rune(0)
+			} else {
+				o.Rune2 = *ptr
+			}
+		default:
+			w.SetErr(fmt.Errorf("invalid pointer type %T for field o.Rune2", ptr))
+		}
+	}
 	_m_rune2 := func() { o.NullMask |= MyInterfaceStructNullMaskRune2 }
 	if err := w.ReadPointerWithHook(&o.Rune2, ndr.PointerHook{_s_rune2, _m_rune2}, _ptr_rune2); err != nil {
 		return err
@@ -732,7 +809,18 @@ func (o *MyStruct) UnmarshalNDR(ctx context.Context, w ndr.Reader) error {
 		}
 		return nil
 	})
-	_s_str1 := func(ptr interface{}) { o.Str1 = *ptr.(*string) }
+	_s_str1 := func(ptr any) {
+		switch ptr := ptr.(type) {
+		case *string:
+			if ptr == nil {
+				o.Str1 = ""
+			} else {
+				o.Str1 = *ptr
+			}
+		default:
+			w.SetErr(fmt.Errorf("invalid pointer type %T for field o.Str1", ptr))
+		}
+	}
 	if err := w.ReadPointer(&o.Str1, _s_str1, _ptr_str1); err != nil {
 		return err
 	}

@@ -230,7 +230,18 @@ func (o *xxx_IndicateOperation) UnmarshalNDRRequest(ctx context.Context, w ndr.R
 			}
 			return nil
 		})
-		_s_message := func(ptr interface{}) { o.Message = *ptr.(**oaut.String) }
+		_s_message := func(ptr any) {
+			switch ptr := ptr.(type) {
+			case **oaut.String:
+				if ptr == nil {
+					o.Message = nil
+				} else {
+					o.Message = *ptr
+				}
+			default:
+				w.SetErr(fmt.Errorf("invalid pointer type %T for field o.Message", ptr))
+			}
+		}
 		if err := w.ReadPointer(&o.Message, _s_message, _ptr_message); err != nil {
 			return err
 		}

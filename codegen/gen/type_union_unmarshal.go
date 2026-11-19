@@ -101,7 +101,18 @@ func (p *TypeGenerator) GenUnionArmPrimitiveTypeUnmarshalNDR(ctx context.Context
 	p.CheckErr(p.B("o.Value.UnmarshalNDR", "ctx", "w"))
 	p.P("return nil")
 	p.P("})")
-	p.P("_s_o", ":=", "func(ptr interface{}) {", "o.Value", "=", "*ptr.(**", armName, ")", "}")
+	p.Block("_s_o", ":=", "func(ptr any)", func() {
+		p.Switch("ptr := ptr.(type)", func() {
+			p.P("case", "**"+armName, ":")
+			p.If("ptr == nil", func() {
+				p.P("o.Value", "=", "nil")
+			}, p.Else(func() {
+				p.P("o.Value", "=", "*ptr")
+			}))
+			p.P("default", ":")
+			p.P(p.B("w.SetErr", `fmt.Errorf("invalid pointer type %T for field o.Value", ptr)`))
+		})
+	})
 	p.CheckErr(p.B("w.ReadPointer", p.Amp("o.Value"), "_s_o", "_ptr_o"))
 }
 

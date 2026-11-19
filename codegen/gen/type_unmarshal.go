@@ -210,11 +210,22 @@ func (p *TypeGenerator) GenFieldUnmarshalNDR(ctx context.Context, field *midl.Fi
 		// render setter function.
 		sN := "_s" + "_" + field.Name
 		decl := p.GoScopeTypeName(ctx, p.Scope(), field, scopes)
-		p.P(sN, ":=", "func(ptr interface{}) {", name, "=", "*ptr.(*", decl, ")", "}")
 
-		mN := "_m" + "_" + field.Name
+		p.Block(sN, ":=", "func(ptr any)", func() {
+			p.Switch("ptr := ptr.(type)", func() {
+				p.P("case", p.Ptr(decl), ":")
+				p.If("ptr", "==", "nil", func() {
+					p.P(name, "=", p.GoTypeZeroValue(ctx, p.Scope(), field, scopes))
+				}, p.Else(func() {
+					p.P(name, "=", p.Ptr("ptr"))
+				}))
+				p.P("default:")
+				p.P(p.B("w.SetErr", `fmt.Errorf("invalid pointer type %T for field `+name+`", ptr)`))
+			})
+		})
 
 		if mask := Mask(ctx); mask != "" && scopes.Next().Type().IsPrimitiveType() {
+			mN := "_m" + "_" + field.Name
 			p.P(mN, ":=", "func() {", p.O(p.NullMask()), "|=", mask+GoFieldName(ctx, field), "}")
 			// read the pointer.
 			p.CheckErr(p.B("w.ReadPointerWithHook", p.Amp(name), "ndr.PointerHook{"+sN+","+mN+"}", fN))

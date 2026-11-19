@@ -12,6 +12,11 @@ import (
 	"github.com/rs/zerolog"
 )
 
+// ErrProtocolNotFound is returned by Sync when the protocol name is not in the indexer, i.e. the IDL is not a
+// published MS-OpenSpecs protocol (e.g. a private/reverse-engineered interface). Callers that only use the sync for
+// documentation comments may treat this as a skip rather than a hard error.
+var ErrProtocolNotFound = errors.New("protocol not found")
+
 type MSDN struct {
 	mu sync.RWMutex
 
@@ -119,7 +124,7 @@ func (m *MSDN) Sync(ctx context.Context, protocolName string) error {
 
 	protocol, ok := m.Indexer.Get(protocolName)
 	if !ok {
-		return fmt.Errorf("protocol %q not found", protocolName)
+		return fmt.Errorf("%w: %q", ErrProtocolNotFound, protocolName)
 	}
 
 	index, err := GetProtocolIndex(ctx, protocol.Name, WithIndexer(m.Indexer), WithCacheFS(m.CacheFS))
