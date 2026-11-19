@@ -231,7 +231,18 @@ func (o *xxx_TestCallOperation) UnmarshalNDRRequest(ctx context.Context, w ndr.R
 			}
 			return nil
 		})
-		_s_input := func(ptr interface{}) { o.Input = *ptr.(*string) }
+		_s_input := func(ptr any) {
+			switch ptr := ptr.(type) {
+			case *string:
+				if ptr == nil {
+					o.Input = ""
+				} else {
+					o.Input = *ptr
+				}
+			default:
+				w.SetErr(fmt.Errorf("invalid pointer type %T for field o.Input", ptr))
+			}
+		}
 		if err := w.ReadPointer(&o.Input, _s_input, _ptr_input); err != nil {
 			return err
 		}
@@ -250,7 +261,18 @@ func (o *xxx_TestCallOperation) UnmarshalNDRRequest(ctx context.Context, w ndr.R
 			}
 			return nil
 		})
-		_s_input2 := func(ptr interface{}) { o.Input2 = *ptr.(**dtyp.UnicodeString) }
+		_s_input2 := func(ptr any) {
+			switch ptr := ptr.(type) {
+			case **dtyp.UnicodeString:
+				if ptr == nil {
+					o.Input2 = nil
+				} else {
+					o.Input2 = *ptr
+				}
+			default:
+				w.SetErr(fmt.Errorf("invalid pointer type %T for field o.Input2", ptr))
+			}
+		}
 		if err := w.ReadPointer(&o.Input2, _s_input2, _ptr_input2); err != nil {
 			return err
 		}
@@ -266,7 +288,18 @@ func (o *xxx_TestCallOperation) UnmarshalNDRRequest(ctx context.Context, w ndr.R
 			}
 			return nil
 		})
-		_s_dword_pointer := func(ptr interface{}) { o.DwordPointer = *ptr.(*uint32) }
+		_s_dword_pointer := func(ptr any) {
+			switch ptr := ptr.(type) {
+			case *uint32:
+				if ptr == nil {
+					o.DwordPointer = uint32(0)
+				} else {
+					o.DwordPointer = *ptr
+				}
+			default:
+				w.SetErr(fmt.Errorf("invalid pointer type %T for field o.DwordPointer", ptr))
+			}
+		}
 		_m_dword_pointer := func() { o.NullMask |= TestCallNullMaskDwordPointer }
 		if err := w.ReadPointerWithHook(&o.DwordPointer, ndr.PointerHook{_s_dword_pointer, _m_dword_pointer}, _ptr_dword_pointer); err != nil {
 			return err
@@ -384,7 +417,18 @@ func (o *xxx_TestCallOperation) UnmarshalNDRResponse(ctx context.Context, w ndr.
 			}
 			return nil
 		})
-		_s_output := func(ptr interface{}) { o.Output = *ptr.(*string) }
+		_s_output := func(ptr any) {
+			switch ptr := ptr.(type) {
+			case *string:
+				if ptr == nil {
+					o.Output = ""
+				} else {
+					o.Output = *ptr
+				}
+			default:
+				w.SetErr(fmt.Errorf("invalid pointer type %T for field o.Output", ptr))
+			}
+		}
 		if err := w.ReadPointer(&o.Output, _s_output, _ptr_output); err != nil {
 			return err
 		}
@@ -403,7 +447,18 @@ func (o *xxx_TestCallOperation) UnmarshalNDRResponse(ctx context.Context, w ndr.
 			}
 			return nil
 		})
-		_s_my_struct_output := func(ptr interface{}) { o.MyStructOutput = *ptr.(**myidl.MyInterfaceStruct) }
+		_s_my_struct_output := func(ptr any) {
+			switch ptr := ptr.(type) {
+			case **myidl.MyInterfaceStruct:
+				if ptr == nil {
+					o.MyStructOutput = nil
+				} else {
+					o.MyStructOutput = *ptr
+				}
+			default:
+				w.SetErr(fmt.Errorf("invalid pointer type %T for field o.MyStructOutput", ptr))
+			}
+		}
 		if err := w.ReadPointer(&o.MyStructOutput, _s_my_struct_output, _ptr_my_struct_output); err != nil {
 			return err
 		}
@@ -422,7 +477,18 @@ func (o *xxx_TestCallOperation) UnmarshalNDRResponse(ctx context.Context, w ndr.
 			}
 			return nil
 		})
-		_s_my_unicode_string_output := func(ptr interface{}) { o.MyUnicodeStringOutput = *ptr.(**myidl.MyUnicodeString) }
+		_s_my_unicode_string_output := func(ptr any) {
+			switch ptr := ptr.(type) {
+			case **myidl.MyUnicodeString:
+				if ptr == nil {
+					o.MyUnicodeStringOutput = nil
+				} else {
+					o.MyUnicodeStringOutput = *ptr
+				}
+			default:
+				w.SetErr(fmt.Errorf("invalid pointer type %T for field o.MyUnicodeStringOutput", ptr))
+			}
+		}
 		if err := w.ReadPointer(&o.MyUnicodeStringOutput, _s_my_unicode_string_output, _ptr_my_unicode_string_output); err != nil {
 			return err
 		}
@@ -636,7 +702,18 @@ func (o *xxx_TestCall2Operation) UnmarshalNDRRequest(ctx context.Context, w ndr.
 			}
 			return nil
 		})
-		_s_dword_pointer := func(ptr interface{}) { o.DwordPointer = *ptr.(*uint32) }
+		_s_dword_pointer := func(ptr any) {
+			switch ptr := ptr.(type) {
+			case *uint32:
+				if ptr == nil {
+					o.DwordPointer = uint32(0)
+				} else {
+					o.DwordPointer = *ptr
+				}
+			default:
+				w.SetErr(fmt.Errorf("invalid pointer type %T for field o.DwordPointer", ptr))
+			}
+		}
 		_m_dword_pointer := func() { o.NullMask |= TestCall2NullMaskDwordPointer }
 		if err := w.ReadPointerWithHook(&o.DwordPointer, ndr.PointerHook{_s_dword_pointer, _m_dword_pointer}, _ptr_dword_pointer); err != nil {
 			return err

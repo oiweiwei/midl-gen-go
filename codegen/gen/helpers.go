@@ -126,6 +126,10 @@ func (p *Generator) Else(args ...interface{}) []interface{} {
 	return append([]interface{}{"else"}, args...)
 }
 
+func (p *Generator) Switch(args ...interface{}) {
+	p.Block(append([]interface{}{"switch"}, args...)...)
+}
+
 func (p *Generator) Block(args ...interface{}) {
 
 	var (
@@ -178,6 +182,10 @@ func (p *Generator) B(pre interface{}, s ...interface{}) string {
 
 func (p *Generator) Amp(v interface{}) string {
 	return "&" + fmt.Sprintf("%v", v)
+}
+
+func (p *Generator) Ptr(ptr interface{}) string {
+	return fmt.Sprintf("*%v", ptr)
 }
 
 func (p *Generator) BPtr(ptr interface{}) string {

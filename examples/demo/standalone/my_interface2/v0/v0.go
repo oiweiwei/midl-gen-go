@@ -140,7 +140,18 @@ func (o *xxx_TestCallOperation) UnmarshalNDRRequest(ctx context.Context, w ndr.R
 			}
 			return nil
 		})
-		_s_input := func(ptr interface{}) { o.Input = *ptr.(*string) }
+		_s_input := func(ptr any) {
+			switch ptr := ptr.(type) {
+			case *string:
+				if ptr == nil {
+					o.Input = ""
+				} else {
+					o.Input = *ptr
+				}
+			default:
+				w.SetErr(fmt.Errorf("invalid pointer type %T for field o.Input", ptr))
+			}
+		}
 		if err := w.ReadPointer(&o.Input, _s_input, _ptr_input); err != nil {
 			return err
 		}
@@ -203,7 +214,18 @@ func (o *xxx_TestCallOperation) UnmarshalNDRResponse(ctx context.Context, w ndr.
 			}
 			return nil
 		})
-		_s_output := func(ptr interface{}) { o.Output = *ptr.(*string) }
+		_s_output := func(ptr any) {
+			switch ptr := ptr.(type) {
+			case *string:
+				if ptr == nil {
+					o.Output = ""
+				} else {
+					o.Output = *ptr
+				}
+			default:
+				w.SetErr(fmt.Errorf("invalid pointer type %T for field o.Output", ptr))
+			}
+		}
 		if err := w.ReadPointer(&o.Output, _s_output, _ptr_output); err != nil {
 			return err
 		}

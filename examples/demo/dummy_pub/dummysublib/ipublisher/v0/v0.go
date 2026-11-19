@@ -279,7 +279,18 @@ func (o *xxx_SubscribeOperation) UnmarshalNDRRequest(ctx context.Context, w ndr.
 			}
 			return nil
 		})
-		_s_sink := func(ptr interface{}) { o.Sink = *ptr.(**dummysublib.ISubscriberSink) }
+		_s_sink := func(ptr any) {
+			switch ptr := ptr.(type) {
+			case **dummysublib.ISubscriberSink:
+				if ptr == nil {
+					o.Sink = nil
+				} else {
+					o.Sink = *ptr
+				}
+			default:
+				w.SetErr(fmt.Errorf("invalid pointer type %T for field o.Sink", ptr))
+			}
+		}
 		if err := w.ReadPointer(&o.Sink, _s_sink, _ptr_sink); err != nil {
 			return err
 		}
@@ -769,7 +780,18 @@ func (o *xxx_EchoOperation) UnmarshalNDRRequest(ctx context.Context, w ndr.Reade
 			}
 			return nil
 		})
-		_s_input := func(ptr interface{}) { o.Input = *ptr.(**oaut.String) }
+		_s_input := func(ptr any) {
+			switch ptr := ptr.(type) {
+			case **oaut.String:
+				if ptr == nil {
+					o.Input = nil
+				} else {
+					o.Input = *ptr
+				}
+			default:
+				w.SetErr(fmt.Errorf("invalid pointer type %T for field o.Input", ptr))
+			}
+		}
 		if err := w.ReadPointer(&o.Input, _s_input, _ptr_input); err != nil {
 			return err
 		}
@@ -868,7 +890,18 @@ func (o *xxx_EchoOperation) UnmarshalNDRResponse(ctx context.Context, w ndr.Read
 			}
 			return nil
 		})
-		_s_output := func(ptr interface{}) { o.Output = *ptr.(**oaut.String) }
+		_s_output := func(ptr any) {
+			switch ptr := ptr.(type) {
+			case **oaut.String:
+				if ptr == nil {
+					o.Output = nil
+				} else {
+					o.Output = *ptr
+				}
+			default:
+				w.SetErr(fmt.Errorf("invalid pointer type %T for field o.Output", ptr))
+			}
+		}
 		if err := w.ReadPointer(&o.Output, _s_output, _ptr_output); err != nil {
 			return err
 		}
