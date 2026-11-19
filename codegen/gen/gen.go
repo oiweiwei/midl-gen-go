@@ -2,6 +2,7 @@ package gen
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"go/format"
 	"os"
@@ -151,7 +152,13 @@ func (p *Generator) GenFile(ctx context.Context, fn string, f *midl.File) error 
 		p.MSDN = &openspecs.MSDN{CacheFS: p.MSDNCache, Indexer: indexer}
 
 		if err := p.MSDN.SyncForFile(ctx, filepath.Base(fn)); err != nil {
-			return fmt.Errorf("msdn: openspecs: sync: %w", err)
+			// A private / non-MS IDL (e.g. a reverse-engineered interface) has no OpenSpecs page; generate
+			// it without doc comments instead of failing. Any other sync error is still fatal.
+			if !errors.Is(err, openspecs.ErrProtocolNotFound) {
+				return fmt.Errorf("msdn: openspecs: sync: %w", err)
+			}
+			fmt.Fprintf(os.Stderr, "msdn: openspecs: %v; generating without documentation\n", err)
+			p.MSDN = &openspecs.MSDN{}
 		}
 	} else {
 		p.MSDN = &openspecs.MSDN{}

@@ -7,6 +7,7 @@ package midl
 import (
     "fmt"
     "math/big"
+    "strings"
 
     "github.com/oiweiwei/midl-gen-go/midl/uuid"
 )
@@ -1134,9 +1135,9 @@ import                  : /* empty */
                             {
                                 $$ = []string{}
                             }
-                        | import1
+                        | import import1
                             {
-                                $$ = $1
+                                $$ = append($1, $2...)
                             }
                         ;
 
@@ -1242,8 +1243,14 @@ pragma_declarator       : PRAGMA_DEFINE IDENT const_exp
                             }
                         | PRAGMA_CPP_QUOTE '(' string_literal ')'
                             {
-                                // XXX: re-enter the STRING_LITERAL as PRAGMA_DEFINE.
-                                pushLex(RPClex, $3)
+                                // MIDL emits cpp_quote(...) content verbatim into the generated C header and does
+                                // NOT parse it as IDL. We only re-lex preprocessor directives (e.g. cpp_quote("#define
+                                // NAME VALUE"), which some IDLs use to declare constants). Any other content -- C-only
+                                // typedefs (typedef __RPC_unique_pointer ...), DEFINE_ENUM_FLAG_OPERATORS, #if/#endif
+                                // guards, comments -- is for the C header only and is ignored here.
+                                if strings.HasPrefix(strings.TrimSpace($3), "#define") {
+                                    pushLex(RPClex, $3)
+                                }
                             }
                         ;
 
