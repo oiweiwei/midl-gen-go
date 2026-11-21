@@ -224,14 +224,14 @@ func (p *TypeGenerator) GenFieldUnmarshalNDR(ctx context.Context, field *midl.Fi
 			})
 		})
 
-		if mask := Mask(ctx); mask != "" && scopes.Next().Type().IsPrimitiveType() {
+		if HasNullMaskBit(ctx, field) && scopes.Next().Type().IsPrimitiveType() {
 			mN := "_m" + "_" + field.Name
-			p.P(mN, ":=", "func() {", p.O(p.NullMask()), "|=", mask+GoFieldName(ctx, field), "}")
+			p.P(mN, ":=", "func() {", p.O(p.NullMask()), "|=", Mask(ctx)+GoFieldName(ctx, field), "}")
 			// read the pointer.
-			p.CheckErr(p.B("w.ReadPointerWithHook", p.Amp(name), "ndr.PointerHook{"+sN+","+mN+"}", fN))
+			p.CheckErr(p.GenReadPointer(ctx, scopes, p.Amp(name), sN, mN, fN))
 		} else {
 			// read the pointer.
-			p.CheckErr(p.B("w.ReadPointer", p.Amp(name), sN, fN))
+			p.CheckErr(p.GenReadPointer(ctx, scopes, p.Amp(name), sN, "", fN))
 		}
 
 	case scopes.Is(midl.TypeArray):

@@ -716,7 +716,7 @@ func (o *MyInterfaceStruct) UnmarshalNDR(ctx context.Context, w ndr.Reader) erro
 		}
 	}
 	_m_rune1 := func() { o.NullMask |= MyInterfaceStructNullMaskRune1 }
-	if err := w.ReadPointerWithHook(&o.Rune1, ndr.PointerHook{_s_rune1, _m_rune1}, _ptr_rune1); err != nil {
+	if err := w.ReadPointerWithHook(&o.Rune1, ndr.PointerHook{OnSet: _s_rune1, OnNull: _m_rune1}, _ptr_rune1); err != nil {
 		return err
 	}
 	_ptr_rune2 := ndr.UnmarshalNDRFunc(func(ctx context.Context, w ndr.Reader) error {
@@ -740,7 +740,7 @@ func (o *MyInterfaceStruct) UnmarshalNDR(ctx context.Context, w ndr.Reader) erro
 		}
 	}
 	_m_rune2 := func() { o.NullMask |= MyInterfaceStructNullMaskRune2 }
-	if err := w.ReadPointerWithHook(&o.Rune2, ndr.PointerHook{_s_rune2, _m_rune2}, _ptr_rune2); err != nil {
+	if err := w.ReadPointerWithHook(&o.Rune2, ndr.PointerHook{OnSet: _s_rune2, OnNull: _m_rune2}, _ptr_rune2); err != nil {
 		return err
 	}
 	return nil

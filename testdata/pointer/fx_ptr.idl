@@ -1,0 +1,13 @@
+[uuid(11111111-0000-0000-0000-000000000001), version(1.0), pointer_default(ptr)]
+interface fx_ptr
+{
+    typedef [ptr] long *PL;
+    typedef [unique] long *PU;
+    typedef [ref] long *PR;
+    typedef long *PD;
+    typedef struct { long *a; [unique] long *b; [ref] long *c; [ptr] long *d; PL e; PU f; PD g; [ref] PU h; [unique] PL i; [ptr] PD j; } S;
+    typedef struct { long **pp; PL *ppl; } T;
+
+    long f1([in] handle_t h, [in] S *s, [in] long *x, [in, unique] long *u, [in, ptr] long *p, [in] PL pl, [in] PU pu, [in] PD pd, [in] PR pr);
+    long f2([in] handle_t h, [in, ref] PU q, [in, unique] PL r, [in, ptr] PD s2, [in] T *t, [in] long **pp, [in, ptr] long **pq, [in, unique] PL *pr2);
+}

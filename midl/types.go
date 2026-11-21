@@ -48,6 +48,10 @@ type InterfaceBody struct {
 	Export map[string]*Export `json:"exports,omitempty"`
 	// Operations is a list of the interface operations.
 	Operations []*Operation `json:"operations,omitempty"`
+	// Callbacks is a list of the [callback] operations: they are called by
+	// the server on the client, and MIDL numbers them in their own opnum
+	// sequence starting at 0 (they do not consume an operation opnum).
+	Callbacks []*Operation `json:"callbacks,omitempty"`
 }
 
 // Exports function ...

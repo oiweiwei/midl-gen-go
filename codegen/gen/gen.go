@@ -424,12 +424,13 @@ When no pointer attribute is associated with a pointer that is a member
 of a structure or union, the MIDL compiler assigns pointer attributes
 using the following priority rules (1 is highest):
 
-1. Attributes explicitly applied to the pointer type
-2. Attributes explicitly applied to the pointer parameter or member
+1. Attributes explicitly applied to the pointer parameter or member
+2. Attributes explicitly applied to the pointer type (typedef)
 3. (?) The pointer_default attribute in the IDL file that defines the type
 4. The pointer_default attribute in the IDL file that imports the type
 5. Unique (Microsoft RPC default mode)
 */
+// Deprecated: unused, see EffectivePointer.
 func (p *Generator) GenPointerType(ctx context.Context, scopes *Scopes) midl.PointerType {
 
 	var ptr midl.PointerType

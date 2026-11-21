@@ -791,7 +791,7 @@ func (p *TypeGenerator) GenFieldMarshalNDR(ctx context.Context, field *midl.Fiel
 				}
 			}
 
-			if mask := Mask(ctx); mask != "" {
+			if HasNullMaskBit(ctx, field) {
 				if nullChk != "" {
 					nullChk += "&& "
 				}
@@ -799,7 +799,7 @@ func (p *TypeGenerator) GenFieldMarshalNDR(ctx context.Context, field *midl.Fiel
 					name, p.GoTypeZeroValue(ctx, p.Scope(), field, scopes))
 			}
 
-			if nullChk == "" {
+			if nullChk == "" && !scopes.Scope().Pointer.IsWeak(IsOp(ctx)) {
 				p.P("// XXX: pointer default mask was not generated as conditions")
 				p.P("// for automatic generation were not met.")
 				p.P("// If this behavior is not desired, use goext_default_null([cond]) attribute.")
