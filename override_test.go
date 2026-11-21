@@ -8,7 +8,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/oiweiwei/midl-gen-go/codegen/gen"
+	"github.com/oiweiwei/midl-gen-go/codegen/golang"
 	"github.com/oiweiwei/midl-gen-go/midl"
 )
 
@@ -24,12 +24,12 @@ func TestScopedOverride(t *testing.T) {
 	sess := midl.NewSession(midl.WithInclude(dir))
 	out := t.TempDir()
 
-	p := &gen.Generator{Session: sess, ImportsPath: "x/", Format: true, Dir: out}
+	p := golang.New(golang.Options{Session: sess, ImportsPath: "x/", Format: true})
 	files, err := p.Gen(context.Background(), filepath.Join(dir, "ov.idl"))
 	if err != nil {
 		t.Fatal(err)
 	}
-	if err := gen.WriteFiles(nil, out, files); err != nil {
+	if err := golang.WriteFiles(nil, out, files); err != nil {
 		t.Fatal(err)
 	}
 
@@ -89,11 +89,11 @@ func TestSymbolsAgreeWithGeneratedCode(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	p := &gen.Generator{Session: sess}
+	p := golang.New(golang.Options{Session: sess})
 	symbols := p.Symbols(context.Background(), f)
 
 	type key struct{ kind, owner, idl string }
-	got := map[key]gen.Symbol{}
+	got := map[key]golang.Symbol{}
 	for _, s := range symbols {
 		got[key{s.Kind, s.Owner, s.IDL}] = s
 	}
@@ -119,8 +119,7 @@ func TestSymbolsAgreeWithGeneratedCode(t *testing.T) {
 	}
 
 	// every field of every struct listed must be in the generated code under the name listed.
-	out := t.TempDir()
-	g := &gen.Generator{Session: sess, ImportsPath: "x/", Format: true, Dir: out}
+	g := golang.New(golang.Options{Session: sess, ImportsPath: "x/", Format: true})
 	files, err := g.Gen(context.Background(), filepath.Join(dir, "ov.idl"))
 	if err != nil {
 		t.Fatal(err)

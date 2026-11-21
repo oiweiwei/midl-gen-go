@@ -1,4 +1,4 @@
-package gen
+package emit
 
 import (
 	"fmt"
@@ -17,7 +17,7 @@ var (
 	Obj = "o"
 )
 
-func (p *Generator) GenRange(ctx *Env, n string, i, upto int, fn func(*Env, string)) {
+func (p *Emitter) GenRange(ctx *Env, n string, i, upto int, fn func(*Env, string)) {
 	if i >= upto {
 		fn(ctx, n)
 		return
@@ -28,12 +28,12 @@ func (p *Generator) GenRange(ctx *Env, n string, i, upto int, fn func(*Env, stri
 	})
 }
 
-func (p *Generator) If(args ...interface{}) {
+func (p *Emitter) If(args ...interface{}) {
 	p.Block(append([]interface{}{"if"}, args...)...)
 }
 
 var (
-	CheckErr1 = func(p *Generator) func(...interface{}) {
+	CheckErr1 = func(p *Emitter) func(...interface{}) {
 		return func(args ...interface{}) {
 			p.Block(append(append([]interface{}{"if", "err", ":="}, args...), ";", "err != nil", func() {
 				p.P("return", "err")
@@ -41,18 +41,18 @@ var (
 		}
 	}
 
-	CheckErr2 = func(p *Generator) func(...interface{}) {
+	CheckErr2 = func(p *Emitter) func(...interface{}) {
 		return func(args ...interface{}) {
 			p.P(args...)
 		}
 	}
 )
 
-func (p *Generator) Structure(args ...interface{}) {
+func (p *Emitter) Structure(args ...interface{}) {
 	p.Block(append([]interface{}{"type", args[0], "struct"}, args[1:]...)...)
 }
 
-func (p *Generator) Range(args ...interface{}) {
+func (p *Emitter) Range(args ...interface{}) {
 
 	switch len(args) {
 	case 0:
@@ -68,19 +68,19 @@ func (p *Generator) Range(args ...interface{}) {
 	}
 }
 
-func (p *Generator) ElseIf(args ...interface{}) []interface{} {
+func (p *Emitter) ElseIf(args ...interface{}) []interface{} {
 	return append([]interface{}{"else", "if"}, args...)
 }
 
-func (p *Generator) Else(args ...interface{}) []interface{} {
+func (p *Emitter) Else(args ...interface{}) []interface{} {
 	return append([]interface{}{"else"}, args...)
 }
 
-func (p *Generator) Switch(args ...interface{}) {
+func (p *Emitter) Switch(args ...interface{}) {
 	p.Block(append([]interface{}{"switch"}, args...)...)
 }
 
-func (p *Generator) Block(args ...interface{}) {
+func (p *Emitter) Block(args ...interface{}) {
 
 	var (
 		printable []interface{}
@@ -109,7 +109,7 @@ func (p *Generator) Block(args ...interface{}) {
 }
 
 // Var function generates the variable name.
-func (p *Generator) Var(n string, idx ...interface{}) string {
+func (p *Emitter) Var(n string, idx ...interface{}) string {
 	if len(idx) > 0 {
 		return fmt.Sprintf("%s%v", n, idx[0])
 	}
@@ -117,17 +117,17 @@ func (p *Generator) Var(n string, idx ...interface{}) string {
 }
 
 // Q returns the Go string literal for n; quotes, backslashes and control characters are escaped.
-func (p *Generator) Q(n string) string {
+func (p *Emitter) Q(n string) string {
 	return goprint.Quote(n)
 }
 
 // W returns a typed writer appending to the file being generated. It must be
 // called again after the file changes (Reset): it is not meant to be kept.
-func (p *Generator) W() *goprint.Writer {
+func (p *Emitter) W() *goprint.Writer {
 	return goprint.NewWriter(p.out.Out)
 }
 
-func (p *Generator) B(pre interface{}, s ...interface{}) string {
+func (p *Emitter) B(pre interface{}, s ...interface{}) string {
 
 	ss := make([]string, len(s))
 	for i := range s {
@@ -137,15 +137,15 @@ func (p *Generator) B(pre interface{}, s ...interface{}) string {
 	return fmt.Sprintf("%v(%s)", pre, strings.Join(ss, ","))
 }
 
-func (p *Generator) Amp(v interface{}) string {
+func (p *Emitter) Amp(v interface{}) string {
 	return "&" + fmt.Sprintf("%v", v)
 }
 
-func (p *Generator) Ptr(ptr interface{}) string {
+func (p *Emitter) Ptr(ptr interface{}) string {
 	return fmt.Sprintf("*%v", ptr)
 }
 
-func (p *Generator) BPtr(ptr interface{}) string {
+func (p *Emitter) BPtr(ptr interface{}) string {
 	return fmt.Sprintf("(*%v)", ptr)
 }
 
@@ -153,11 +153,11 @@ var (
 	varReplacer = strings.NewReplacer("[", "_", "]", "", Obj+".", "")
 )
 
-func (p *Generator) ToVar(s string) string {
+func (p *Emitter) ToVar(s string) string {
 	return varReplacer.Replace(s)
 }
 
-func (p *Generator) IVar(n string, idxs ...interface{}) string {
+func (p *Emitter) IVar(n string, idxs ...interface{}) string {
 	for _, idx := range idxs {
 		n += fmt.Sprintf("[%v]", idx)
 	}
@@ -165,18 +165,18 @@ func (p *Generator) IVar(n string, idxs ...interface{}) string {
 }
 
 // EO function generates the O with namer.
-func (p *Generator) EO(ctx *Env, n string) string {
+func (p *Emitter) EO(ctx *Env, n string) string {
 	return p.O(GoMemberName(ctx, n))
 }
 
-func (p *Generator) EOWithCtx(ctx *Env) func(string) string {
+func (p *Emitter) EOWithCtx(ctx *Env) func(string) string {
 	return func(n string) string {
 		return p.EO(ctx, n)
 	}
 }
 
 // O function generates the "o."
-func (p *Generator) O(n string) string {
+func (p *Emitter) O(n string) string {
 	return Obj + "." + n
 }
 
@@ -184,7 +184,7 @@ var (
 	ZeroLen = "%ZERO%"
 )
 
-func (p *Generator) Len(n string) string {
+func (p *Emitter) Len(n string) string {
 	if strings.HasPrefix(n, ZeroLen) {
 		return "0"
 	}
@@ -192,19 +192,19 @@ func (p *Generator) Len(n string) string {
 }
 
 // R function generates the repeat with start end sequence.
-func (p *Generator) R(start, s, end string, count int) string {
+func (p *Emitter) R(start, s, end string, count int) string {
 	return strings.Repeat(start, count) + s + strings.Repeat(end, count)
 }
 
-func (p *Generator) BufVar(name string) string {
+func (p *Emitter) BufVar(name string) string {
 	return "_" + p.ToVar(name) + "_buf"
 }
 
-func (p *Generator) NullMask(name ...string) string {
+func (p *Emitter) NullMask(name ...string) string {
 	return strings.Join(name, "") + "NullMask"
 }
 
-func (p *Generator) VarName(ctx *Env, index ...interface{}) string {
+func (p *Emitter) VarName(ctx *Env, index ...interface{}) string {
 	if ctx.VarName != "" {
 		return p.IVar(ctx.VarName, index...)
 	}

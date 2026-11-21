@@ -1,4 +1,4 @@
-package gen
+package emit
 
 import (
 	"github.com/oiweiwei/midl-gen-go/midl"
@@ -17,20 +17,20 @@ func goExprFormat(ident func(string) string) expr.Format {
 
 // FormatExpr renders the expression as Go; identifiers are rendered as plain
 // names.
-func (p *Generator) FormatExpr(ctx *Env, e midl.Expr) string {
+func (p *Emitter) FormatExpr(ctx *Env, e midl.Expr) string {
 	return e.Format(goExprFormat(nil))
 }
 
 // FormatExprO renders the expression as Go; identifiers are the fields of the
 // receiver ("o.Field"), named according to the namer of the context.
-func (p *Generator) FormatExprO(ctx *Env, e midl.Expr) string {
+func (p *Emitter) FormatExprO(ctx *Env, e midl.Expr) string {
 	return e.Format(goExprFormat(p.EOWithCtx(ctx)))
 }
 
 // FormatConstExpr renders the value of an IDL constant as Go. Identifiers are
 // other constants; when hexSize is positive, integer literals are rendered as
 // hexadecimal of that many bytes.
-func (p *Generator) FormatConstExpr(ctx *Env, e midl.Expr, hexSize int) string {
+func (p *Emitter) FormatConstExpr(ctx *Env, e midl.Expr, hexSize int) string {
 	f := goExprFormat(func(n string) string { return GoName(ctx, n) })
 	if hexSize > 0 {
 		f.Uint = GoHex(hexSize)

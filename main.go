@@ -11,7 +11,7 @@ import (
 	"strings"
 	"text/tabwriter"
 
-	"github.com/oiweiwei/midl-gen-go/codegen/gen"
+	"github.com/oiweiwei/midl-gen-go/codegen/golang"
 	"github.com/oiweiwei/midl-gen-go/logx"
 	"github.com/oiweiwei/midl-gen-go/midl"
 	"github.com/oiweiwei/midl-gen-go/msdn/openspecs"
@@ -98,22 +98,21 @@ func newGenerateCmd() *cobra.Command {
 			ctx := context.Background()
 
 			for _, fn := range files {
-				p := &gen.Generator{
+				p := golang.New(golang.Options{
 					Session:              sess,
 					Log:                  log,
 					ImportsPath:          pkg,
 					Format:               !noFormat,
 					EmitTrace:            emitTrace,
-					Dir:                  output,
 					MSDNCache:            msdnOpenspecsCache,
 					MSDNIndexerFile:      msdnOpenspecsIndexer,
 					MSDNIndexerExtraFile: msdnOpenspecsIndexerExtra,
-				}
+				})
 				out, err := p.Gen(ctx, fn)
 				if err != nil {
 					return fmt.Errorf("%s: %w", fn, err)
 				}
-				if err := gen.WriteFiles(log, output, out); err != nil {
+				if err := golang.WriteFiles(log, output, out); err != nil {
 					return fmt.Errorf("%s: %w", fn, err)
 				}
 			}
@@ -210,14 +209,14 @@ Use --explain to see every step of the derivation of a name.`,
 				return fmt.Errorf("collect files: %w", err)
 			}
 
-			var symbols []gen.Symbol
+			var symbols []golang.Symbol
 
 			for _, fn := range files {
 				f, err := sess.Load(fn)
 				if err != nil {
 					return fmt.Errorf("%s: %w", fn, err)
 				}
-				p := &gen.Generator{Session: sess}
+				p := golang.New(golang.Options{Session: sess})
 				for _, sym := range p.Symbols(context.Background(), f) {
 					if len(want) > 0 && !want[sym.Kind] {
 						continue

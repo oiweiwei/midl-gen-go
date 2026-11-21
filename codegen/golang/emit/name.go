@@ -1,4 +1,4 @@
-package gen
+package emit
 
 import (
 	"fmt"
@@ -57,7 +57,7 @@ func GoHex(n int) func(uint64) string {
 
 var defaultVersion = &midl.Version{}
 
-func (p *Generator) WithInterfaceNamer(ctx *Env, iff *midl.Interface) *Env {
+func (p *Emitter) WithInterfaceNamer(ctx *Env, iff *midl.Interface) *Env {
 	for _, f := range p.Session.Files() {
 		if _, ok := f.LookupType(iff.Name); !ok {
 			continue
@@ -67,7 +67,7 @@ func (p *Generator) WithInterfaceNamer(ctx *Env, iff *midl.Interface) *Env {
 	return ctx
 }
 
-func (p *Generator) WithInterfaceBaseNamer(ctx *Env, iff *midl.Interface) *Env {
+func (p *Emitter) WithInterfaceBaseNamer(ctx *Env, iff *midl.Interface) *Env {
 	name := iff.BaseName
 	if iff.Base != nil {
 		name = iff.Base.Name
@@ -81,7 +81,7 @@ func (p *Generator) WithInterfaceBaseNamer(ctx *Env, iff *midl.Interface) *Env {
 	return ctx
 }
 
-func (p *Generator) GoInterfaceTypeName(ctx *Env, iff *midl.Interface, nhook ...func(string) string) string {
+func (p *Emitter) GoInterfaceTypeName(ctx *Env, iff *midl.Interface, nhook ...func(string) string) string {
 
 	n := iff.Name
 
@@ -121,7 +121,7 @@ func (p *Generator) GoInterfaceTypeName(ctx *Env, iff *midl.Interface, nhook ...
 	return n
 }
 
-func (p *Generator) GoScopeTypeNameWithN(ctx *Env, attr *midl.TypeAttr, field *midl.Field, scopes *Scopes, trim bool, n ...string) string {
+func (p *Emitter) GoScopeTypeNameWithN(ctx *Env, attr *midl.TypeAttr, field *midl.Field, scopes *desc.Cursor, trim bool, n ...string) string {
 	t := p.GoTypeName(ctx, attr, field, scopes, n...)
 	if trim {
 		return strings.TrimLeft(t, "*")
@@ -129,7 +129,7 @@ func (p *Generator) GoScopeTypeNameWithN(ctx *Env, attr *midl.TypeAttr, field *m
 	return t
 }
 
-func (p *Generator) GoScopeTypeName(ctx *Env, attr *midl.TypeAttr, field *midl.Field, scopes *Scopes, trim ...bool) string {
+func (p *Emitter) GoScopeTypeName(ctx *Env, attr *midl.TypeAttr, field *midl.Field, scopes *desc.Cursor, trim ...bool) string {
 	n := p.GoTypeName(ctx, attr, field, scopes)
 	if len(trim) > 0 {
 		return strings.TrimLeft(n, "*")
@@ -137,15 +137,15 @@ func (p *Generator) GoScopeTypeName(ctx *Env, attr *midl.TypeAttr, field *midl.F
 	return n
 }
 
-func (p *Generator) GoFieldTypeName(ctx *Env, attr *midl.TypeAttr, field *midl.Field, n ...string) string {
+func (p *Emitter) GoFieldTypeName(ctx *Env, attr *midl.TypeAttr, field *midl.Field, n ...string) string {
 	return p.GoTypeName(ctx, attr, field, desc.Of(field), n...)
 }
 
-func (p *Generator) EmbeddedTypeName(ctx *Env, attrs *midl.TypeAttr, field *midl.Field) string {
+func (p *Emitter) EmbeddedTypeName(ctx *Env, attrs *midl.TypeAttr, field *midl.Field) string {
 	return GoName(ctx, attrs.Alias) + "_" + GoFieldName(ctx, field)
 }
 
-func (p *Generator) GoTypeName(ctx *Env, attrs *midl.TypeAttr, field *midl.Field, scopes *Scopes, n ...string) string {
+func (p *Emitter) GoTypeName(ctx *Env, attrs *midl.TypeAttr, field *midl.Field, scopes *desc.Cursor, n ...string) string {
 
 	var ret string
 
@@ -229,7 +229,7 @@ go_type_name_loop:
 	return strings.Join(n, "") + ret
 }
 
-func (p *Generator) GoPackageName(ctx *Env, scopes *Scopes) string {
+func (p *Emitter) GoPackageName(ctx *Env, scopes *desc.Cursor) string {
 
 	pkg, err := p.GoPackage(ctx, scopes)
 	if err != nil {
@@ -243,7 +243,7 @@ func (p *Generator) GoPackageName(ctx *Env, scopes *Scopes) string {
 	return lastPart(pkg.Name) + "."
 }
 
-func (p *Generator) WithNamer(ctx *Env, scopes *Scopes) *Env {
+func (p *Emitter) WithNamer(ctx *Env, scopes *desc.Cursor) *Env {
 	pkg, _ := p.GoPackage(ctx, scopes)
 	if pkg == nil || pkg.File == nil || pkg.File.Namer() == nil {
 		return ctx
@@ -251,7 +251,7 @@ func (p *Generator) WithNamer(ctx *Env, scopes *Scopes) *Env {
 	return ctx.WithNamer(pkg.File.Namer())
 }
 
-func (p *Generator) GoPackage(ctx *Env, scopes *Scopes) (*Package, error) {
+func (p *Emitter) GoPackage(ctx *Env, scopes *desc.Cursor) (*Package, error) {
 
 	n := scopes.Alias()
 	if n == "" {
@@ -398,7 +398,7 @@ func GoPackage(ctx *Env, n string) (*Package, bool) {
 	return nil, false
 }
 
-func LookupName(ctx *Env, scopes *Scopes) string {
+func LookupName(ctx *Env, scopes *desc.Cursor) string {
 
 	if alias := scopes.Alias(); alias != "" {
 		if strings.HasPrefix(alias, "PDNS") {

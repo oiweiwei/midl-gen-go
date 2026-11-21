@@ -1,6 +1,8 @@
-package gen
+package ndr
 
 import (
+	"github.com/oiweiwei/midl-gen-go/codegen/golang/emit"
+	"github.com/oiweiwei/midl-gen-go/desc"
 	"github.com/oiweiwei/midl-gen-go/midl"
 )
 
@@ -18,7 +20,7 @@ var (
 )
 
 // UTF16Len function returns the UTF16 length-count function call on variable `n`.
-func (p *Generator) UTF16Len(ctx *Env, n string, isNullTerminated bool) string {
+func (p *Emitter) UTF16Len(ctx *emit.Env, n string, isNullTerminated bool) string {
 	if isNullTerminated {
 		return p.B(UTF16NLenFunc, n)
 	}
@@ -26,7 +28,7 @@ func (p *Generator) UTF16Len(ctx *Env, n string, isNullTerminated bool) string {
 }
 
 // ByteLen function returns the byte length-count function call on variable `n`.
-func (p *Generator) ByteLen(ctx *Env, n string, isNullTerminated bool) string {
+func (p *Emitter) ByteLen(ctx *emit.Env, n string, isNullTerminated bool) string {
 	if isNullTerminated {
 		return p.B(ByteNLenFunc, n)
 	}
@@ -34,7 +36,7 @@ func (p *Generator) ByteLen(ctx *Env, n string, isNullTerminated bool) string {
 }
 
 // DataLen function returns the proper length-count function call on variable `n`.
-func (p *Generator) DataLen(ctx *Env, field *midl.Field, scopes *Scopes, n string, defaultTypeSize ...string) string {
+func (p *Emitter) DataLen(ctx *emit.Env, field *midl.Field, scopes *desc.Cursor, n string, defaultTypeSize ...string) string {
 
 	if field.Attrs.Format.MultiSize {
 		return p.B(MultiSzLenFunc, n)

@@ -1,43 +1,27 @@
-package gen
+package ndr
 
 import (
 	"strings"
 
+	"github.com/oiweiwei/midl-gen-go/codegen/golang/emit"
 	"github.com/oiweiwei/midl-gen-go/desc"
 	"github.com/oiweiwei/midl-gen-go/desc/ndr"
 	"github.com/oiweiwei/midl-gen-go/midl"
 )
 
 type ParamGenerator struct {
-	*Generator
+	*Emitter
 	*TypeGenerator
 }
 
-func (p *Generator) NewParamGenerator(ctx *Env, typ *midl.Type) *ParamGenerator {
+func (p *Emitter) NewParamGenerator(ctx *emit.Env, typ *midl.Type) *ParamGenerator {
 	return &ParamGenerator{
-		Generator:     p,
+		Emitter:       p,
 		TypeGenerator: p.NewTypeGenerator(ctx, typ),
 	}
 }
 
-var (
-	AnyParam = 0
-	InParam  = 1
-	OutParam = 2
-)
-
-func ParamName(dir int) string {
-	switch dir {
-	case InParam:
-		return "Request"
-	case OutParam:
-		return "Response"
-	}
-
-	return ""
-}
-
-func (p *Generator) GenOperation(ctx *Env, op *midl.Operation) {
+func (p *Emitter) GenOperation(ctx *emit.Env, op *midl.Operation) {
 	if p.IsUnusedOp(op.Name) {
 		return
 	}
@@ -47,25 +31,25 @@ func (p *Generator) GenOperation(ctx *Env, op *midl.Operation) {
 
 	ctx = ctx.WithNullMask(mask)
 
-	p.GenOperationStruct(ctx, op, AnyParam)
-	p.GenOperationMarshalNDR(ctx, op, InParam)
-	p.GenOperationUnmarshalNDR(ctx, op, InParam)
-	p.GenOperationMarshalNDR(ctx, op, OutParam)
-	p.GenOperationUnmarshalNDR(ctx, op, OutParam)
-	p.GenOperationStruct(ctx, op, InParam)
-	p.GenOperationStruct(ctx, op, OutParam)
+	p.GenOperationStruct(ctx, op, emit.AnyParam)
+	p.GenOperationMarshalNDR(ctx, op, emit.InParam)
+	p.GenOperationUnmarshalNDR(ctx, op, emit.InParam)
+	p.GenOperationMarshalNDR(ctx, op, emit.OutParam)
+	p.GenOperationUnmarshalNDR(ctx, op, emit.OutParam)
+	p.GenOperationStruct(ctx, op, emit.InParam)
+	p.GenOperationStruct(ctx, op, emit.OutParam)
 }
 
-func (p *Generator) GenOperationMarshalNDR(ctx *Env, op *midl.Operation, dir int) {
+func (p *Emitter) GenOperationMarshalNDR(ctx *emit.Env, op *midl.Operation, dir int) {
 
-	pN := ParamName(dir)
+	pN := emit.ParamName(dir)
 	fN := "MarshalNDR" + pN
-	opN := p.OpName(ctx, op, AnyParam)
+	opN := p.OpName(ctx, op, emit.AnyParam)
 
 	strct := &midl.Type{
 		Kind: midl.TypeAttribute,
 		Attrs: &midl.TypeAttr{
-			Alias: Escape(p.OpName(ctx, op, dir)),
+			Alias: emit.Escape(p.OpName(ctx, op, dir)),
 		},
 		Elem: &midl.Type{
 			Kind: midl.TypeStruct, Struct: &midl.Struct{}},
@@ -128,29 +112,29 @@ func (p *Generator) GenOperationMarshalNDR(ctx *Env, op *midl.Operation, dir int
 
 }
 
-func (p *Generator) PrepareOperationPayloadHook(ctx *Env, dir int) {
-	pN := ParamName(dir)
+func (p *Emitter) PrepareOperationPayloadHook(ctx *emit.Env, dir int) {
+	pN := emit.ParamName(dir)
 	p.If("hook, ok := (interface{})(o).(interface { AfterPrepare"+pN+"Payload(context.Context) error }); ok", func() {
 		p.CheckErr(p.B("hook.AfterPrepare"+pN+"Payload", "ctx"))
 	})
 }
 
-func (p *Generator) GenOperationUnmarshalNDR(ctx *Env, op *midl.Operation, dir int) {
+func (p *Emitter) GenOperationUnmarshalNDR(ctx *emit.Env, op *midl.Operation, dir int) {
 
 	fn := "UnmarshalNDR"
-	if dir == InParam {
+	if dir == emit.InParam {
 		fn += "Request"
-	} else if dir == OutParam {
+	} else if dir == emit.OutParam {
 		fn += "Response"
 	}
 
 	p.P()
-	p.Block("func", "(o *"+p.OpName(ctx, op, AnyParam)+")", fn, "(ctx context.Context, w ndr.Reader)", "error", func() {
+	p.Block("func", "(o *"+p.OpName(ctx, op, emit.AnyParam)+")", fn, "(ctx context.Context, w ndr.Reader)", "error", func() {
 
 		strct := &midl.Type{
 			Kind: midl.TypeAttribute,
 			Attrs: &midl.TypeAttr{
-				Alias: Escape(p.OpName(ctx, op, dir)),
+				Alias: emit.Escape(p.OpName(ctx, op, dir)),
 			},
 			Elem: &midl.Type{
 				Kind: midl.TypeStruct, Struct: &midl.Struct{}},
@@ -188,7 +172,7 @@ func (p *Generator) GenOperationUnmarshalNDR(ctx *Env, op *midl.Operation, dir i
 
 }
 
-func (p *Generator) GenParamComment(ctx *Env, param *midl.Param) string {
+func (p *Emitter) GenParamComment(ctx *emit.Env, param *midl.Param) string {
 	if param.Attrs == nil {
 		return "{}"
 	}
@@ -197,103 +181,10 @@ func (p *Generator) GenParamComment(ctx *Env, param *midl.Param) string {
 	return "{" + (&attr).String() + "}"
 }
 
-func (p *Generator) MethodName(ctx *Env, op *midl.Operation) string {
-	n := GoName(ctx, op.Name)
-	if strings.HasPrefix(op.Name, "_") {
-		n = "_" + n
-	}
-	if op.Attrs.PropGet {
-		n = "Get" + n
-	}
-	if op.Attrs.PropPut {
-		n = "Set" + n
-	}
-	if op.Attrs.PropPutRef {
-		n = "SetByRef" + n
-	}
-	return n
-}
+func (p *Emitter) GetOutputParamImplicitDependents(ctx *emit.Env, op *midl.Operation, dir int) []*midl.Param {
 
-func (p *Generator) DirName(ctx *Env, dir int) string {
-	switch dir {
-	case InParam:
-		return "Request"
-	case OutParam:
-		return "Response"
-	}
-	return ""
-}
-
-func (p *Generator) OpName(ctx *Env, op *midl.Operation, dir int) string {
-	n := p.MethodName(ctx, op)
-	if dir == InParam {
-		n += "Request"
-		return n
-	} else if dir == OutParam {
-		n += "Response"
-		return n
-	}
-	return p.XXX() + n + "Operation"
-}
-
-func (p *Generator) IsDir(ctx *Env, pdir midl.Direction, dir int) bool {
-	return dir == AnyParam || (dir == InParam && pdir.In) || (dir == OutParam && pdir.Out)
-}
-
-func (p *Generator) ReturnValue() string {
-	return "Return"
-}
-
-func (p *Generator) OperationReturnValue(ctx *Env, op *midl.Operation) *midl.Param {
-	return &midl.Param{
-		Name:  p.ReturnValue(),
-		Type:  op.Type,
-		Attrs: &midl.ParamAttr{FieldAttr: &midl.FieldAttr{}, Direction: midl.Direction{Out: true}},
-	}
-}
-
-func (p *Generator) OperationParams(ctx *Env, op *midl.Operation) []*midl.Param {
-
-	params := make([]*midl.Param, len(op.Params))
-	copy(params, op.Params)
-
-	if !op.Type.Is(midl.TypeVoid) {
-		params = append(params, p.OperationReturnValue(ctx, op))
-	}
-
-	if !ctx.Interface.IsObject() {
-		return params
-	}
-
-	return append([]*midl.Param{
-		{
-			Name:  "This",
-			Type:  p.Session.LookupType("ORPCTHIS"),
-			Attrs: &midl.ParamAttr{FieldAttr: &midl.FieldAttr{}, Direction: midl.Direction{In: true}},
-		},
-		{
-			Name:  "That",
-			Type:  p.Session.LookupType("ORPCTHAT"),
-			Attrs: &midl.ParamAttr{FieldAttr: &midl.FieldAttr{}, Direction: midl.Direction{Out: true}},
-		},
-	}, params...)
-}
-
-func (p *Generator) GetExprIdents(ctx *Env, expr ...midl.Expr) []string {
-	ret := make([]string, 0, len(expr))
-	for _, expr := range expr {
-		val, ok := expr.FirstIdent()
-		if ok {
-			ret = append(ret, val)
-		}
-	}
-	return ret
-}
-
-func (p *Generator) GetOutputParamImplicitDependents(ctx *Env, op *midl.Operation, dir int) []*midl.Param {
-
-	if dir != OutParam {
-		if dir == InParam {
+	if dir != emit.OutParam {
+		if dir == emit.InParam {
 			for _, param := range p.OperationParams(ctx, op) {
 				if param.Attrs.Direction.Out && param.IsPipe() {
 					return []*midl.Param{param}
@@ -334,11 +225,11 @@ func (p *Generator) GetOutputParamImplicitDependents(ctx *Env, op *midl.Operatio
 	return deps
 }
 
-func (p *Generator) GenOperationStruct(ctx *Env, op *midl.Operation, dir int) {
+func (p *Emitter) GenOperationStruct(ctx *emit.Env, op *midl.Operation, dir int) {
 
 	p.P()
-	p.P("//", p.OpName(ctx, op, dir), "structure", "represents", "the", RPCName(op.Name),
-		"operation", strings.ToLower(ParamName(dir)))
+	p.P("//", p.OpName(ctx, op, dir), "structure", "represents", "the", emit.RPCName(op.Name),
+		"operation", strings.ToLower(emit.ParamName(dir)))
 
 	doc, _ := p.MSDN.GetPage(ctx, op.Name)
 
@@ -370,11 +261,11 @@ func (p *Generator) GenOperationStruct(ctx *Env, op *midl.Operation, dir int) {
 				// skip handle.
 				continue
 			}
-			if dir != AnyParam && GoParamName(ctx, param) == "_" {
+			if dir != emit.AnyParam && emit.GoParamName(ctx, param) == "_" {
 				// skip reserved.
 				continue
 			}
-			if dir != AnyParam {
+			if dir != emit.AnyParam {
 				// gen docstring.
 				if doc, ok := doc.GetObjectSection(param.Name); ok {
 					p.GenComment(ctx, doc.Documentation)
@@ -393,7 +284,7 @@ func (p *Generator) GenOperationStruct(ctx *Env, op *midl.Operation, dir int) {
 
 	})
 
-	if dir == AnyParam {
+	if dir == emit.AnyParam {
 		p.GenOpNum(ctx, op, dir)
 		p.GenOpName(ctx, op, dir)
 		return
@@ -402,32 +293,32 @@ func (p *Generator) GenOperationStruct(ctx *Env, op *midl.Operation, dir int) {
 	p.GenOperationToOp(ctx, op, dir, mask != "")
 	p.GenOperationFromOp(ctx, op, dir, mask != "")
 
-	dirN := ParamName(dir)
+	dirN := emit.ParamName(dir)
 
 	p.Block("func", "(o *"+p.OpName(ctx, op, dir)+")", "MarshalNDR", "(ctx context.Context, w ndr.Writer)", "error", func() {
 		p.P("return", "o."+p.XXX()+"ToOp(ctx, nil).MarshalNDR"+dirN+"(ctx, w)")
 	})
 
 	p.Block("func", "(o *"+p.OpName(ctx, op, dir)+")", "UnmarshalNDR", "(ctx context.Context, r ndr.Reader)", "error", func() {
-		p.P("_o", ":=", p.Amp(p.OpName(ctx, op, AnyParam))+"{}")
+		p.P("_o", ":=", p.Amp(p.OpName(ctx, op, emit.AnyParam))+"{}")
 		p.CheckErr("_o.UnmarshalNDR" + dirN + "(ctx, r)")
 		p.P("o." + p.XXX() + "FromOp(ctx, _o)")
 		p.P("return", "nil")
 	})
 
-	if dir == InParam {
+	if dir == emit.InParam {
 		p.GenMakeResponse(ctx, op, dir)
 		p.GenOpNum(ctx, op, dir)
 		p.GenOpName(ctx, op, dir)
 	}
 }
 
-func (p *Generator) GenOperationNullMask(ctx *Env, op *midl.Operation) string {
+func (p *Emitter) GenOperationNullMask(ctx *emit.Env, op *midl.Operation) string {
 
 	var nullable []*midl.Param
 
 	for _, param := range p.OperationParams(ctx, op) {
-		if IsIgnoredPointer(ctx, param.Field()) {
+		if emit.IsIgnoredPointer(ctx, param.Field()) {
 			nullable = append(nullable, param)
 		}
 	}
@@ -444,7 +335,7 @@ func (p *Generator) GenOperationNullMask(ctx *Env, op *midl.Operation) string {
 	p.P("var", "(")
 	in, out := []string{"0"}, []string{"0"}
 	for i, param := range nullable {
-		n := mask + GoFieldName(ctx, param.Field())
+		n := mask + emit.GoFieldName(ctx, param.Field())
 		p.P(n, mask, "=", "1", "<<", i /* cannot use position here, using i */)
 
 		if param.Attrs.Direction.In {
@@ -457,8 +348,8 @@ func (p *Generator) GenOperationNullMask(ctx *Env, op *midl.Operation) string {
 	}
 
 	p.P()
-	p.P(mask+p.DirName(ctx, InParam)+"All", mask, "=", strings.Join(in, " | "))
-	p.P(mask+p.DirName(ctx, OutParam)+"All", mask, "=", strings.Join(out, " | "))
+	p.P(mask+p.DirName(ctx, emit.InParam)+"All", mask, "=", strings.Join(in, " | "))
+	p.P(mask+p.DirName(ctx, emit.OutParam)+"All", mask, "=", strings.Join(out, " | "))
 
 	p.P(")")
 	p.P()
@@ -472,21 +363,21 @@ func (p *Generator) GenOperationNullMask(ctx *Env, op *midl.Operation) string {
 	return mask
 }
 
-func (p *Generator) GenMakeResponse(ctx *Env, op *midl.Operation, dir int) {
-	implicit := p.GetOutputParamImplicitDependents(ctx, op, OutParam)
+func (p *Emitter) GenMakeResponse(ctx *emit.Env, op *midl.Operation, dir int) {
+	implicit := p.GetOutputParamImplicitDependents(ctx, op, emit.OutParam)
 	p.P()
 	p.P("//", "Make"+p.OpName(ctx, op, dir), "build a response structure from the given request structure.")
-	p.Block("func", "(o *"+p.OpName(ctx, op, dir)+")", "MakeResponse()", "*"+p.OpName(ctx, op, OutParam), func() {
+	p.Block("func", "(o *"+p.OpName(ctx, op, dir)+")", "MakeResponse()", "*"+p.OpName(ctx, op, emit.OutParam), func() {
 		if len(implicit) == 0 {
-			p.P("return", "&"+p.OpName(ctx, op, OutParam)+"{}")
+			p.P("return", "&"+p.OpName(ctx, op, emit.OutParam)+"{}")
 			return
 		}
 		p.If("o == nil", func() {
-			p.P("return", "&"+p.OpName(ctx, op, OutParam)+"{}")
+			p.P("return", "&"+p.OpName(ctx, op, emit.OutParam)+"{}")
 		})
-		p.Block("return", "&"+p.OpName(ctx, op, OutParam), func() {
+		p.Block("return", "&"+p.OpName(ctx, op, emit.OutParam), func() {
 			for _, param := range implicit {
-				n := GoParamName(ctx, param)
+				n := emit.GoParamName(ctx, param)
 				if n == "_" {
 					continue
 				}
@@ -496,13 +387,13 @@ func (p *Generator) GenMakeResponse(ctx *Env, op *midl.Operation, dir int) {
 	})
 }
 
-func (p *Generator) GenOpNum(ctx *Env, op *midl.Operation, dir int) {
+func (p *Emitter) GenOpNum(ctx *emit.Env, op *midl.Operation, dir int) {
 	p.P()
 	p.P("//", "OpNum", "returns", "the", "operation", "number", "of", op.Name, "operation.")
 	p.P("func", "(o *"+p.OpName(ctx, op, dir)+")", "OpNum()", "int", "{", "return", op.OpNum, "}")
 }
 
-func (p *Generator) GenOpName(ctx *Env, op *midl.Operation, dir int) {
+func (p *Emitter) GenOpName(ctx *emit.Env, op *midl.Operation, dir int) {
 	p.P()
 	p.P("//", "OpName", "returns", "the", "operation", "name", "of", op.Name, "operation.")
 	p.P("func", "(o *"+p.OpName(ctx, op, dir)+")", "OpName()", "string", "{",
@@ -510,12 +401,12 @@ func (p *Generator) GenOpName(ctx *Env, op *midl.Operation, dir int) {
 		"}")
 }
 
-func (p *Generator) GenOperationToOp(ctx *Env, op *midl.Operation, dir int, mask bool) {
+func (p *Emitter) GenOperationToOp(ctx *emit.Env, op *midl.Operation, dir int, mask bool) {
 
 	p.P()
-	p.P("func", "(o *"+p.OpName(ctx, op, dir)+")", p.XXX()+"ToOp(ctx context.Context, op *"+p.OpName(ctx, op, AnyParam), ")", "*"+p.OpName(ctx, op, AnyParam), "{")
+	p.P("func", "(o *"+p.OpName(ctx, op, dir)+")", p.XXX()+"ToOp(ctx context.Context, op *"+p.OpName(ctx, op, emit.AnyParam), ")", "*"+p.OpName(ctx, op, emit.AnyParam), "{")
 	p.If("op == nil", func() {
-		p.P("op", "=", "&"+p.OpName(ctx, op, AnyParam)+"{}")
+		p.P("op", "=", "&"+p.OpName(ctx, op, emit.AnyParam)+"{}")
 	})
 	p.If("o == nil", func() {
 		p.P("return", "op")
@@ -524,7 +415,7 @@ func (p *Generator) GenOperationToOp(ctx *Env, op *midl.Operation, dir int, mask
 	if implicit := p.GetOutputParamImplicitDependents(ctx, op, dir); len(implicit) > 0 {
 		p.P("//", "XXX:", "implicit input dependencies for output parameters")
 		for _, param := range implicit {
-			n := GoParamName(ctx, param)
+			n := emit.GoParamName(ctx, param)
 			if n == "_" {
 				continue
 			}
@@ -546,7 +437,7 @@ func (p *Generator) GenOperationToOp(ctx *Env, op *midl.Operation, dir int, mask
 		if !p.IsDir(ctx, param.Attrs.Direction, dir) || param.IsHandle() {
 			continue
 		}
-		n := GoParamName(ctx, param)
+		n := emit.GoParamName(ctx, param)
 		if n == "_" {
 			continue
 		}
@@ -562,16 +453,16 @@ func (p *Generator) GenOperationToOp(ctx *Env, op *midl.Operation, dir int, mask
 	p.P("}")
 }
 
-func (p *Generator) GenOperationFromOp(ctx *Env, op *midl.Operation, dir int, mask bool) {
+func (p *Emitter) GenOperationFromOp(ctx *emit.Env, op *midl.Operation, dir int, mask bool) {
 	p.P()
-	p.P("func", "(o *"+p.OpName(ctx, op, dir)+")", p.XXX()+"FromOp(ctx context.Context, op *"+p.OpName(ctx, op, AnyParam), ")", "{")
+	p.P("func", "(o *"+p.OpName(ctx, op, dir)+")", p.XXX()+"FromOp(ctx context.Context, op *"+p.OpName(ctx, op, emit.AnyParam), ")", "{")
 	p.If("o == nil", func() {
 		p.P("return")
 	})
 	if implicit := p.GetOutputParamImplicitDependents(ctx, op, dir); len(implicit) > 0 {
 		p.P("//", "XXX:", "implicit input dependencies for output parameters")
 		for _, param := range implicit {
-			n := GoParamName(ctx, param)
+			n := emit.GoParamName(ctx, param)
 			if n == "_" {
 				continue
 			}
@@ -584,7 +475,7 @@ func (p *Generator) GenOperationFromOp(ctx *Env, op *midl.Operation, dir int, ma
 		if !p.IsDir(ctx, param.Attrs.Direction, dir) || param.IsHandle() {
 			continue
 		}
-		n := GoParamName(ctx, param)
+		n := emit.GoParamName(ctx, param)
 		if n == "_" {
 			continue
 		}

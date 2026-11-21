@@ -1,18 +1,19 @@
-package gen
+package ndr
 
 import (
 	"strings"
 
+	"github.com/oiweiwei/midl-gen-go/codegen/golang/emit"
 	"github.com/oiweiwei/midl-gen-go/desc"
 	"github.com/oiweiwei/midl-gen-go/desc/ndr"
 	"github.com/oiweiwei/midl-gen-go/midl"
 )
 
-func (p *TypeGenerator) GenUnionUnmarshalNDR(ctx *Env) {
+func (p *TypeGenerator) GenUnionUnmarshalNDR(ctx *emit.Env) {
 
 	p.P()
 
-	switchType := p.SwitchType(ctx, p.Scopes)
+	switchType := p.SwitchType(ctx, p.Cursor)
 
 	sw := p.Union().Switch
 
@@ -24,30 +25,30 @@ func (p *TypeGenerator) GenUnionUnmarshalNDR(ctx *Env) {
 
 	swVar := "sw"
 	if sw != nil {
-		swVar = p.O(GoMemberName(ctx, sw.Name))
+		swVar = p.O(emit.GoMemberName(ctx, sw.Name))
 	}
 
-	p.GenDoUnionAlignemntUnmarshalNDR(ctx, ndr.Alignment(p.Scopes))
+	p.GenDoUnionAlignemntUnmarshalNDR(ctx, ndr.Alignment(p.Cursor))
 
 	if sw != nil {
-		if p.IsEnumSwitch(ctx, p.Scopes) {
+		if p.IsEnumSwitch(ctx, p.Cursor) {
 			p.CheckErr(p.B("w.ReadEnum", p.B(p.BPtr(switchType), p.Amp(swVar))))
 		} else {
 			p.CheckErr(p.B("w.ReadData", p.B(p.BPtr(switchType), p.Amp(swVar))))
 		}
 	} else {
-		if p.IsEnumSwitch(ctx, p.Scopes) {
+		if p.IsEnumSwitch(ctx, p.Cursor) {
 			p.CheckErr(p.B("w.ReadSwitch", p.B("ndr.Enum", p.B(p.BPtr(switchType), p.Amp(swVar)))))
 		} else {
 			p.CheckErr(p.B("w.ReadSwitch", p.B(p.BPtr(switchType), p.Amp(swVar))))
 		}
 	}
 
-	if MSUnion(ctx) && sw == nil {
+	if emit.MSUnion(ctx) && sw == nil {
 		p.P("//", "ms_union")
-		p.GenDoAlignmentUnmarshalNDR(ctx, ndr.Alignment(p.Scopes))
+		p.GenDoAlignmentUnmarshalNDR(ctx, ndr.Alignment(p.Cursor))
 	} else {
-		p.GenDoUnionAlignemntUnmarshalNDR(ctx, ndr.Alignment(p.Scopes))
+		p.GenDoUnionAlignemntUnmarshalNDR(ctx, ndr.Alignment(p.Cursor))
 	}
 
 	p.Block("switch", swVar, func() {
@@ -93,7 +94,7 @@ func (p *TypeGenerator) GenUnionUnmarshalNDR(ctx *Env) {
 
 }
 
-func (p *TypeGenerator) GenUnionArmPrimitiveTypeUnmarshalNDR(ctx *Env, cases *midl.UnionCase, armName string) {
+func (p *TypeGenerator) GenUnionArmPrimitiveTypeUnmarshalNDR(ctx *emit.Env, cases *midl.UnionCase, armName string) {
 	// Null pointers skip the deferred callback, including when reusing a union.
 	p.P("o.Value", "=", "nil")
 	// render deferred unmarshalling function.
@@ -117,7 +118,7 @@ func (p *TypeGenerator) GenUnionArmPrimitiveTypeUnmarshalNDR(ctx *Env, cases *mi
 	p.CheckErr(p.GenReadPointer(ctx, desc.Of(cases.Arms[0]), p.Amp("o.Value"), "_s_o", "", "_ptr_o"))
 }
 
-func (p *TypeGenerator) GenUnionArmUnmarshalNDR(ctx *Env, arm *midl.UnionCase, caseName string) {
+func (p *TypeGenerator) GenUnionArmUnmarshalNDR(ctx *emit.Env, arm *midl.UnionCase, caseName string) {
 
 	p.P("func", "(o *"+caseName+")", "UnmarshalNDR(ctx context.Context, w ndr.Reader)", "error", "{")
 

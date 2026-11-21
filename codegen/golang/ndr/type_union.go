@@ -1,22 +1,23 @@
-package gen
+package ndr
 
 import (
 	"fmt"
 	"strings"
 
+	"github.com/oiweiwei/midl-gen-go/codegen/golang/emit"
 	"github.com/oiweiwei/midl-gen-go/desc"
 	"github.com/oiweiwei/midl-gen-go/desc/ndr"
 	"github.com/oiweiwei/midl-gen-go/midl"
 )
 
-func (p *TypeGenerator) GenUnion(ctx *Env) {
+func (p *TypeGenerator) GenUnion(ctx *emit.Env) {
 
 	sw := p.Union().Switch
 
 	if p.Layer().Parent != "" {
-		p.P("//", p.GoTypeName, "structure", "represents", RPCName(p.Layer().Parent), "union", "anonymous", "member.")
+		p.P("//", p.GoTypeName, "structure", "represents", emit.RPCName(p.Layer().Parent), "union", "anonymous", "member.")
 	} else {
-		p.P("//", p.GoTypeName, "structure", "represents", RPCName(p.Alias()), "RPC", "union.")
+		p.P("//", p.GoTypeName, "structure", "represents", emit.RPCName(p.Alias()), "RPC", "union.")
 	}
 	if p.Doc != nil {
 		p.P("//")
@@ -25,7 +26,7 @@ func (p *TypeGenerator) GenUnion(ctx *Env) {
 
 	p.Structure(p.GoTypeName, func() {
 		if sw != nil {
-			p.P(GoMemberName(ctx, sw.Name), p.SwitchType(ctx, p.Scopes))
+			p.P(emit.GoMemberName(ctx, sw.Name), p.SwitchType(ctx, p.Cursor))
 		}
 		p.CB(func() {
 			p.P("Types that are assignable to Value")
@@ -62,7 +63,7 @@ func (p *TypeGenerator) GenUnion(ctx *Env) {
 	}
 }
 
-func (p *TypeGenerator) GenerateUnionGetValue(ctx *Env) {
+func (p *TypeGenerator) GenerateUnionGetValue(ctx *emit.Env) {
 
 	p.P()
 
@@ -94,7 +95,7 @@ func (p *TypeGenerator) GenerateUnionGetValue(ctx *Env) {
 
 }
 
-func (p *TypeGenerator) SwitchTypeZeroValue(ctx *Env, switchType string) any {
+func (p *TypeGenerator) SwitchTypeZeroValue(ctx *emit.Env, switchType string) any {
 	switch switchType {
 	case "string":
 		return `""`
@@ -102,9 +103,9 @@ func (p *TypeGenerator) SwitchTypeZeroValue(ctx *Env, switchType string) any {
 	return 0
 }
 
-func (p *TypeGenerator) GenerateNDRSwitchValue(ctx *Env) {
+func (p *TypeGenerator) GenerateNDRSwitchValue(ctx *emit.Env) {
 
-	switchType := p.SwitchType(ctx, p.Scopes)
+	switchType := p.SwitchType(ctx, p.Cursor)
 
 	p.P()
 	p.Block("func", "(o *"+p.GoTypeName+")", "NDRSwitchValue(sw "+switchType+")", switchType, func() {
@@ -135,12 +136,12 @@ func (p *TypeGenerator) GenerateNDRSwitchValue(ctx *Env) {
 	})
 }
 
-func (p *TypeGenerator) GenerateSwitchIs(ctx *Env, field *midl.Field, scopes *Scopes, switchVar string) {
+func (p *TypeGenerator) GenerateSwitchIs(ctx *emit.Env, field *midl.Field, scopes *desc.Cursor, switchVar string) {
 	switchIs, switchType := field.Attrs.SwitchIs, p.SwitchType(ctx, scopes)
 	p.P(switchVar, ":=", p.B(switchType, p.GenExpr(ctx, switchIs, p.LookupExprField(ctx, switchIs), switchType)))
 }
 
-func (p *TypeGenerator) IsEnumSwitch(ctx *Env, scopes *Scopes) bool {
+func (p *TypeGenerator) IsEnumSwitch(ctx *emit.Env, scopes *desc.Cursor) bool {
 	if p.Union() != nil && p.Union().IsEncapsulated() {
 		return false
 	}
@@ -148,12 +149,12 @@ func (p *TypeGenerator) IsEnumSwitch(ctx *Env, scopes *Scopes) bool {
 	return desc.OfType(scopes.Layer().SwitchType).Is(midl.TypeEnum)
 }
 
-func (p *TypeGenerator) SwitchType(ctx *Env, scopes *Scopes) string {
+func (p *TypeGenerator) SwitchType(ctx *emit.Env, scopes *desc.Cursor) string {
 
 	var switchType string
 
 	if p.Union() != nil && p.Union().IsEncapsulated() {
-		switchType = p.Generator.GoFieldTypeName(ctx, p.Layer(), &midl.Field{
+		switchType = p.Emitter.GoFieldTypeName(ctx, p.Layer(), &midl.Field{
 			Attrs: &midl.FieldAttr{},
 			Type:  p.Union().Switch.Type,
 		})
@@ -161,7 +162,7 @@ func (p *TypeGenerator) SwitchType(ctx *Env, scopes *Scopes) string {
 		if scope := desc.OfType(scopes.Layer().SwitchType); scope.Is(midl.TypeEnum) {
 			switchType = scope.EnumType().String()
 		} else {
-			switchType = p.Generator.GoFieldTypeName(ctx, p.Layer(), &midl.Field{
+			switchType = p.Emitter.GoFieldTypeName(ctx, p.Layer(), &midl.Field{
 				Attrs: &midl.FieldAttr{},
 				Type:  scopes.Layer().SwitchType,
 			})
@@ -171,11 +172,11 @@ func (p *TypeGenerator) SwitchType(ctx *Env, scopes *Scopes) string {
 	return switchType
 }
 
-func (p *TypeGenerator) GenUnionMarshalNDR(ctx *Env) {
+func (p *TypeGenerator) GenUnionMarshalNDR(ctx *emit.Env) {
 
 	p.P()
 
-	switchType := p.SwitchType(ctx, p.Scopes)
+	switchType := p.SwitchType(ctx, p.Cursor)
 
 	sw := p.Union().Switch
 
@@ -193,30 +194,30 @@ func (p *TypeGenerator) GenUnionMarshalNDR(ctx *Env) {
 
 	swVar := "sw"
 	if sw != nil {
-		swVar = p.O(GoMemberName(ctx, sw.Name))
+		swVar = p.O(emit.GoMemberName(ctx, sw.Name))
 	}
 
-	p.GenDoUnionAlignemntMarshalNDR(ctx, ndr.Alignment(p.Scopes))
+	p.GenDoUnionAlignemntMarshalNDR(ctx, ndr.Alignment(p.Cursor))
 
 	if sw != nil {
-		if p.IsEnumSwitch(ctx, p.Scopes) {
+		if p.IsEnumSwitch(ctx, p.Cursor) {
 			p.CheckErr(p.B("w.WriteEnum", p.B(switchType, swVar)))
 		} else {
 			p.CheckErr(p.B("w.WriteData", p.B(switchType, swVar)))
 		}
 	} else {
-		if p.IsEnumSwitch(ctx, p.Scopes) {
+		if p.IsEnumSwitch(ctx, p.Cursor) {
 			p.CheckErr(p.B("w.WriteSwitch", p.B("ndr.Enum", p.B(switchType, swVar))))
 		} else {
 			p.CheckErr(p.B("w.WriteSwitch", p.B(switchType, swVar)))
 		}
 	}
 
-	if MSUnion(ctx) && sw == nil {
+	if emit.MSUnion(ctx) && sw == nil {
 		p.P("//", "ms_union")
-		p.GenDoAlignmentMarshalNDR(ctx, ndr.Alignment(p.Scopes))
+		p.GenDoAlignmentMarshalNDR(ctx, ndr.Alignment(p.Cursor))
 	} else {
-		p.GenDoUnionAlignemntMarshalNDR(ctx, ndr.Alignment(p.Scopes))
+		p.GenDoUnionAlignemntMarshalNDR(ctx, ndr.Alignment(p.Cursor))
 	}
 
 	p.Block("switch", swVar, func() {
@@ -283,7 +284,7 @@ func (p *TypeGenerator) GenUnionMarshalNDR(ctx *Env) {
 
 }
 
-func (p *TypeGenerator) GenUnionArmPrimitiveTypeMarshalNDR(ctx *Env, cases *midl.UnionCase, armName string) {
+func (p *TypeGenerator) GenUnionArmPrimitiveTypeMarshalNDR(ctx *emit.Env, cases *midl.UnionCase, armName string) {
 	p.P("_o, _ := o.Value.(*" + armName + ")")
 	p.If("_o", "!=", "nil", func() {
 		p.P("_ptr_o", ":=", "ndr.MarshalNDRFunc", "(", "func(ctx context.Context, w ndr.Writer) error {")
@@ -296,7 +297,7 @@ func (p *TypeGenerator) GenUnionArmPrimitiveTypeMarshalNDR(ctx *Env, cases *midl
 	}))
 }
 
-func (p *TypeGenerator) IsArmPointerToPrimitiveType(ctx *Env, cases *midl.UnionCase) bool {
+func (p *TypeGenerator) IsArmPointerToPrimitiveType(ctx *emit.Env, cases *midl.UnionCase) bool {
 
 	if len(cases.Arms) != 1 {
 		return false
@@ -306,7 +307,7 @@ func (p *TypeGenerator) IsArmPointerToPrimitiveType(ctx *Env, cases *midl.UnionC
 	return scopes.Is(midl.TypePointer) && scopes.Next().Type().IsPrimitiveType()
 }
 
-func (p *TypeGenerator) UnionArmName(ctx *Env, cases *midl.UnionCase) string {
+func (p *TypeGenerator) UnionArmName(ctx *emit.Env, cases *midl.UnionCase) string {
 
 	caseName := p.GoTypeName
 
@@ -322,14 +323,14 @@ func (p *TypeGenerator) UnionArmName(ctx *Env, cases *midl.UnionCase) string {
 
 	if len(cases.Arms) > 0 {
 		// use arm name as a union arm type name.
-		n := GoMemberName(ctx, cases.Arms[0].Name)
+		n := emit.GoMemberName(ctx, cases.Arms[0].Name)
 
 		if strings.Contains(n, caseName) || strings.Contains(caseName, n) {
 			n = strings.ReplaceAll(n, caseName, "")
 		}
 
 		if n == "_" {
-			n = GoNameNoReserved(ctx, cases.Arms[0].Name)
+			n = emit.GoNameNoReserved(ctx, cases.Arms[0].Name)
 		}
 
 		if n != "" {
@@ -352,7 +353,7 @@ func (p *TypeGenerator) UnionArmName(ctx *Env, cases *midl.UnionCase) string {
 						continue
 					}
 					if e.ID == int(val) {
-						return caseName + "_" + GoName(ctx, e.Value)
+						return caseName + "_" + emit.GoName(ctx, e.Value)
 					}
 				}
 			}
@@ -368,12 +369,12 @@ func (p *TypeGenerator) UnionArmName(ctx *Env, cases *midl.UnionCase) string {
 	return caseName + "_" + fmt.Sprintf("%d", cases.Position)
 }
 
-func (p *TypeGenerator) GenUnionArmInterface(ctx *Env, cases *midl.UnionCase) {
+func (p *TypeGenerator) GenUnionArmInterface(ctx *emit.Env, cases *midl.UnionCase) {
 	p.P()
 	p.P("func", "(*"+p.UnionArmName(ctx, cases)+")", "is_"+p.GoTypeName, "()", "{}")
 }
 
-func (p *TypeGenerator) GenUnionArm(ctx *Env, cases *midl.UnionCase) {
+func (p *TypeGenerator) GenUnionArm(ctx *emit.Env, cases *midl.UnionCase) {
 
 	if cases.IsDefault && len(cases.Arms) == 0 {
 		return
@@ -383,9 +384,9 @@ func (p *TypeGenerator) GenUnionArm(ctx *Env, cases *midl.UnionCase) {
 
 	p.P()
 	if cases.IsDefault {
-		p.P("//", caseName, "structure", "represents", RPCName(p.Alias()), "RPC", "default", "union arm.")
+		p.P("//", caseName, "structure", "represents", emit.RPCName(p.Alias()), "RPC", "default", "union arm.")
 	} else {
-		p.P("//", caseName, "structure", "represents", RPCName(p.Alias()), "RPC", "union arm.")
+		p.P("//", caseName, "structure", "represents", emit.RPCName(p.Alias()), "RPC", "union arm.")
 		p.P("//")
 		p.P("//", "It has following labels:", cases.String())
 	}
@@ -406,7 +407,7 @@ func (p *TypeGenerator) GenUnionArm(ctx *Env, cases *midl.UnionCase) {
 	}
 }
 
-func (p *TypeGenerator) ArmFields(ctx *Env, cases *midl.UnionCase) []*midl.Field {
+func (p *TypeGenerator) ArmFields(ctx *emit.Env, cases *midl.UnionCase) []*midl.Field {
 
 	if p.IsEmbeddedArmStruct(ctx, cases) {
 		return cases.Arms[0].Type.Struct.Fields
@@ -415,11 +416,11 @@ func (p *TypeGenerator) ArmFields(ctx *Env, cases *midl.UnionCase) []*midl.Field
 	return cases.Arms
 }
 
-func (p *TypeGenerator) IsEmbeddedArmStruct(ctx *Env, cases *midl.UnionCase) bool {
+func (p *TypeGenerator) IsEmbeddedArmStruct(ctx *emit.Env, cases *midl.UnionCase) bool {
 	return len(cases.Arms) > 0 && (cases.Arms[0].Type.Is(midl.TypeStruct) || cases.Arms[0].Type.Is(midl.TypeUnion)) && cases.Arms[0].Type.Name == "" && cases.Arms[0].Type.Tag == ""
 }
 
-func (p *TypeGenerator) GenUnionArmMarshalNDR(ctx *Env, arm *midl.UnionCase, caseName string) {
+func (p *TypeGenerator) GenUnionArmMarshalNDR(ctx *emit.Env, arm *midl.UnionCase, caseName string) {
 
 	p.P()
 	p.P("func", "(o *"+caseName+")", "MarshalNDR(ctx context.Context, w ndr.Writer)", "error", "{")

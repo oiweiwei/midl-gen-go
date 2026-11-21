@@ -1,12 +1,13 @@
-package gen
+package golang
 
 import (
 	"path/filepath"
 
+	"github.com/oiweiwei/midl-gen-go/codegen/golang/emit"
 	"github.com/oiweiwei/midl-gen-go/midl"
 )
 
-func (p *Generator) GenClientSet(ctx *Env, f *midl.File) {
+func (p *Generator) GenClientSet(ctx *emit.Env, f *midl.File) {
 
 	n := "Client"
 
@@ -29,12 +30,12 @@ func (p *Generator) GenClientSet(ctx *Env, f *midl.File) {
 	}
 
 	if !f.PkgIs("dcom") {
-		p.AddImport(Import{
+		p.AddImport(emit.Import{
 			Name: "dcom_client",
 			Path: filepath.Join(dcom.GoPkgBase, "dcom", "client"),
 		})
 	}
-	p.AddImport(Import{
+	p.AddImport(emit.Import{
 		Name: "dcom",
 		Path: filepath.Join(dcom.GoPkgBase, "dcom"),
 	})
@@ -47,7 +48,7 @@ func (p *Generator) GenClientSet(ctx *Env, f *midl.File) {
 			for _, iff := range dcom.Interfaces {
 				ctx := p.WithInterfaceNamer(ctx, iff)
 				if iff.Body.Operations != nil && iff.Base != nil {
-					p.P(GoName(ctx, iff.Name), "()", p.GoInterfaceTypeName(ctx, iff, hook))
+					p.P(emit.GoName(ctx, iff.Name), "()", p.GoInterfaceTypeName(ctx, iff, hook))
 				}
 			}
 		}
@@ -55,7 +56,7 @@ func (p *Generator) GenClientSet(ctx *Env, f *midl.File) {
 		p.P("//", "Package specific interfaces")
 		for _, iff := range f.Interfaces {
 			if iff.Body.Operations != nil && iff.Base != nil {
-				p.P(GoName(ctx, iff.Name), "()", p.GoInterfaceTypeName(ctx, iff, hook))
+				p.P(emit.GoName(ctx, iff.Name), "()", p.GoInterfaceTypeName(ctx, iff, hook))
 			}
 		}
 		p.P("//", "AlterContext alters the client context.")
@@ -78,7 +79,7 @@ func (p *Generator) GenClientSet(ctx *Env, f *midl.File) {
 		}
 		for _, iff := range f.Interfaces {
 			if iff.Body.Operations != nil && iff.Base != nil {
-				p.P(GoNamePrivate(ctx, iff.Name), p.GoInterfaceTypeName(ctx, iff, hook))
+				p.P(emit.GoNamePrivate(ctx, iff.Name), p.GoInterfaceTypeName(ctx, iff, hook))
 			}
 		}
 	})
@@ -88,8 +89,8 @@ func (p *Generator) GenClientSet(ctx *Env, f *midl.File) {
 			ctx := p.WithInterfaceNamer(ctx, iff)
 			if iff.Body.Operations != nil && iff.Base != nil {
 				p.P()
-				p.P("func", "(o *"+dn+")", GoName(ctx, iff.Name), "()", p.GoInterfaceTypeName(ctx, iff, hook), "{")
-				p.P("return", p.O("dcomClient"+"."+GoName(ctx, iff.Name)), "()")
+				p.P("func", "(o *"+dn+")", emit.GoName(ctx, iff.Name), "()", p.GoInterfaceTypeName(ctx, iff, hook), "{")
+				p.P("return", p.O("dcomClient"+"."+emit.GoName(ctx, iff.Name)), "()")
 				p.P("}")
 			}
 		}
@@ -98,8 +99,8 @@ func (p *Generator) GenClientSet(ctx *Env, f *midl.File) {
 	for _, iff := range f.Interfaces {
 		if iff.Body.Operations != nil && iff.Base != nil {
 			p.P()
-			p.P("func", "(o *"+dn+")", GoName(ctx, iff.Name), "()", p.GoInterfaceTypeName(ctx, iff, hook), "{")
-			p.P("return", p.O(GoNamePrivate(ctx, iff.Name)))
+			p.P("func", "(o *"+dn+")", emit.GoName(ctx, iff.Name), "()", p.GoInterfaceTypeName(ctx, iff, hook), "{")
+			p.P("return", p.O(emit.GoNamePrivate(ctx, iff.Name)))
 			p.P("}")
 		}
 	}
@@ -148,7 +149,7 @@ func (p *Generator) GenClientSet(ctx *Env, f *midl.File) {
 		for _, iff := range f.Interfaces {
 			if iff.Body.Operations != nil && iff.Base != nil {
 				p.P()
-				iffName := GoNamePrivate(ctx, iff.Name)
+				iffName := emit.GoNamePrivate(ctx, iff.Name)
 				p.P(iffName+"SubConn, err", ":=", p.B("sub.SubConn", "ctx", p.SyntaxNameWithImport(ctx, iff)))
 				p.If("err != nil", func() {
 					p.P("//", "XXX: use main subconnection as a last resort")
@@ -157,7 +158,7 @@ func (p *Generator) GenClientSet(ctx *Env, f *midl.File) {
 				})
 				p.P()
 				hook := func(n string) string { return "New" + n + "Client" }
-				p.P("o."+GoNamePrivate(ctx, iff.Name), ",", "err", "=",
+				p.P("o."+emit.GoNamePrivate(ctx, iff.Name), ",", "err", "=",
 					p.B(p.GoInterfaceTypeName(ctx, iff, hook),
 						"ctx", iffName+"SubConn",
 						p.B("append", "opts", p.B("dcerpc.WithNoBind", iffName+"SubConn"))+"..."))
@@ -186,7 +187,7 @@ func (p *Generator) GenClientSet(ctx *Env, f *midl.File) {
 			}
 			for _, iff := range f.Interfaces {
 				if iff.Body.Operations != nil && iff.Base != nil {
-					p.P(GoNamePrivate(ctx, iff.Name), ":", p.O(GoNamePrivate(ctx, iff.Name)+"."+p.B("IPID", "ctx", "ipid")), ",")
+					p.P(emit.GoNamePrivate(ctx, iff.Name), ":", p.O(emit.GoNamePrivate(ctx, iff.Name)+"."+p.B("IPID", "ctx", "ipid")), ",")
 				}
 			}
 			p.P("cc", ":", "o.cc,")

@@ -1,4 +1,4 @@
-package gen
+package emit
 
 import (
 	"github.com/oiweiwei/midl-gen-go/codegen/goprint"
@@ -9,7 +9,7 @@ import (
 type Import = goprint.Import
 
 // GenPackageImportGuard emits the exported GoPackage variable of the package.
-func (p *Generator) GenPackageImportGuard(ctx *Env) {
+func (p *Emitter) GenPackageImportGuard(ctx *Env) {
 	p.P("")
 	p.P("var (")
 	p.P("//", "import guard")
@@ -35,7 +35,7 @@ var (
 	}
 )
 
-func (p *Generator) GenPackage(ctx *Env, f *midl.File) {
+func (p *Emitter) GenPackage(ctx *Env, f *midl.File) {
 	p.P("package", p.out.PackageName[lastSlash(p.out.PackageName)+1:])
 }
 
@@ -51,6 +51,6 @@ func lastSlash(s string) int {
 // AddImport registers a candidate import for the file being generated and
 // returns the identifier the generated code must use to refer to the package.
 // The import is written only if the code refers to it.
-func (p *Generator) AddImport(imp Import) string {
+func (p *Emitter) AddImport(imp Import) string {
 	return p.out.Imports.Add(imp)
 }

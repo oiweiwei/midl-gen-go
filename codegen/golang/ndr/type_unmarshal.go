@@ -1,15 +1,16 @@
-package gen
+package ndr
 
 import (
+	"github.com/oiweiwei/midl-gen-go/codegen/golang/emit"
 	"github.com/oiweiwei/midl-gen-go/desc"
 	"github.com/oiweiwei/midl-gen-go/desc/ndr"
 	"github.com/oiweiwei/midl-gen-go/midl"
 )
 
-func (p *TypeGenerator) GenStructUnmarshalNDR(ctx *Env) {
+func (p *TypeGenerator) GenStructUnmarshalNDR(ctx *emit.Env) {
 
 	trailingField := p.Struct().LastFieldIndex()
-	if ndr.IsConformant(p.Scopes) || ndr.IsVarying(p.Scopes) {
+	if ndr.IsConformant(p.Cursor) || ndr.IsVarying(p.Cursor) {
 		trailingField--
 	}
 
@@ -19,13 +20,13 @@ func (p *TypeGenerator) GenStructUnmarshalNDR(ctx *Env) {
 		// write size information.
 		p.GenStructUnmarshalNDRSizePreamble(ctx, p.StructLastField())
 		// align the structure.
-		p.GenDoAlignmentUnmarshalNDR(ctx, ndr.Alignment(p.Scopes))
+		p.GenDoAlignmentUnmarshalNDR(ctx, ndr.Alignment(p.Cursor))
 		// unmarshal fields.
 		for i, field := range p.Struct().Fields {
 			p.GenFieldUnmarshalNDR(ctx, field, desc.Of(field))
 			if i == trailingField {
-				if f := desc.Of(field); ndr.PlainAlignment(f) != ndr.PlainAlignment(p.Scopes) {
-					p.GenDoTrailingGapUnmarshalNDR(ctx, ndr.Alignment(p.Scopes))
+				if f := desc.Of(field); ndr.PlainAlignment(f) != ndr.PlainAlignment(p.Cursor) {
+					p.GenDoTrailingGapUnmarshalNDR(ctx, ndr.Alignment(p.Cursor))
 				}
 			}
 		}
@@ -50,7 +51,7 @@ func (p *TypeGenerator) GenStructUnmarshalNDR(ctx *Env) {
 
 }
 
-func (p *TypeGenerator) GenStructUnmarshalNDRSizeCheck(ctx *Env) {
+func (p *TypeGenerator) GenStructUnmarshalNDRSizeCheck(ctx *emit.Env) {
 	if rng := p.Layer().Range; rng != nil {
 		if rng.Min == rng.Max && rng.Min > 0 {
 			p.If("w.Len()", "!=", rng.Min, "/* size-is check */", func() {
@@ -71,8 +72,8 @@ func (p *TypeGenerator) GenStructUnmarshalNDRSizeCheck(ctx *Env) {
 	}
 }
 
-func (p *TypeGenerator) GenStructUnmarshalNDRSizePreamble(ctx *Env, field *midl.Field) {
-	if !ndr.IsConformant(p.Scopes) {
+func (p *TypeGenerator) GenStructUnmarshalNDRSizePreamble(ctx *emit.Env, field *midl.Field) {
+	if !ndr.IsConformant(p.Cursor) {
 		return
 	}
 	p.P("sizeInfo, ok := ctx.Value(ndr.SizeInfo).([]uint64)")
@@ -85,11 +86,11 @@ func (p *TypeGenerator) GenStructUnmarshalNDRSizePreamble(ctx *Env, field *midl.
 	})
 }
 
-func (p *Generator) GenReadSize(ctx *Env, sz interface{}) {
+func (p *Emitter) GenReadSize(ctx *emit.Env, sz interface{}) {
 	p.CheckErr(p.B("w.ReadSize", p.Amp(sz)))
 }
 
-func (p *TypeGenerator) GenFieldUnmarshalNDR(ctx *Env, field *midl.Field, scopes *Scopes, index ...interface{}) {
+func (p *TypeGenerator) GenFieldUnmarshalNDR(ctx *emit.Env, field *midl.Field, scopes *desc.Cursor, index ...interface{}) {
 
 	if scopes == nil || field.Attrs.Ignore {
 		// end.
@@ -125,7 +126,7 @@ func (p *TypeGenerator) GenFieldUnmarshalNDR(ctx *Env, field *midl.Field, scopes
 
 		if scopes.IsBool() && midl.PrimitiveTypeSize(scopes.Kind()) > 1 {
 
-			typeName := GoPrimitiveTypeName(scopes.Kind())
+			typeName := emit.GoPrimitiveTypeName(scopes.Kind())
 
 			varName := "_b" + p.ToVar(name)
 			p.P("var", varName, typeName)
@@ -224,9 +225,9 @@ func (p *TypeGenerator) GenFieldUnmarshalNDR(ctx *Env, field *midl.Field, scopes
 			})
 		})
 
-		if HasNullMaskBit(ctx, field) && scopes.Next().Type().IsPrimitiveType() {
+		if emit.HasNullMaskBit(ctx, field) && scopes.Next().Type().IsPrimitiveType() {
 			mN := "_m" + "_" + field.Name
-			p.P(mN, ":=", "func() {", p.O(p.NullMask()), "|=", ctx.NullMask+GoFieldName(ctx, field), "}")
+			p.P(mN, ":=", "func() {", p.O(p.NullMask()), "|=", ctx.NullMask+emit.GoFieldName(ctx, field), "}")
 			// read the pointer.
 			p.CheckErr(p.GenReadPointer(ctx, scopes, p.Amp(name), sN, mN, fN))
 		} else {
@@ -428,7 +429,7 @@ func (p *TypeGenerator) GenFieldUnmarshalNDR(ctx *Env, field *midl.Field, scopes
 
 		if field.Attrs.Format.Hex {
 			varName := "_hex_" + field.Name
-			p.P(varName, ",", "err", ":=", p.B(p.AddImport(HexImport)+"."+"DecodeString", p.B("string", name)))
+			p.P(varName, ",", "err", ":=", p.B(p.AddImport(emit.HexImport)+"."+"DecodeString", p.B("string", name)))
 			p.If("err", "!=", "nil", func() {
 				p.P("return", "err")
 			})
@@ -456,7 +457,7 @@ func (p *TypeGenerator) GenFieldUnmarshalNDR(ctx *Env, field *midl.Field, scopes
 
 }
 
-func (p *TypeGenerator) GenStringBufferUnmarshalNDR(ctx *Env, field *midl.Field, scopes *Scopes, name, origName string) {
+func (p *TypeGenerator) GenStringBufferUnmarshalNDR(ctx *emit.Env, field *midl.Field, scopes *desc.Cursor, name, origName string) {
 
 	// convert utf16/byte array back to string.
 	switch scopes := scopes.Next(); scopes.Kind() {

@@ -1,28 +1,20 @@
-package gen
+package golang
 
 import (
 	"fmt"
-	"regexp"
 	"strconv"
 
+	"github.com/oiweiwei/midl-gen-go/codegen/golang/emit"
 	"github.com/oiweiwei/midl-gen-go/codegen/goprint"
 	"github.com/oiweiwei/midl-gen-go/desc"
 	"github.com/oiweiwei/midl-gen-go/midl"
 )
 
-var (
-	notUsedOpRe = regexp.MustCompile("(NotUsedOnWire)|(NotImplemented)|(LSA_DP)|(LSA_TM)|(Unused)|(Opnum\\d+Reserved)|(Reserved_Opnum\\d+)|(Reserved\\d+)|(Opnum\\d+NotUsedByProtocol)")
-)
-
-func (p *Generator) IsUnusedOp(n string) bool {
-	return notUsedOpRe.MatchString(n)
-}
-
 // GenServerHandle generates the registration function and the operation
 // dispatcher of the server interface.
-func (p *Generator) GenServerHandle(ctx *Env, iff *midl.Interface) {
+func (p *Generator) GenServerHandle(ctx *emit.Env, iff *midl.Interface) {
 
-	n := GoName(ctx, iff.Name) + "Server"
+	n := emit.GoName(ctx, iff.Name) + "Server"
 
 	w := p.W()
 
@@ -79,11 +71,11 @@ func (p *Generator) GenServerHandle(ctx *Env, iff *midl.Interface) {
 					w.Return("nil", "nil")
 					continue
 				}
-				w.Line("op", ":=", goprint.Amp(p.OpName(ctx, op, AnyParam))+"{}")
+				w.Line("op", ":=", goprint.Amp(p.OpName(ctx, op, emit.AnyParam))+"{}")
 				w.If("err := op.UnmarshalNDRRequest(ctx, r); err != nil", func() {
 					w.Return("nil", "err")
 				})
-				w.Line("req", ":=", goprint.Amp(p.OpName(ctx, op, InParam)+"{}"))
+				w.Line("req", ":=", goprint.Amp(p.OpName(ctx, op, emit.InParam)+"{}"))
 				w.Line("req." + goprint.Call(p.XXX()+"FromOp", "ctx", "op"))
 				w.Line("resp, err", ":=", goprint.Call("o."+p.MethodName(ctx, op), "ctx", "req"))
 				w.Return("resp."+p.XXX()+"ToOp(ctx, op)", "err")
@@ -94,9 +86,9 @@ func (p *Generator) GenServerHandle(ctx *Env, iff *midl.Interface) {
 	})
 }
 
-func (p *Generator) GenServerInterface(ctx *Env, iff *midl.Interface) {
+func (p *Generator) GenServerInterface(ctx *emit.Env, iff *midl.Interface) {
 
-	n := GoName(ctx, iff.Name) + "Server"
+	n := emit.GoName(ctx, iff.Name) + "Server"
 
 	p.P()
 	p.P("//", iff.Name, "server interface.")
@@ -132,16 +124,16 @@ func (p *Generator) GenServerInterface(ctx *Env, iff *midl.Interface) {
 
 			p.P(p.B(p.MethodName(ctx, op),
 				"context.Context",
-				"*"+p.OpName(ctx, op, InParam),
+				"*"+p.OpName(ctx, op, emit.InParam),
 			),
-				p.B("", "*"+p.OpName(ctx, op, OutParam), "error"))
+				p.B("", "*"+p.OpName(ctx, op, emit.OutParam), "error"))
 		}
 	})
 }
 
-func (p *Generator) GenUnplementedServer(ctx *Env, iff *midl.Interface) {
+func (p *Generator) GenUnplementedServer(ctx *emit.Env, iff *midl.Interface) {
 
-	n := "Unimplemented" + GoName(ctx, iff.Name) + "Server"
+	n := "Unimplemented" + emit.GoName(ctx, iff.Name) + "Server"
 
 	p.P()
 	p.P("//", "Unimplemented", iff.Name)
@@ -160,16 +152,16 @@ func (p *Generator) GenUnplementedServer(ctx *Env, iff *midl.Interface) {
 		if p.IsUnusedOp(op.Name) {
 			continue
 		}
-		p.P("func", p.B("", n), p.B(p.MethodName(ctx, op), "context.Context", "*"+p.OpName(ctx, op, InParam)),
-			p.B("", "*"+p.OpName(ctx, op, OutParam), "error"), "{ return nil, dcerpc.ErrNotImplemented }")
+		p.P("func", p.B("", n), p.B(p.MethodName(ctx, op), "context.Context", "*"+p.OpName(ctx, op, emit.InParam)),
+			p.B("", "*"+p.OpName(ctx, op, emit.OutParam), "error"), "{ return nil, dcerpc.ErrNotImplemented }")
 	}
 	p.P()
-	p.P("var", "_", GoName(ctx, iff.Name)+"Server", "=", p.B("", "*"+n), p.B("", "nil"))
+	p.P("var", "_", emit.GoName(ctx, iff.Name)+"Server", "=", p.B("", "*"+n), p.B("", "nil"))
 }
 
-func (p *Generator) GenClient(ctx *Env, iff *midl.Interface) {
+func (p *Generator) GenClient(ctx *emit.Env, iff *midl.Interface) {
 
-	n := GoName(ctx, iff.Name) + "Client"
+	n := emit.GoName(ctx, iff.Name) + "Client"
 
 	dn := p.XXX() + "Default" + n
 
@@ -189,8 +181,8 @@ func (p *Generator) GenClient(ctx *Env, iff *midl.Interface) {
 
 	if iff.IsObject() && iff.Base != nil {
 		ctx := p.WithInterfaceBaseNamer(ctx, iff)
-		p.Block("func", "(o *"+dn+")", p.B(GoName(ctx, iff.BaseName)), p.GoInterfaceTypeName(ctx, iff.Base, func(n string) string { return n + "Client" }), func() {
-			p.P("return", p.O(GoName(ctx, iff.BaseName)+"Client"))
+		p.Block("func", "(o *"+dn+")", p.B(emit.GoName(ctx, iff.BaseName)), p.GoInterfaceTypeName(ctx, iff.Base, func(n string) string { return n + "Client" }), func() {
+			p.P("return", p.O(emit.GoName(ctx, iff.BaseName)+"Client"))
 		})
 	}
 
@@ -203,10 +195,10 @@ func (p *Generator) GenClient(ctx *Env, iff *midl.Interface) {
 		p.P()
 		p.P("func", "(o *"+dn+")",
 			p.B(p.MethodName(ctx, op),
-				"ctx context.Context", "in *"+p.OpName(ctx, op, InParam), "opts ...dcerpc.CallOption",
+				"ctx context.Context", "in *"+p.OpName(ctx, op, emit.InParam), "opts ...dcerpc.CallOption",
 			),
 			p.B("",
-				"*"+p.OpName(ctx, op, OutParam), "error",
+				"*"+p.OpName(ctx, op, emit.OutParam), "error",
 			), "{")
 		p.P("op", ":=", p.B("in."+p.XXX()+"ToOp", "ctx", "nil"))
 		if iff.IsObject() {
@@ -221,7 +213,7 @@ func (p *Generator) GenClient(ctx *Env, iff *midl.Interface) {
 		p.If("err", ":=", p.B("o.cc.Invoke", "ctx", "op", "opts..."), ";", "err != nil", func() {
 			p.P("return", "nil, err")
 		})
-		p.P("out", ":=", p.Amp(p.OpName(ctx, op, OutParam)+"{}"))
+		p.P("out", ":=", p.Amp(p.OpName(ctx, op, emit.OutParam)+"{}"))
 		p.P(p.B("out."+p.XXX()+"FromOp", "ctx", "op"))
 
 		if !op.Type.Is(midl.TypeVoid) {
@@ -240,8 +232,8 @@ func (p *Generator) GenClient(ctx *Env, iff *midl.Interface) {
 				cmp = "<"
 			}
 
-			p.If("op."+GoParamName(ctx.WithOwner(op.Name), param), cmp, p.GoTypeZeroValue(ctx, nil, field, desc.Of(field)), func() {
-				p.P("return", "out", ",", p.B("fmt.Errorf", `"%s: %w"`, "op.OpName()", p.B("o.cc.Error", "ctx", "op."+GoParamName(ctx.WithOwner(op.Name), param))))
+			p.If("op."+emit.GoParamName(ctx.WithOwner(op.Name), param), cmp, p.GoTypeZeroValue(ctx, nil, field, desc.Of(field)), func() {
+				p.P("return", "out", ",", p.B("fmt.Errorf", `"%s: %w"`, "op.OpName()", p.B("o.cc.Error", "ctx", "op."+emit.GoParamName(ctx.WithOwner(op.Name), param))))
 			})
 		}
 
@@ -266,7 +258,7 @@ func (p *Generator) GenClient(ctx *Env, iff *midl.Interface) {
 			p.Block("return", "&", dn, func() {
 				if iff.Base != nil {
 					ctx := p.WithInterfaceBaseNamer(ctx, iff)
-					p.P(GoName(ctx, iff.BaseName)+"Client", ":", p.O(GoName(ctx, iff.BaseName)+"Client"+"."+p.B("IPID", "ctx", "ipid")), ",")
+					p.P(emit.GoName(ctx, iff.BaseName)+"Client", ":", p.O(emit.GoName(ctx, iff.BaseName)+"Client"+"."+p.B("IPID", "ctx", "ipid")), ",")
 				}
 				p.P("cc", ":", "o.cc,")
 				p.P("ipid", ":", "ipid,")
@@ -309,7 +301,7 @@ func (p *Generator) GenClient(ctx *Env, iff *midl.Interface) {
 			p.Block("return", "&", dn, func() {
 				if iff.Base != nil {
 					ctx := p.WithInterfaceBaseNamer(ctx, iff)
-					p.P(GoName(ctx, iff.BaseName)+"Client", ":", "base", ",")
+					p.P(emit.GoName(ctx, iff.BaseName)+"Client", ":", "base", ",")
 				}
 				p.P("cc", ":", "cc,")
 				p.P("ipid", ":", "ipid,")
@@ -325,8 +317,8 @@ func (p *Generator) GenClient(ctx *Env, iff *midl.Interface) {
 	})
 }
 
-func (p *Generator) GenClientInterface(ctx *Env, iff *midl.Interface) {
-	n := GoName(ctx, iff.Name) + "Client"
+func (p *Generator) GenClientInterface(ctx *emit.Env, iff *midl.Interface) {
+	n := emit.GoName(ctx, iff.Name) + "Client"
 	p.P()
 	p.P("//", iff.Name, "interface.")
 	p.Block("type", n, "interface", func() {
@@ -337,7 +329,7 @@ func (p *Generator) GenClientInterface(ctx *Env, iff *midl.Interface) {
 			// p.P(p.GoInterfaceTypeName(ctx, iff.Base, baseN))
 			p.P()
 			p.P("//", iff.BaseName, "retrieval method.")
-			p.P(p.B(GoName(ctx, iff.BaseName)), p.GoInterfaceTypeName(ctx, iff.Base, func(n string) string { return n + "Client" }))
+			p.P(p.B(emit.GoName(ctx, iff.BaseName)), p.GoInterfaceTypeName(ctx, iff.Base, func(n string) string { return n + "Client" }))
 		}
 		for _, op := range iff.Body.Operations {
 			// gen operation doc.
@@ -362,10 +354,10 @@ func (p *Generator) GenClientInterface(ctx *Env, iff *midl.Interface) {
 
 			p.P(p.B(p.MethodName(ctx, op),
 				"context.Context",
-				"*"+p.OpName(ctx, op, InParam),
+				"*"+p.OpName(ctx, op, emit.InParam),
 				"...dcerpc.CallOption",
 			),
-				p.B("", "*"+p.OpName(ctx, op, OutParam), "error"))
+				p.B("", "*"+p.OpName(ctx, op, emit.OutParam), "error"))
 		}
 
 		p.P()
@@ -383,8 +375,8 @@ func (p *Generator) GenClientInterface(ctx *Env, iff *midl.Interface) {
 	})
 }
 
-func (p *Generator) SyntaxName(ctx *Env, iff *midl.Interface) string {
-	n := GoName(ctx, iff.Name) + "Syntax"
+func (p *Generator) SyntaxName(ctx *emit.Env, iff *midl.Interface) string {
+	n := emit.GoName(ctx, iff.Name) + "Syntax"
 	ver := iff.Attrs.Version
 	if ver == nil {
 		ver = &midl.Version{}
@@ -392,7 +384,7 @@ func (p *Generator) SyntaxName(ctx *Env, iff *midl.Interface) string {
 	return fmt.Sprintf("%sV%d_%d", n, ver.Major, ver.Minor)
 }
 
-func (p *Generator) SyntaxNameWithImport(ctx *Env, iff *midl.Interface) string {
+func (p *Generator) SyntaxNameWithImport(ctx *emit.Env, iff *midl.Interface) string {
 	n := p.GoInterfaceTypeName(ctx, iff) + "Syntax"
 	ver := iff.Attrs.Version
 	if ver == nil {
@@ -401,20 +393,20 @@ func (p *Generator) SyntaxNameWithImport(ctx *Env, iff *midl.Interface) string {
 	return fmt.Sprintf("%sV%d_%d", n, ver.Major, ver.Minor)
 }
 
-func (p *Generator) GenInterfaceID(ctx *Env, iff *midl.Interface) {
+func (p *Generator) GenInterfaceID(ctx *emit.Env, iff *midl.Interface) {
 
 	if iff.Attrs.UUID == nil {
 		return
 	}
 
-	n := GoName(ctx, iff.Name) + "Syntax"
+	n := emit.GoName(ctx, iff.Name) + "Syntax"
 
 	p.P()
 	p.P("var", "(")
 	if iff.IsObject() {
 		_ = p.GoPackageName(ctx, desc.OfType(p.Session.LookupType("IID")))
 		p.P("//", iff.Name, "interface", "identifier", iff.Attrs.UUID)
-		p.P(GoName(ctx, iff.Name)+"IID", "=", "&dcom.IID", UUIDToGUID(iff.Attrs.UUID))
+		p.P(emit.GoName(ctx, iff.Name)+"IID", "=", "&dcom.IID", emit.UUIDToGUID(iff.Attrs.UUID))
 	}
 
 	p.P("//", "Syntax UUID")
