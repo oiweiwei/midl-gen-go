@@ -17,6 +17,11 @@ import (
 type Config struct {
 	// Rename maps a whole identifier to the words of its Go name.
 	Rename map[string][]string `yaml:"rename"`
+	// Override renames one member of one owner: the owner is the IDL name of a
+	// struct, union, enum or operation, the member the IDL name of its field,
+	// parameter or element, and the value the words of the Go name. It applies to
+	// that member only and takes precedence over every other rule.
+	Override map[string]map[string][]string `yaml:"override"`
 	// Rotate maps a leading word to the word that is moved to the end.
 	Rotate map[string]string `yaml:"rotate"`
 	// Abbr maps a lower case word to the exact spelling used in the Go name.
@@ -56,6 +61,7 @@ func (c *Config) Merge(other *Config) *Config {
 
 	out := &Config{
 		Rename:     map[string][]string{},
+		Override:   map[string]map[string][]string{},
 		Rotate:     map[string]string{},
 		Abbr:       map[string]string{},
 		Split:      map[string][]string{},
@@ -68,6 +74,16 @@ func (c *Config) Merge(other *Config) *Config {
 		}
 		for k, v := range src.Rename {
 			out.Rename[k] = append([]string(nil), v...)
+		}
+		for owner, members := range src.Override {
+			m := out.Override[owner]
+			if m == nil {
+				m = map[string][]string{}
+				out.Override[owner] = m
+			}
+			for member, words := range members {
+				m[member] = append([]string(nil), words...)
+			}
 		}
 		for k, v := range src.Rotate {
 			out.Rotate[k] = v

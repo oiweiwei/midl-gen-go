@@ -166,3 +166,38 @@ abbr:
   api: API
   attr: Attribute
 ```
+
+## Overriding one name
+
+The rules above are global. To rename one field of one struct (or one parameter of one
+operation, or one element of one enum) without touching anything else, use `override`:
+
+```yaml
+override:
+  SAMPR_USER_ALL_INFORMATION:     # the owner: the typedef name of the struct, union or enum
+    NtOwfPassword: [Nt, Hash]     #   member (IDL name): the words of the Go name -> NtHash
+  rpc__mgmt_inq_stats:            # an operation; its members are its parameters
+    count: [Max, Count]
+```
+
+* The **owner** is the name the type is declared with (the typedef name, or the tag if there
+  is none), or the operation name. The **member** is the IDL name of the field, union arm,
+  parameter or enumeration element.
+* The value is the list of words, as for `rename`; it wins over every other rule and applies to
+  that member only.
+* It changes the Go identifier everywhere the member is used (the declaration, the marshalling
+  code, the `size_is` expressions of other members). It does not change the `json` tag or the
+  `idl:"name:..."` tag: those follow the IDL name, so the wire formats stay as they were.
+* Per-IDL overrides are written under `gonames.idl` in `config.yaml`, as for the other rules.
+
+## Seeing how a name is derived
+
+```
+midl-gen-go symbols -I idl idl/epm.idl --kind field --match ept_entry
+midl-gen-go symbols -I idl idl/samr.idl --match 'NtOwfPassword$' --explain
+```
+
+lists every name of the file with the Go name the generator gives it, the words, and the rules
+that fired (`override`, `rename`, `trim.prefixAll`, `trim.suffix`, `lookBehind`, `split`,
+`rotate`, `trim.prefix`, `trim.word`, `abbr`, `acronym`, `reserved`, ...). The OWNER column is the
+key to use in `override`. `--explain` shows every step; `--json` gives the same for scripts.

@@ -240,8 +240,8 @@ func (p *Generator) GenClient(ctx *Env, iff *midl.Interface) {
 				cmp = "<"
 			}
 
-			p.If("op."+GoName(ctx, field.Name), cmp, p.GoTypeZeroValue(ctx, nil, field, desc.Of(field)), func() {
-				p.P("return", "out", ",", p.B("fmt.Errorf", `"%s: %w"`, "op.OpName()", p.B("o.cc.Error", "ctx", "op."+GoName(ctx, field.Name))))
+			p.If("op."+GoParamName(ctx.WithOwner(op.Name), param), cmp, p.GoTypeZeroValue(ctx, nil, field, desc.Of(field)), func() {
+				p.P("return", "out", ",", p.B("fmt.Errorf", `"%s: %w"`, "op.OpName()", p.B("o.cc.Error", "ctx", "op."+GoParamName(ctx.WithOwner(op.Name), param))))
 			})
 		}
 

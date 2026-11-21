@@ -410,6 +410,8 @@ func (p *Generator) GenType(ctx *Env, t *midl.Type) {
 		return
 	}
 
+	ctx = ctx.WithOwner(pp.OwnerName())
+
 	switch {
 	case pp.Is(midl.TypeStruct):
 		pp.GenStruct(ctx)

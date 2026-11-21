@@ -166,7 +166,7 @@ func (p *Generator) IVar(n string, idxs ...interface{}) string {
 
 // EO function generates the O with namer.
 func (p *Generator) EO(ctx *Env, n string) string {
-	return p.O(GoName(ctx, n))
+	return p.O(GoMemberName(ctx, n))
 }
 
 func (p *Generator) EOWithCtx(ctx *Env) func(string) string {

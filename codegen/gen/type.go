@@ -36,6 +36,15 @@ func (p *Generator) NewTypeGenerator(ctx *Env, typ *midl.Type) *TypeGenerator {
 	}
 }
 
+// OwnerName is the IDL name the members of the type are overridden by: the
+// name of the typedef if there is one, else the tag.
+func (p *TypeGenerator) OwnerName() string {
+	if alias := p.Alias(); alias != "" {
+		return alias
+	}
+	return p.Type().Tag
+}
+
 func (p *TypeGenerator) Skip() bool {
 	return p.Scopes == nil || p.Layer().Alias == ""
 }
@@ -159,14 +168,14 @@ func (p *TypeGenerator) GenEnum(ctx *Env) {
 		if doc, ok := p.Doc.GetSection(enum.Value); ok {
 			p.GenComment(ctx, doc.Documentation)
 		}
-		p.P(GoMergeNames(ctx, p.GoTypeName, GoNameNoReserved(ctx, enum.Value)), p.GoTypeName, "=", strconv.Itoa(enum.ID))
+		p.P(GoMergeNames(ctx, p.GoTypeName, GoMemberNameNoReserved(ctx, enum.Value)), p.GoTypeName, "=", strconv.Itoa(enum.ID))
 	}
 	p.P(")")
 	p.P()
 	p.Block("func", "(o "+p.GoTypeName+")", "String()", "string", func() {
 		p.Block("switch o", func() {
 			for _, enum := range p.Enum().Elems {
-				n := GoMergeNames(ctx, p.GoTypeName, GoNameNoReserved(ctx, enum.Value))
+				n := GoMergeNames(ctx, p.GoTypeName, GoMemberNameNoReserved(ctx, enum.Value))
 				p.P("case", n, ":")
 				p.P("return", p.Q(n))
 			}
@@ -465,7 +474,7 @@ func (p *TypeGenerator) GenStructPreparePayloadSizeExpr(ctx *Env, field *midl.Fi
 		if szField.Name != target {
 			continue
 		}
-		szN := GoName(ctx, szField.Name)
+		szN := GoMemberName(ctx, szField.Name)
 		szT := p.GoFieldTypeName(ctx, p.Layer(), szField)
 		// ... if o.Data != nil && o.DataLen == 0 ...
 		p.If(p.O(n), "!=", p.GoTypeZeroValue(ctx, p.Layer(), field, scopes), "&&", p.O(szN), "==", "0", func() {

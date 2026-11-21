@@ -7,7 +7,9 @@ import (
 	"log/slog"
 	"os"
 	"path/filepath"
+	"regexp"
 	"strings"
+	"text/tabwriter"
 
 	"github.com/oiweiwei/midl-gen-go/codegen/gen"
 	"github.com/oiweiwei/midl-gen-go/logx"
@@ -160,6 +162,108 @@ func newDumpCmd() *cobra.Command {
 	return cmd
 }
 
+func newSymbolsCmd() *cobra.Command {
+	var (
+		includes []string
+		kinds    []string
+		match    string
+		explain  bool
+		asJSON   bool
+	)
+
+	cmd := &cobra.Command{
+		Use:   "symbols [flags] file.idl ...",
+		Short: "List the IDL names and the Go names they are given, and how",
+		Long: `List the names of IDL files (constants, types, fields, union arms, enumeration elements,
+interfaces, operations and parameters) with the Go name the generator gives each, the words
+the name consists of and the naming rules that fired.
+
+It uses the naming functions of the generator, so it shows what the generated code will have.
+The OWNER column is the key of the "override" section of the gonames rules: to rename one
+field of one struct, write
+
+    override:
+      OWNER:
+        IDL: [Words, Of, The, Name]
+
+Use --explain to see every step of the derivation of a name.`,
+		Args: cobra.MinimumNArgs(1),
+		RunE: func(cmd *cobra.Command, args []string) error {
+
+			var re *regexp.Regexp
+			if match != "" {
+				var err error
+				if re, err = regexp.Compile(match); err != nil {
+					return fmt.Errorf("--match: %w", err)
+				}
+			}
+
+			want := map[string]bool{}
+			for _, k := range kinds {
+				want[k] = true
+			}
+
+			sess := newSession(includes, newLogger(false))
+
+			files, err := collectFiles(args)
+			if err != nil {
+				return fmt.Errorf("collect files: %w", err)
+			}
+
+			var symbols []gen.Symbol
+
+			for _, fn := range files {
+				f, err := sess.Load(fn)
+				if err != nil {
+					return fmt.Errorf("%s: %w", fn, err)
+				}
+				p := &gen.Generator{Session: sess}
+				for _, sym := range p.Symbols(context.Background(), f) {
+					if len(want) > 0 && !want[sym.Kind] {
+						continue
+					}
+					if re != nil && !re.MatchString(sym.Owner+"."+sym.IDL) && !re.MatchString(sym.Go) {
+						continue
+					}
+					symbols = append(symbols, sym)
+				}
+			}
+
+			if asJSON {
+				enc := json.NewEncoder(os.Stdout)
+				enc.SetIndent("", "  ")
+				return enc.Encode(symbols)
+			}
+
+			w := tabwriter.NewWriter(os.Stdout, 0, 4, 2, ' ', 0)
+			fmt.Fprintln(w, "KIND\tOWNER\tIDL\tGO\tWORDS\tRULES")
+			for _, sym := range symbols {
+				fmt.Fprintf(w, "%s\t%s\t%s\t%s\t%s\t%s\n", sym.Kind, sym.Owner, sym.IDL, sym.Go,
+					strings.Join(sym.Trace.Words, " "), strings.Join(sym.Trace.Rules(), ","))
+				if explain {
+					if len(sym.Trace.Lexems) > 0 {
+						fmt.Fprintf(w, "\t\t\t  lexems\t%s\t\n", strings.Join(sym.Trace.Lexems, " "))
+					}
+					for _, step := range sym.Trace.Steps {
+						fmt.Fprintf(w, "\t\t\t  %s\t%s\t\n", step.Rule, step.Detail)
+					}
+				}
+			}
+			return w.Flush()
+		},
+	}
+
+	cmd.Flags().StringArrayVarP(&includes, "include", "I", nil,
+		"IDL search path entry; repeatable. Format: path or base=path (base is Go module path)")
+	cmd.Flags().StringSliceVar(&kinds, "kind", nil,
+		"only these kinds: const, type, field, arm, element, interface, operation, param")
+	cmd.Flags().StringVar(&match, "match", "", "only names whose OWNER.IDL or Go name matches the regular expression")
+	cmd.Flags().BoolVar(&explain, "explain", false, "show every step of the derivation of each name")
+	cmd.Flags().BoolVar(&asJSON, "json", false, "output JSON")
+
+	return cmd
+}
+
 func newMSDNCmd() *cobra.Command {
 	var (
 		msdnOpenspecsCache        string
@@ -251,7 +355,7 @@ func main() {
 		SilenceErrors: true,
 	}
 
-	root.AddCommand(newGenerateCmd(), newDumpCmd(), newMSDNCmd())
+	root.AddCommand(newGenerateCmd(), newDumpCmd(), newSymbolsCmd(), newMSDNCmd())
 
 	if err := root.Execute(); err != nil {
 		fmt.Fprintln(os.Stderr, err)

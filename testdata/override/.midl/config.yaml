@@ -1,0 +1,4 @@
+go:
+  pkg: example.com/ov
+gonames:
+  path: ./gonames

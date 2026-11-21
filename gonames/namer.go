@@ -87,6 +87,16 @@ func GoNamePrivate(nr *Namer, n string) string {
 	return ret
 }
 
+// GoMemberName is GoName for a member of the owner, see Namer.MemberWords.
+func GoMemberName(nr *Namer, owner, name string) string {
+	return strings.Join(Resolve(nr).MemberWords(owner, name, true), "")
+}
+
+// GoMemberNameNoReserved is GoMemberName without the replacement of reserved fields.
+func GoMemberNameNoReserved(nr *Namer, owner, name string) string {
+	return strings.Join(Resolve(nr).MemberWords(owner, name, false), "")
+}
+
 // GoNameNoReserved is GoName without the replacement of reserved fields.
 func GoNameNoReserved(nr *Namer, n string) string {
 	return strings.Join(Resolve(nr).Words(n, false), "")
@@ -113,7 +123,39 @@ var reserved = regexp.MustCompile(`^(Word)?(Reserved?|Unused?|Dummy)(String|Long
 // Words returns the words of the Go name of the IDL identifier. If reserved is
 // true a reserved field (padding, unused) gets the blank name "_".
 func (nr *Namer) Words(name string, reserved bool) []string {
-	nr = Resolve(nr)
+	return Resolve(nr).words(name, reserved, nil)
+}
+
+// MemberWords is Words for a member (a field, parameter or element) of the
+// owner (a struct, union, enum or operation): a rule written for exactly that
+// member in the override section applies instead of the general rules.
+func (nr *Namer) MemberWords(owner, name string, reserved bool) []string {
+	return Resolve(nr).member(owner, name, reserved, nil)
+}
+
+// ExplainMember is MemberWords that also returns how the name was derived.
+func (nr *Namer) ExplainMember(owner, name string, reserved bool) *Trace {
+	tr := &Trace{Input: name}
+	tr.Words = Resolve(nr).member(owner, name, reserved, tr)
+	return tr
+}
+
+func (nr *Namer) member(owner, name string, reserved bool, tr *Trace) []string {
+	if words, ok := nr.cfg.Override[owner][name]; ok {
+		tr.add(RuleOverride, "%s.%s -> %v", owner, name, words)
+		return append([]string(nil), words...)
+	}
+	return nr.words(name, reserved, tr)
+}
+
+// Explain is Words that also returns how the name was derived.
+func (nr *Namer) Explain(name string, reserved bool) *Trace {
+	tr := &Trace{Input: name}
+	tr.Words = Resolve(nr).words(name, reserved, tr)
+	return tr
+}
+
+func (nr *Namer) words(name string, reserved bool, tr *Trace) []string {
 
 	if name == "" {
 		return nil
@@ -121,49 +163,64 @@ func (nr *Namer) Words(name string, reserved bool) []string {
 
 	// a name that is escaped is taken as it is.
 	if lit := Unescape(name); lit != name {
+		tr.add(RuleEscape, "%s taken as it is", lit)
 		return []string{lit}
 	}
 
 	if words, ok := nr.cfg.Rename[name]; ok {
+		tr.add(RuleRename, "%s -> %v", name, words)
 		return append([]string(nil), words...)
 	}
 
-	lexems := nr.lex(nr.trim(name))
+	lexems := nr.lex(nr.trim(name, tr), tr)
 
-	words, moved := nr.words(lexems)
+	if tr != nil {
+		tr.Lexems = append([]string(nil), lexems...)
+	}
+
+	words, moved := nr.spellAll(lexems, tr)
 
 	if reserved && isReserved(words) {
+		tr.add(RuleReserved, "%v is a reserved field", words)
 		return []string{"_"}
 	}
 
-	words = placeMoved(words, moved)
-	words = nr.lastResort(words, lexems)
+	words = placeMoved(words, moved, tr)
+	words = nr.lastResort(words, lexems, tr)
 
-	return dropContextHandle(words)
+	return dropContextHandle(words, tr)
 }
 
 // trim removes the prefixes and suffixes of the identifier (before it is split).
-func (nr *Namer) trim(name string) string {
+func (nr *Namer) trim(name string, tr *Trace) string {
 	for _, prefix := range nr.cfg.Trim.PrefixAll {
+		before := name
 		// an identifier that is a prefix by itself is kept.
 		if name = strings.TrimPrefix(name, prefix); name == "" {
 			name = prefix
 		}
+		if name != before {
+			tr.add(RulePrefixAll, "%s: %s -> %s", prefix, before, name)
+		}
 	}
 	for _, suffix := range nr.cfg.Trim.Suffix {
+		before := name
 		name = strings.TrimSuffix(name, suffix)
+		if name != before {
+			tr.add(RuleSuffix, "%s: %s -> %s", suffix, before, name)
+		}
 	}
 	return name
 }
 
 // lex splits the identifier into lexems (see Split) and applies the lookBehind
 // and split rules to each of them in turn.
-func (nr *Namer) lex(name string) []string {
+func (nr *Namer) lex(name string, tr *Trace) []string {
 	var out []string
 	for _, lexem := range Split(name) {
 		var cur []rune
-		out, cur = nr.lookBehind(out, []rune(lexem))
-		out = append(out, nr.split(cur)...)
+		out, cur = nr.lookBehind(out, []rune(lexem), tr)
+		out = append(out, nr.split(cur, tr)...)
 	}
 	return out
 }
@@ -171,7 +228,7 @@ func (nr *Namer) lex(name string) []string {
 // lookBehind applies the rule keyed by the previous and the current lexem: both
 // are replaced by the words of the rule, the last of which stays the current
 // lexem.
-func (nr *Namer) lookBehind(out []string, cur []rune) ([]string, []rune) {
+func (nr *Namer) lookBehind(out []string, cur []rune, tr *Trace) ([]string, []rune) {
 
 	if len(out) < 1 {
 		return out, cur
@@ -187,6 +244,8 @@ func (nr *Namer) lookBehind(out []string, cur []rune) ([]string, []rune) {
 		return out, cur
 	}
 
+	tr.add(RuleLookBehind, "%s + %s -> %v", out[len(out)-1], string(cur), repl)
+
 	switch len(repl) {
 	case 0:
 		return out[:len(out)-1], nil
@@ -198,8 +257,9 @@ func (nr *Namer) lookBehind(out []string, cur []rune) ([]string, []rune) {
 }
 
 // split returns the words of the lexem if there is a rule to split it.
-func (nr *Namer) split(cur []rune) []string {
+func (nr *Namer) split(cur []rune, tr *Trace) []string {
 	if words, ok := nr.cfg.Split[strings.ToLower(string(cur))]; ok {
+		tr.add(RuleSplit, "%s -> %v", string(cur), words)
 		return words
 	}
 	return []string{string(cur)}
@@ -208,7 +268,7 @@ func (nr *Namer) split(cur []rune) []string {
 // words turns each lexem into a word: it is dropped (trimmed prefix or word),
 // abbreviated or capitalized. A first lexem with a rotate rule is not a word
 // but is returned to be placed at the end.
-func (nr *Namer) words(lexems []string) (words []string, moved string) {
+func (nr *Namer) spellAll(lexems []string, tr *Trace) (words []string, moved string) {
 
 	for i, lexem := range lexems {
 
@@ -220,19 +280,22 @@ func (nr *Namer) words(lexems []string) (words []string, moved string) {
 
 		if i == 0 {
 			if to, ok := nr.cfg.Rotate[lexem]; ok {
+				tr.add(RuleRotate, "%s moves to the end as %s", lexem, to)
 				moved = to
 				continue
 			}
 			if _, ok := nr.prefix[lexem]; ok {
+				tr.add(RuleTrimPrefix, "%s dropped", lexem)
 				continue
 			}
 		}
 
 		if _, ok := nr.word[lower]; ok {
+			tr.add(RuleTrimWord, "%s dropped", lexem)
 			continue
 		}
 
-		words = append(words, nr.spell(lower))
+		words = append(words, nr.spell(lower, tr))
 	}
 
 	return words, moved
@@ -245,7 +308,7 @@ func isReserved(words []string) bool { return reserved.MatchString(strings.Join(
 // Size or Length word if the moved word is one too, or the last word that
 // ends with the beginning of the moved word (at least three letters), instead
 // of being added.
-func placeMoved(words []string, moved string) []string {
+func placeMoved(words []string, moved string, tr *Trace) []string {
 
 	if moved == "" {
 		return words
@@ -269,27 +332,33 @@ loop:
 		words = append(words, moved)
 	}
 
+	tr.add(RulePlaceMoved, "%v", words)
+
 	return words
 }
 
 // lastResort names an identifier that has no words left (everything was
 // dropped) after its last lexem.
-func (nr *Namer) lastResort(words, lexems []string) []string {
+func (nr *Namer) lastResort(words, lexems []string, tr *Trace) []string {
 
 	if len(words) > 0 || len(lexems) == 0 {
 		return words
 	}
 
-	return append(words, nr.spell(strings.ToLower(lexems[len(lexems)-1])))
+	tr.add(RuleLastResort, "no words left, using %s", lexems[len(lexems)-1])
+
+	return append(words, nr.spell(strings.ToLower(lexems[len(lexems)-1]), tr))
 }
 
 // spell returns the spelling of a lower case word in a name: the abbreviation
 // of the word, the acronym, or the word capitalized.
-func (nr *Namer) spell(lower string) string {
+func (nr *Namer) spell(lower string, tr *Trace) string {
 	if abbr, ok := nr.cfg.Abbr[lower]; ok {
+		tr.add(RuleAbbr, "%s -> %s", lower, abbr)
 		return abbr
 	}
 	if acronym, ok := nr.acronym[lower]; ok {
+		tr.add(RuleAcronym, "%s -> %s", lower, acronym)
 		return acronym
 	}
 	return Title(lower)
@@ -300,7 +369,7 @@ func (nr *Namer) spell(lower string) string {
 //
 // Note: the words after a removal are not looked at again, so a second
 // "Context Handle" pair directly behind the first stays.
-func dropContextHandle(words []string) []string {
+func dropContextHandle(words []string, tr *Trace) []string {
 
 	if len(words) <= 2 {
 		return words
@@ -308,6 +377,7 @@ func dropContextHandle(words []string) []string {
 
 	for i := 0; i < len(words)-1; i++ {
 		if words[i] == "Context" && words[i+1] == "Handle" {
+			tr.add(RuleContextHandle, "Context Handle dropped")
 			words = append(words[:i], words[i+2:]...)
 		}
 	}

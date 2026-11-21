@@ -24,7 +24,7 @@ func (p *TypeGenerator) GenUnionUnmarshalNDR(ctx *Env) {
 
 	swVar := "sw"
 	if sw != nil {
-		swVar = p.O(GoName(ctx, sw.Name))
+		swVar = p.O(GoMemberName(ctx, sw.Name))
 	}
 
 	p.GenDoUnionAlignemntUnmarshalNDR(ctx, ndr.Alignment(p.Scopes))

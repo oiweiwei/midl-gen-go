@@ -32,6 +32,9 @@ type Env struct {
 	NullMask string
 	// VarName is the name of the variable the value is read into or written from.
 	VarName string
+	// Owner is the IDL name of the struct, union, enum or operation whose
+	// members are being named (see gonames Config.Override).
+	Owner string
 	// Operation is true while the parameters of an operation are generated,
 	// where the outermost pointer defaults to [ref].
 	Operation bool
@@ -77,6 +80,9 @@ func (e *Env) WithNullMask(mask string) *Env { c := e.Clone(); c.NullMask = mask
 
 // WithVarName returns the state with the variable name.
 func (e *Env) WithVarName(n string) *Env { c := e.Clone(); c.VarName = n; return c }
+
+// WithOwner returns the state with the owner of the members that are named.
+func (e *Env) WithOwner(owner string) *Env { c := e.Clone(); c.Owner = owner; return c }
 
 // WithOperation returns the state for the parameters of an operation.
 func (e *Env) WithOperation() *Env { c := e.Clone(); c.Operation = true; return c }

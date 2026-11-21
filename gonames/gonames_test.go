@@ -107,6 +107,76 @@ func TestAcronyms(t *testing.T) {
 	}
 }
 
+func TestOverrideAppliesToOneMemberOnly(t *testing.T) {
+	nr := namer(t, `
+rename: {pFoo: [Renamed]}
+override:
+  A_STRUCT:
+    pFoo: [Registered, Count]
+    pReserved: [Special]
+`)
+	for _, tc := range []struct {
+		owner, name, want string
+	}{
+		{"A_STRUCT", "pFoo", "RegisteredCount"}, // the override beats the global rename.
+		{"A_STRUCT", "pReserved", "Special"},    // and the reserved field rule.
+		{"A_STRUCT", "pBar", "PBar"},            // other members of the owner are not touched.
+		{"B_STRUCT", "pFoo", "Renamed"},         // other owners are not touched.
+		{"", "pFoo", "Renamed"},                 // no owner: the general rules.
+	} {
+		if got := GoMemberName(nr, tc.owner, tc.name); got != tc.want {
+			t.Errorf("%s.%s = %q, want %q", tc.owner, tc.name, got, tc.want)
+		}
+	}
+	// the general entry point does not know about owners.
+	if got := GoName(nr, "pFoo"); got != "Renamed" {
+		t.Errorf("GoName: %s", got)
+	}
+}
+
+func TestOverrideMerge(t *testing.T) {
+	a := &Config{Override: map[string]map[string][]string{"S": {"x": {"A"}, "y": {"B"}}}}
+	b := &Config{Override: map[string]map[string][]string{"S": {"y": {"C"}}, "T": {"z": {"D"}}}}
+	m := a.Merge(b)
+	if !reflect.DeepEqual(m.Override["S"]["x"], []string{"A"}) || !reflect.DeepEqual(m.Override["S"]["y"], []string{"C"}) || !reflect.DeepEqual(m.Override["T"]["z"], []string{"D"}) {
+		t.Errorf("got %v", m.Override)
+	}
+	if !reflect.DeepEqual(a.Override["S"]["y"], []string{"B"}) {
+		t.Error("Merge must not modify its receiver")
+	}
+}
+
+func TestExplain(t *testing.T) {
+	nr := namer(t, `
+trim: {prefix: [dw], suffix: [W]}
+acronyms: [ACL]
+abbr: {buf: Buffer}
+override: {S: {x: [Over]}}
+`)
+
+	tr := nr.Explain("dwAclBufW", true)
+	if got := tr.Words; !reflect.DeepEqual(got, []string{"ACL", "Buffer"}) {
+		t.Fatalf("words: %v", got)
+	}
+	if got, want := tr.Rules(), []string{RuleSuffix, RuleTrimPrefix, RuleAcronym, RuleAbbr}; !reflect.DeepEqual(got, want) {
+		t.Errorf("rules: got %v, want %v (steps %v)", got, want, tr.Steps)
+	}
+	if !reflect.DeepEqual(tr.Lexems, []string{"dw", "Acl", "Buf"}) {
+		t.Errorf("lexems: %v", tr.Lexems)
+	}
+
+	if tr := nr.ExplainMember("S", "x", true); !reflect.DeepEqual(tr.Rules(), []string{RuleOverride}) || !reflect.DeepEqual(tr.Words, []string{"Over"}) {
+		t.Errorf("override: %v %v", tr.Rules(), tr.Words)
+	}
+
+	// explaining must give the words Words gives.
+	for _, in := range []string{"dwAclBufW", "Reserved", "ContextHandleFoo", "%x", "I"} {
+		if got, want := nr.Explain(in, true).Words, nr.Words(in, true); !reflect.DeepEqual(got, want) {
+			t.Errorf("%s: Explain %v, Words %v", in, got, want)
+		}
+	}
+}
+
 func TestReservedFields(t *testing.T) {
 	for _, in := range []string{"Reserved", "Reserved1", "Unused", "dummy", "WordReserved"} {
 		if got := GoName(nil, in); got != "_" {

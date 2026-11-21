@@ -41,7 +41,7 @@ func (p *Generator) GenOperation(ctx *Env, op *midl.Operation) {
 	if p.IsUnusedOp(op.Name) {
 		return
 	}
-	ctx = ctx.WithOperation()
+	ctx = ctx.WithOperation().WithOwner(op.Name)
 
 	mask := p.GenOperationNullMask(ctx, op)
 
@@ -370,7 +370,7 @@ func (p *Generator) GenOperationStruct(ctx *Env, op *midl.Operation, dir int) {
 				// skip handle.
 				continue
 			}
-			if dir != AnyParam && GoName(ctx, param.Name) == "_" {
+			if dir != AnyParam && GoParamName(ctx, param) == "_" {
 				// skip reserved.
 				continue
 			}
@@ -486,7 +486,7 @@ func (p *Generator) GenMakeResponse(ctx *Env, op *midl.Operation, dir int) {
 		})
 		p.Block("return", "&"+p.OpName(ctx, op, OutParam), func() {
 			for _, param := range implicit {
-				n := GoName(ctx, param.Name)
+				n := GoParamName(ctx, param)
 				if n == "_" {
 					continue
 				}
@@ -524,7 +524,7 @@ func (p *Generator) GenOperationToOp(ctx *Env, op *midl.Operation, dir int, mask
 	if implicit := p.GetOutputParamImplicitDependents(ctx, op, dir); len(implicit) > 0 {
 		p.P("//", "XXX:", "implicit input dependencies for output parameters")
 		for _, param := range implicit {
-			n := GoName(ctx, param.Name)
+			n := GoParamName(ctx, param)
 			if n == "_" {
 				continue
 			}
@@ -546,7 +546,7 @@ func (p *Generator) GenOperationToOp(ctx *Env, op *midl.Operation, dir int, mask
 		if !p.IsDir(ctx, param.Attrs.Direction, dir) || param.IsHandle() {
 			continue
 		}
-		n := GoName(ctx, param.Name)
+		n := GoParamName(ctx, param)
 		if n == "_" {
 			continue
 		}
@@ -571,7 +571,7 @@ func (p *Generator) GenOperationFromOp(ctx *Env, op *midl.Operation, dir int, ma
 	if implicit := p.GetOutputParamImplicitDependents(ctx, op, dir); len(implicit) > 0 {
 		p.P("//", "XXX:", "implicit input dependencies for output parameters")
 		for _, param := range implicit {
-			n := GoName(ctx, param.Name)
+			n := GoParamName(ctx, param)
 			if n == "_" {
 				continue
 			}
@@ -584,7 +584,7 @@ func (p *Generator) GenOperationFromOp(ctx *Env, op *midl.Operation, dir int, ma
 		if !p.IsDir(ctx, param.Attrs.Direction, dir) || param.IsHandle() {
 			continue
 		}
-		n := GoName(ctx, param.Name)
+		n := GoParamName(ctx, param)
 		if n == "_" {
 			continue
 		}

@@ -1,0 +1,5 @@
+override:
+  stats:           # the operation
+    count: [Max, Count]
+  BUF:             # the struct (typedef name)
+    count: [Length]

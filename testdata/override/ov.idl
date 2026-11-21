@@ -1,0 +1,9 @@
+[uuid(11111111-0000-0000-0000-000000000009), version(1.0)]
+interface ov
+{
+    typedef struct { long count; [size_is(count)] long data[]; } BUF;
+    typedef struct { long count; long other; } OTHER;
+
+    /* the size of "stats" is "*count": an expression that refers to a sibling parameter. */
+    void stats([in] handle_t h, [in, out] long *count, [out, size_is(*count)] long stats[*]);
+}

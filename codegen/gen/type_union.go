@@ -25,7 +25,7 @@ func (p *TypeGenerator) GenUnion(ctx *Env) {
 
 	p.Structure(p.GoTypeName, func() {
 		if sw != nil {
-			p.P(GoName(ctx, sw.Name), p.SwitchType(ctx, p.Scopes))
+			p.P(GoMemberName(ctx, sw.Name), p.SwitchType(ctx, p.Scopes))
 		}
 		p.CB(func() {
 			p.P("Types that are assignable to Value")
@@ -193,7 +193,7 @@ func (p *TypeGenerator) GenUnionMarshalNDR(ctx *Env) {
 
 	swVar := "sw"
 	if sw != nil {
-		swVar = p.O(GoName(ctx, sw.Name))
+		swVar = p.O(GoMemberName(ctx, sw.Name))
 	}
 
 	p.GenDoUnionAlignemntMarshalNDR(ctx, ndr.Alignment(p.Scopes))
@@ -322,7 +322,7 @@ func (p *TypeGenerator) UnionArmName(ctx *Env, cases *midl.UnionCase) string {
 
 	if len(cases.Arms) > 0 {
 		// use arm name as a union arm type name.
-		n := GoName(ctx, cases.Arms[0].Name)
+		n := GoMemberName(ctx, cases.Arms[0].Name)
 
 		if strings.Contains(n, caseName) || strings.Contains(caseName, n) {
 			n = strings.ReplaceAll(n, caseName, "")

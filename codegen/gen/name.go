@@ -19,6 +19,21 @@ var (
 // GoName converts the IDL identifier to a Go name with the namer in effect.
 func GoName(ctx *Env, n string) string { return gonames.GoName(ctx.Namer, n) }
 
+// GoMemberName converts the IDL name of a member (field, parameter, element) of
+// the owner in effect to a Go name; a rule written for exactly that member
+// applies, see gonames Config.Override.
+func GoMemberName(ctx *Env, n string) string {
+	return gonames.GoMemberName(ctx.Namer, ctx.Owner, n)
+}
+
+// GoMemberNameNoReserved is GoMemberName without the replacement of reserved fields.
+func GoMemberNameNoReserved(ctx *Env, n string) string {
+	return gonames.GoMemberNameNoReserved(ctx.Namer, ctx.Owner, n)
+}
+
+// GoParamName is the Go name of the parameter of the operation in effect.
+func GoParamName(ctx *Env, param *midl.Param) string { return GoMemberName(ctx, param.Name) }
+
 // GoNamePrivate converts the IDL identifier to an unexported Go name.
 func GoNamePrivate(ctx *Env, n string) string { return gonames.GoNamePrivate(ctx.Namer, n) }
 
@@ -422,5 +437,5 @@ func GoPrimitiveTypeName(t midl.Kind) string {
 }
 
 func GoFieldName(ctx *Env, field *midl.Field) string {
-	return GoName(ctx, FieldName(field.Position, field.Name))
+	return GoMemberName(ctx, FieldName(field.Position, field.Name))
 }
