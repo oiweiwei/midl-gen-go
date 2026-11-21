@@ -1,13 +1,11 @@
 package gen
 
 import (
-	"context"
-
 	"github.com/oiweiwei/midl-gen-go/desc/ndr"
 	"github.com/oiweiwei/midl-gen-go/midl"
 )
 
-func (p *TypeGenerator) GenZeroUnionFieldMarshalNDR(ctx context.Context, field *midl.Field, scopes *Scopes, index ...interface{}) {
+func (p *TypeGenerator) GenZeroUnionFieldMarshalNDR(ctx *Env, field *midl.Field, scopes *Scopes, index ...interface{}) {
 
 	name := p.VarName(ctx)
 	if name == "" {
@@ -24,30 +22,30 @@ func (p *TypeGenerator) GenZeroUnionFieldMarshalNDR(ctx context.Context, field *
 	}
 }
 
-func (p *TypeGenerator) GenZeroStructFieldMarshalNDR(ctx context.Context, field *midl.Field, scopes *Scopes, index ...interface{}) {
+func (p *TypeGenerator) GenZeroStructFieldMarshalNDR(ctx *Env, field *midl.Field, scopes *Scopes, index ...interface{}) {
 
 	typeName := p.GoScopeTypeName(ctx, p.Layer(), field, scopes, true)
 
 	p.CheckErr(p.B("("+p.Amp(typeName)+"{}).MarshalNDR", "ctx", "w"))
 }
 
-func (p *TypeGenerator) GenZeroPointerFieldMarshalNDR(ctx context.Context, field *midl.Field, scopes *Scopes, index ...interface{}) {
+func (p *TypeGenerator) GenZeroPointerFieldMarshalNDR(ctx *Env, field *midl.Field, scopes *Scopes, index ...interface{}) {
 	p.CheckErr(p.B("w.WritePointer", "nil"))
 }
 
-func (p *TypeGenerator) GenZeroEnumFieldMarshalNDR(ctx context.Context, field *midl.Field, scopes *Scopes, index ...interface{}) {
+func (p *TypeGenerator) GenZeroEnumFieldMarshalNDR(ctx *Env, field *midl.Field, scopes *Scopes, index ...interface{}) {
 
 	p.CheckErr(p.B("w.WriteData", p.B(scopes.Layer().EnumType(), "0")))
 }
 
-func (p *TypeGenerator) GenZeroArrayFieldMarhalNDR(ctx context.Context, field *midl.Field, scopes *Scopes, index ...interface{}) {
+func (p *TypeGenerator) GenZeroArrayFieldMarhalNDR(ctx *Env, field *midl.Field, scopes *Scopes, index ...interface{}) {
 
 	name := p.VarName(ctx)
 	if name == "" {
 		name = p.O(p.IVar(p.GoFieldName(ctx, field), index...))
 	}
 
-	ctx = WithVarName(ctx, ZeroLen)
+	ctx = ctx.WithVarName(ZeroLen)
 
 	idx := p.Var("i", len(index)+1)
 
@@ -62,7 +60,7 @@ func (p *TypeGenerator) GenZeroArrayFieldMarhalNDR(ctx context.Context, field *m
 	}
 }
 
-func (p *TypeGenerator) GenZeroFieldMarshalNDR(ctx context.Context, field *midl.Field, scopes *Scopes, index ...interface{}) {
+func (p *TypeGenerator) GenZeroFieldMarshalNDR(ctx *Env, field *midl.Field, scopes *Scopes, index ...interface{}) {
 
 	if scopes == nil {
 		return
@@ -92,7 +90,7 @@ func (p *TypeGenerator) GenZeroFieldMarshalNDR(ctx context.Context, field *midl.
 }
 
 // GoTypeZeroValue function returns the zero value for the given type. (nil, "", intX(0), uintX(0), false).
-func (p *Generator) GoTypeZeroValue(ctx context.Context, attr *midl.TypeAttr, field *midl.Field, scopes *Scopes) string {
+func (p *Generator) GoTypeZeroValue(ctx *Env, attr *midl.TypeAttr, field *midl.Field, scopes *Scopes) string {
 
 	for scopes != nil {
 		switch scopes.Kind() {

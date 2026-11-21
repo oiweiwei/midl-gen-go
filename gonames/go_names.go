@@ -1,7 +1,6 @@
 package go_names
 
 import (
-	"context"
 	"regexp"
 	"strings"
 
@@ -25,28 +24,23 @@ type Namer struct {
 	*Config
 }
 
-type namerCtx struct{}
-
-func WithNamer(ctx context.Context, n *Namer) context.Context {
-	if n == nil {
-		return ctx
+// Resolve returns the namer, or the default one for a nil namer, so that code
+// that has no per-IDL configuration can pass nil.
+func Resolve(nr *Namer) *Namer {
+	if nr == nil {
+		return &Namer{defaultConfig}
 	}
-	return context.WithValue(ctx, namerCtx{}, n)
+	return nr
 }
 
-func NamerFromContext(ctx context.Context) *Namer {
-	if n, ok := ctx.Value(namerCtx{}).(*Namer); ok {
-		return n
-	}
-	return &Namer{defaultConfig}
+// GoName converts the IDL identifier to a Go name.
+func GoName(nr *Namer, n string) string {
+	return strings.Join(Resolve(nr).GoName(n), "")
 }
 
-func GoName(ctx context.Context, n string) string {
-	return strings.Join(NamerFromContext(ctx).GoName(n), "")
-}
-
-func GoNamePrivate(ctx context.Context, n string) string {
-	nn := NamerFromContext(ctx).GoName(n)
+// GoNamePrivate converts the IDL identifier to an unexported Go name.
+func GoNamePrivate(nr *Namer, n string) string {
+	nn := Resolve(nr).GoName(n)
 	if len(nn) > 0 {
 		nn[0] = strings.ToLower(nn[0])
 	}
@@ -59,24 +53,28 @@ func GoNamePrivate(ctx context.Context, n string) string {
 
 }
 
-func GoNameNoReserved(ctx context.Context, n string) string {
-	return strings.Join(NamerFromContext(ctx).GoNameNoReserved(n), "")
+// GoNameNoReserved is GoName without the replacement of Go reserved words.
+func GoNameNoReserved(nr *Namer, n string) string {
+	return strings.Join(Resolve(nr).GoNameNoReserved(n), "")
 }
 
-func GoSnakeCase(ctx context.Context, n string) string {
-	out := NamerFromContext(ctx).GoName(n)
+// GoSnakeCase converts the IDL identifier to a lower case snake case name.
+func GoSnakeCase(nr *Namer, n string) string {
+	out := Resolve(nr).GoName(n)
 	for i := range out {
 		out[i] = strings.ToLower(out[i])
 	}
 	return strings.Join(out, "_")
 }
 
-func GoLexName(ctx context.Context, n string) []string {
-	return NamerFromContext(ctx).GoName(n)
+// GoLexName returns the words of the Go name of the IDL identifier.
+func GoLexName(nr *Namer, n string) []string {
+	return Resolve(nr).GoName(n)
 }
 
-func GoMergeNames(ctx context.Context, n1, n2 string) string {
-	return NamerFromContext(ctx).MergeNames(n1, n2)
+// GoMergeNames joins two names, dropping the part of the second that repeats the first.
+func GoMergeNames(nr *Namer, n1, n2 string) string {
+	return Resolve(nr).MergeNames(n1, n2)
 }
 
 func (nr *Namer) MergeNames(n1, n2 string) string {

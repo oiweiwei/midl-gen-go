@@ -1,7 +1,6 @@
 package gen
 
 import (
-	"context"
 	"fmt"
 	"path/filepath"
 	"strings"
@@ -12,16 +11,28 @@ import (
 )
 
 var (
-	GoName           = go_names.GoName
-	GoNamePrivate    = go_names.GoNamePrivate
-	GoNameNoReserved = go_names.GoNameNoReserved
-	GoMergeNames     = go_names.GoMergeNames
-	GoSnakeCase      = go_names.GoSnakeCase
-	LexName          = go_names.GoLexName
-	Escape           = go_names.Escape
-	RPCName          = go_names.Unescape
-	Title            = go_names.Title
+	Escape  = go_names.Escape
+	RPCName = go_names.Unescape
+	Title   = go_names.Title
 )
+
+// GoName converts the IDL identifier to a Go name with the namer in effect.
+func GoName(ctx *Env, n string) string { return go_names.GoName(ctx.Namer, n) }
+
+// GoNamePrivate converts the IDL identifier to an unexported Go name.
+func GoNamePrivate(ctx *Env, n string) string { return go_names.GoNamePrivate(ctx.Namer, n) }
+
+// GoNameNoReserved is GoName without the replacement of Go reserved words.
+func GoNameNoReserved(ctx *Env, n string) string { return go_names.GoNameNoReserved(ctx.Namer, n) }
+
+// GoMergeNames joins two names, dropping the repeated part.
+func GoMergeNames(ctx *Env, n1, n2 string) string { return go_names.GoMergeNames(ctx.Namer, n1, n2) }
+
+// GoSnakeCase converts the IDL identifier to a lower case snake case name.
+func GoSnakeCase(ctx *Env, n string) string { return go_names.GoSnakeCase(ctx.Namer, n) }
+
+// LexName returns the words of the Go name of the IDL identifier.
+func LexName(ctx *Env, n string) []string { return go_names.GoLexName(ctx.Namer, n) }
 
 func GoHex(n int) func(uint64) string {
 	return func(v uint64) string {
@@ -31,17 +42,17 @@ func GoHex(n int) func(uint64) string {
 
 var defaultVersion = &midl.Version{}
 
-func (p *Generator) WithInterfaceNamer(ctx context.Context, iff *midl.Interface) context.Context {
+func (p *Generator) WithInterfaceNamer(ctx *Env, iff *midl.Interface) *Env {
 	for _, f := range p.Session.Files() {
 		if _, ok := f.LookupType(iff.Name); !ok {
 			continue
 		}
-		return go_names.WithNamer(ctx, f.Namer())
+		return ctx.WithNamer(f.Namer())
 	}
 	return ctx
 }
 
-func (p *Generator) WithInterfaceBaseNamer(ctx context.Context, iff *midl.Interface) context.Context {
+func (p *Generator) WithInterfaceBaseNamer(ctx *Env, iff *midl.Interface) *Env {
 	name := iff.BaseName
 	if iff.Base != nil {
 		name = iff.Base.Name
@@ -50,12 +61,12 @@ func (p *Generator) WithInterfaceBaseNamer(ctx context.Context, iff *midl.Interf
 		if _, ok := f.LookupType(name); !ok {
 			continue
 		}
-		return go_names.WithNamer(ctx, f.Namer())
+		return ctx.WithNamer(f.Namer())
 	}
 	return ctx
 }
 
-func (p *Generator) GoInterfaceTypeName(ctx context.Context, iff *midl.Interface, nhook ...func(string) string) string {
+func (p *Generator) GoInterfaceTypeName(ctx *Env, iff *midl.Interface, nhook ...func(string) string) string {
 
 	n := iff.Name
 
@@ -65,7 +76,7 @@ func (p *Generator) GoInterfaceTypeName(ctx context.Context, iff *midl.Interface
 			continue
 		}
 
-		ctx = go_names.WithNamer(ctx, f.Namer())
+		ctx = ctx.WithNamer(f.Namer())
 
 		n := GoName(ctx, iff.Name)
 		for _, hook := range nhook {
@@ -95,7 +106,7 @@ func (p *Generator) GoInterfaceTypeName(ctx context.Context, iff *midl.Interface
 	return n
 }
 
-func (p *Generator) GoScopeTypeNameWithN(ctx context.Context, attr *midl.TypeAttr, field *midl.Field, scopes *Scopes, trim bool, n ...string) string {
+func (p *Generator) GoScopeTypeNameWithN(ctx *Env, attr *midl.TypeAttr, field *midl.Field, scopes *Scopes, trim bool, n ...string) string {
 	t := p.GoTypeName(ctx, attr, field, scopes, n...)
 	if trim {
 		return strings.TrimLeft(t, "*")
@@ -103,7 +114,7 @@ func (p *Generator) GoScopeTypeNameWithN(ctx context.Context, attr *midl.TypeAtt
 	return t
 }
 
-func (p *Generator) GoScopeTypeName(ctx context.Context, attr *midl.TypeAttr, field *midl.Field, scopes *Scopes, trim ...bool) string {
+func (p *Generator) GoScopeTypeName(ctx *Env, attr *midl.TypeAttr, field *midl.Field, scopes *Scopes, trim ...bool) string {
 	n := p.GoTypeName(ctx, attr, field, scopes)
 	if len(trim) > 0 {
 		return strings.TrimLeft(n, "*")
@@ -111,15 +122,15 @@ func (p *Generator) GoScopeTypeName(ctx context.Context, attr *midl.TypeAttr, fi
 	return n
 }
 
-func (p *Generator) GoFieldTypeName(ctx context.Context, attr *midl.TypeAttr, field *midl.Field, n ...string) string {
+func (p *Generator) GoFieldTypeName(ctx *Env, attr *midl.TypeAttr, field *midl.Field, n ...string) string {
 	return p.GoTypeName(ctx, attr, field, desc.Of(field), n...)
 }
 
-func (p *Generator) EmbeddedTypeName(ctx context.Context, attrs *midl.TypeAttr, field *midl.Field) string {
+func (p *Generator) EmbeddedTypeName(ctx *Env, attrs *midl.TypeAttr, field *midl.Field) string {
 	return GoName(ctx, attrs.Alias) + "_" + GoFieldName(ctx, field)
 }
 
-func (p *Generator) GoTypeName(ctx context.Context, attrs *midl.TypeAttr, field *midl.Field, scopes *Scopes, n ...string) string {
+func (p *Generator) GoTypeName(ctx *Env, attrs *midl.TypeAttr, field *midl.Field, scopes *Scopes, n ...string) string {
 
 	var ret string
 
@@ -203,7 +214,7 @@ go_type_name_loop:
 	return strings.Join(n, "") + ret
 }
 
-func (p *Generator) GoPackageName(ctx context.Context, scopes *Scopes) string {
+func (p *Generator) GoPackageName(ctx *Env, scopes *Scopes) string {
 
 	pkg, err := p.GoPackage(ctx, scopes)
 	if err != nil {
@@ -217,15 +228,15 @@ func (p *Generator) GoPackageName(ctx context.Context, scopes *Scopes) string {
 	return lastPart(pkg.Name) + "."
 }
 
-func (p *Generator) WithNamer(ctx context.Context, scopes *Scopes) context.Context {
+func (p *Generator) WithNamer(ctx *Env, scopes *Scopes) *Env {
 	pkg, _ := p.GoPackage(ctx, scopes)
 	if pkg == nil || pkg.File == nil || pkg.File.Namer() == nil {
 		return ctx
 	}
-	return go_names.WithNamer(ctx, pkg.File.Namer())
+	return ctx.WithNamer(pkg.File.Namer())
 }
 
-func (p *Generator) GoPackage(ctx context.Context, scopes *Scopes) (*Package, error) {
+func (p *Generator) GoPackage(ctx *Env, scopes *Scopes) (*Package, error) {
 
 	n := scopes.Alias()
 	if n == "" {
@@ -285,17 +296,17 @@ type Package struct {
 func (p *Package) TypeName(n string) string {
 	if p.File != nil {
 		if namer := p.File.Namer(); namer != nil {
-			return GoName(go_names.WithNamer(context.Background(), namer), n)
+			return go_names.GoName(namer, n)
 		}
 	}
 	return n
 }
 
-func GoPackage(ctx context.Context, n string) (*Package, bool) {
+func GoPackage(ctx *Env, n string) (*Package, bool) {
 
 	var defaultVersion = &midl.Version{}
 
-	if iff := Interface(ctx); iff != nil {
+	if iff := ctx.Interface; iff != nil {
 
 		// we are rendering interface.
 
@@ -304,42 +315,42 @@ func GoPackage(ctx context.Context, n string) (*Package, bool) {
 			return &Package{}, true
 		}
 
-		for _, iff := range File(ctx).Interfaces {
+		for _, iff := range ctx.File.Interfaces {
 			// type is in some other interface.
 			// (in the same file).
 			if _, ok := iff.Body.Export[n]; ok {
 
 				if iff.Attrs.Version == nil {
 					return &Package{
-						Name:    filepath.Join(File(ctx).GoPkg, strings.ToLower(iff.Name)),
+						Name:    filepath.Join(ctx.File.GoPkg, strings.ToLower(iff.Name)),
 						Base:    "",
 						Version: defaultVersion,
 					}, true
 				}
 
 				return &Package{
-					Name:    filepath.Join(File(ctx).GoPkg, strings.ToLower(iff.Name)),
+					Name:    filepath.Join(ctx.File.GoPkg, strings.ToLower(iff.Name)),
 					Base:    "",
 					Version: iff.Attrs.Version,
 				}, true
 			}
 		}
 
-		if File(ctx).IsLocal(n) {
+		if ctx.File.IsLocal(n) {
 			// type is file-level definition.
 			return &Package{
-				Name:    File(ctx).GoPkg,
+				Name:    ctx.File.GoPkg,
 				Base:    "",
 				Version: nil,
 			}, true
 		}
 	} else {
-		if _, ok := File(ctx).Export[n]; ok {
+		if _, ok := ctx.File.Export[n]; ok {
 			return &Package{}, true
 		}
 	}
 
-	for _, f := range Session(ctx).Files() {
+	for _, f := range ctx.Session.Files() {
 		if _, ok := f.Export[n]; ok {
 			return &Package{
 				Name: f.GoPkg,
@@ -372,7 +383,7 @@ func GoPackage(ctx context.Context, n string) (*Package, bool) {
 	return nil, false
 }
 
-func LookupName(ctx context.Context, scopes *Scopes) string {
+func LookupName(ctx *Env, scopes *Scopes) string {
 
 	if alias := scopes.Alias(); alias != "" {
 		if strings.HasPrefix(alias, "PDNS") {
@@ -383,7 +394,7 @@ func LookupName(ctx context.Context, scopes *Scopes) string {
 	}
 
 	// find alias based on tagged type.
-	for _, alias := range File(ctx).LookupAlias(scopes.Type().TypeName()) {
+	for _, alias := range ctx.File.LookupAlias(scopes.Type().TypeName()) {
 		if alias != "" {
 			return alias
 		}
@@ -410,6 +421,6 @@ func GoPrimitiveTypeName(t midl.Kind) string {
 	return t.String()
 }
 
-func GoFieldName(ctx context.Context, field *midl.Field) string {
+func GoFieldName(ctx *Env, field *midl.Field) string {
 	return GoName(ctx, FieldName(field.Position, field.Name))
 }

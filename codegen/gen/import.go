@@ -1,8 +1,6 @@
 package gen
 
 import (
-	"context"
-
 	"github.com/oiweiwei/midl-gen-go/codegen/goprint"
 	"github.com/oiweiwei/midl-gen-go/midl"
 )
@@ -11,11 +9,11 @@ import (
 type Import = goprint.Import
 
 // GenPackageImportGuard emits the exported GoPackage variable of the package.
-func (p *Generator) GenPackageImportGuard(ctx context.Context) {
+func (p *Generator) GenPackageImportGuard(ctx *Env) {
 	p.P("")
 	p.P("var (")
 	p.P("//", "import guard")
-	p.P("GoPackage", "=", p.Q(File(ctx).GoPkg))
+	p.P("GoPackage", "=", p.Q(ctx.File.GoPkg))
 	p.P(")")
 }
 
@@ -37,7 +35,7 @@ var (
 	}
 )
 
-func (p *Generator) GenPackage(ctx context.Context, f *midl.File) {
+func (p *Generator) GenPackage(ctx *Env, f *midl.File) {
 	p.P("package", p.out.PackageName[lastSlash(p.out.PackageName)+1:])
 }
 

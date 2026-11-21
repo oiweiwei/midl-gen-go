@@ -1,14 +1,12 @@
 package gen
 
 import (
-	"context"
-
 	"github.com/oiweiwei/midl-gen-go/desc"
 	"github.com/oiweiwei/midl-gen-go/desc/ndr"
 	"github.com/oiweiwei/midl-gen-go/midl"
 )
 
-func (p *TypeGenerator) GenStructUnmarshalNDR(ctx context.Context) {
+func (p *TypeGenerator) GenStructUnmarshalNDR(ctx *Env) {
 
 	trailingField := p.Struct().LastFieldIndex()
 	if ndr.IsConformant(p.Scopes) || ndr.IsVarying(p.Scopes) {
@@ -52,7 +50,7 @@ func (p *TypeGenerator) GenStructUnmarshalNDR(ctx context.Context) {
 
 }
 
-func (p *TypeGenerator) GenStructUnmarshalNDRSizeCheck(ctx context.Context) {
+func (p *TypeGenerator) GenStructUnmarshalNDRSizeCheck(ctx *Env) {
 	if rng := p.Layer().Range; rng != nil {
 		if rng.Min == rng.Max && rng.Min > 0 {
 			p.If("w.Len()", "!=", rng.Min, "/* size-is check */", func() {
@@ -73,7 +71,7 @@ func (p *TypeGenerator) GenStructUnmarshalNDRSizeCheck(ctx context.Context) {
 	}
 }
 
-func (p *TypeGenerator) GenStructUnmarshalNDRSizePreamble(ctx context.Context, field *midl.Field) {
+func (p *TypeGenerator) GenStructUnmarshalNDRSizePreamble(ctx *Env, field *midl.Field) {
 	if !ndr.IsConformant(p.Scopes) {
 		return
 	}
@@ -87,11 +85,11 @@ func (p *TypeGenerator) GenStructUnmarshalNDRSizePreamble(ctx context.Context, f
 	})
 }
 
-func (p *Generator) GenReadSize(ctx context.Context, sz interface{}) {
+func (p *Generator) GenReadSize(ctx *Env, sz interface{}) {
 	p.CheckErr(p.B("w.ReadSize", p.Amp(sz)))
 }
 
-func (p *TypeGenerator) GenFieldUnmarshalNDR(ctx context.Context, field *midl.Field, scopes *Scopes, index ...interface{}) {
+func (p *TypeGenerator) GenFieldUnmarshalNDR(ctx *Env, field *midl.Field, scopes *Scopes, index ...interface{}) {
 
 	if scopes == nil || field.Attrs.Ignore {
 		// end.
@@ -101,13 +99,13 @@ func (p *TypeGenerator) GenFieldUnmarshalNDR(ctx context.Context, field *midl.Fi
 	var name string
 
 	// reserved field.
-	if p.GoFieldName(ctx, field) == "_" && !IsReserved(ctx) {
-		ctx = WithReserved(ctx)
+	if p.GoFieldName(ctx, field) == "_" && !ctx.Reserved {
+		ctx = ctx.WithReserved()
 		typeName := p.GoScopeTypeName(ctx, p.Layer(), field, scopes)
 		p.P("//", "reserved", field.Name)
 		name = "_" + field.Name
 		p.P("var", name, typeName)
-		ctx, index = WithVarName(ctx, name), nil
+		ctx, index = ctx.WithVarName(name), nil
 	}
 
 	// get variable name.
@@ -228,7 +226,7 @@ func (p *TypeGenerator) GenFieldUnmarshalNDR(ctx context.Context, field *midl.Fi
 
 		if HasNullMaskBit(ctx, field) && scopes.Next().Type().IsPrimitiveType() {
 			mN := "_m" + "_" + field.Name
-			p.P(mN, ":=", "func() {", p.O(p.NullMask()), "|=", Mask(ctx)+GoFieldName(ctx, field), "}")
+			p.P(mN, ":=", "func() {", p.O(p.NullMask()), "|=", ctx.NullMask+GoFieldName(ctx, field), "}")
 			// read the pointer.
 			p.CheckErr(p.GenReadPointer(ctx, scopes, p.Amp(name), sN, mN, fN))
 		} else {
@@ -240,7 +238,7 @@ func (p *TypeGenerator) GenFieldUnmarshalNDR(ctx context.Context, field *midl.Fi
 
 		// marshal array.
 
-		ctx := WithNullMask(ctx, "") /* clear null mask as arrays are unsupported */
+		ctx := ctx.WithNullMask("") /* clear null mask as arrays are unsupported */
 
 		isConformant, isVarying := ndr.IsConformant(scopes), ndr.IsVarying(scopes)
 
@@ -288,7 +286,7 @@ func (p *TypeGenerator) GenFieldUnmarshalNDR(ctx context.Context, field *midl.Fi
 		}
 
 		// XXX: for non-wire marshaling try to set size-info.
-		if isConformant && !isVarying && !IsOp(ctx) && !IsReserved(ctx) {
+		if isConformant && !isVarying && !ctx.Operation && !ctx.Reserved {
 			if sz := scopes.Dim().Size(); !sz.Empty() {
 				// check minimum value borders.
 				szVar := p.IVar("sizeInfo", scopes.Dim().Dimension)
@@ -334,7 +332,7 @@ func (p *TypeGenerator) GenFieldUnmarshalNDR(ctx context.Context, field *midl.Fi
 		if scopes.Dim().IsString {
 
 			name = p.BufVar(name)
-			ctx, index = WithVarName(ctx, name), nil
+			ctx, index = ctx.WithVarName(name), nil
 
 			// replace decl with buffer type name.
 			switch scopes := scopes.Next(); scopes.Kind() {
@@ -413,7 +411,7 @@ func (p *TypeGenerator) GenFieldUnmarshalNDR(ctx context.Context, field *midl.Fi
 
 			p.Range(func() {
 				p.P("var", "_chunk", p.GoFieldTypeName(ctx, desc.Of(field).Layer(), field))
-				p.GenFieldUnmarshalNDR(WithVarName(ctx, "_chunk"), field, scopes)
+				p.GenFieldUnmarshalNDR(ctx.WithVarName("_chunk"), field, scopes)
 				p.If(p.Len("_chunk"), "==", "0", "/* end */", func() {
 					p.P("break")
 				})
@@ -451,14 +449,14 @@ func (p *TypeGenerator) GenFieldUnmarshalNDR(ctx context.Context, field *midl.Fi
 		}
 	}
 
-	if IsReserved(ctx) && (scopes.IsBool() && midl.PrimitiveTypeSize(scopes.Kind()) > 1) {
+	if ctx.Reserved && (scopes.IsBool() && midl.PrimitiveTypeSize(scopes.Kind()) > 1) {
 		// XXX: guard.
 		p.P("_", "=", name)
 	}
 
 }
 
-func (p *TypeGenerator) GenStringBufferUnmarshalNDR(ctx context.Context, field *midl.Field, scopes *Scopes, name, origName string) {
+func (p *TypeGenerator) GenStringBufferUnmarshalNDR(ctx *Env, field *midl.Field, scopes *Scopes, name, origName string) {
 
 	// convert utf16/byte array back to string.
 	switch scopes := scopes.Next(); scopes.Kind() {

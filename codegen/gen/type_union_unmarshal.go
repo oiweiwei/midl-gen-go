@@ -1,7 +1,6 @@
 package gen
 
 import (
-	"context"
 	"strings"
 
 	"github.com/oiweiwei/midl-gen-go/desc"
@@ -9,7 +8,7 @@ import (
 	"github.com/oiweiwei/midl-gen-go/midl"
 )
 
-func (p *TypeGenerator) GenUnionUnmarshalNDR(ctx context.Context) {
+func (p *TypeGenerator) GenUnionUnmarshalNDR(ctx *Env) {
 
 	p.P()
 
@@ -94,7 +93,7 @@ func (p *TypeGenerator) GenUnionUnmarshalNDR(ctx context.Context) {
 
 }
 
-func (p *TypeGenerator) GenUnionArmPrimitiveTypeUnmarshalNDR(ctx context.Context, cases *midl.UnionCase, armName string) {
+func (p *TypeGenerator) GenUnionArmPrimitiveTypeUnmarshalNDR(ctx *Env, cases *midl.UnionCase, armName string) {
 	// Null pointers skip the deferred callback, including when reusing a union.
 	p.P("o.Value", "=", "nil")
 	// render deferred unmarshalling function.
@@ -118,7 +117,7 @@ func (p *TypeGenerator) GenUnionArmPrimitiveTypeUnmarshalNDR(ctx context.Context
 	p.CheckErr(p.GenReadPointer(ctx, desc.Of(cases.Arms[0]), p.Amp("o.Value"), "_s_o", "", "_ptr_o"))
 }
 
-func (p *TypeGenerator) GenUnionArmUnmarshalNDR(ctx context.Context, arm *midl.UnionCase, caseName string) {
+func (p *TypeGenerator) GenUnionArmUnmarshalNDR(ctx *Env, arm *midl.UnionCase, caseName string) {
 
 	p.P("func", "(o *"+caseName+")", "UnmarshalNDR(ctx context.Context, w ndr.Reader)", "error", "{")
 

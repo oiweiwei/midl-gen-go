@@ -1,7 +1,6 @@
 package gen
 
 import (
-	"context"
 	"fmt"
 	"strings"
 
@@ -9,84 +8,16 @@ import (
 	"github.com/oiweiwei/midl-gen-go/midl"
 )
 
-type fileCtx struct{}
-
-func WithFile(ctx context.Context, f *midl.File) context.Context {
-	return context.WithValue(ctx, fileCtx{}, f)
-}
-
-func File(ctx context.Context) *midl.File {
-	f, _ := ctx.Value(fileCtx{}).(*midl.File)
-	return f
-}
-
-type sessionCtx struct{}
-
-// WithSession returns a context carrying the IDL session the generator runs in.
-func WithSession(ctx context.Context, s *midl.Session) context.Context {
-	return context.WithValue(ctx, sessionCtx{}, s)
-}
-
-// Session returns the IDL session the generator runs in.
-func Session(ctx context.Context) *midl.Session {
-	s, _ := ctx.Value(sessionCtx{}).(*midl.Session)
-	return s
-}
-
-type reservedCtx struct{}
-
-func WithReserved(ctx context.Context) context.Context {
-	return context.WithValue(ctx, reservedCtx{}, true)
-}
-
-func IsReserved(ctx context.Context) bool {
-	ok, _ := ctx.Value(reservedCtx{}).(bool)
-	return ok
-}
-
-type interfaceCtx struct{}
-
-func WithInterface(ctx context.Context, iff *midl.Interface) context.Context {
-	return context.WithValue(ctx, interfaceCtx{}, iff)
-}
-
-func Interface(ctx context.Context) *midl.Interface {
-	iff, _ := ctx.Value(interfaceCtx{}).(*midl.Interface)
-	return iff
-}
-
-type nullMaskCtx struct{}
-
-func WithNullMask(ctx context.Context, mask string) context.Context {
-	return context.WithValue(ctx, nullMaskCtx{}, mask)
-}
-
-func Mask(ctx context.Context) string {
-	mask, _ := ctx.Value(nullMaskCtx{}).(string)
-	return mask
-}
-
 // HasNullMaskBit reports whether the field has a null-mask bit; must match GenNullMask ([ref] pointers have none).
-func HasNullMaskBit(ctx context.Context, field *midl.Field) bool {
-	return Mask(ctx) != "" && IsIgnoredPointer(ctx, field) && GoFieldName(ctx, field) != "_"
-}
-
-type fieldCtx struct{}
-
-func WithField(ctx context.Context, field *midl.Field) context.Context {
-	return context.WithValue(ctx, fieldCtx{}, field)
-}
-
-func Field(ctx context.Context) *midl.Field {
-	field, _ := ctx.Value(fieldCtx{}).(*midl.Field)
-	return field
+func HasNullMaskBit(ctx *Env, field *midl.Field) bool {
+	return ctx.NullMask != "" && IsIgnoredPointer(ctx, field) && GoFieldName(ctx, field) != "_"
 }
 
 var (
 	Obj = "o"
 )
 
-func (p *Generator) GenRange(ctx context.Context, n string, i, upto int, fn func(context.Context, string)) {
+func (p *Generator) GenRange(ctx *Env, n string, i, upto int, fn func(*Env, string)) {
 	if i >= upto {
 		fn(ctx, n)
 		return
@@ -234,11 +165,11 @@ func (p *Generator) IVar(n string, idxs ...interface{}) string {
 }
 
 // EO function generates the O with namer.
-func (p *Generator) EO(ctx context.Context, n string) string {
+func (p *Generator) EO(ctx *Env, n string) string {
 	return p.O(GoName(ctx, n))
 }
 
-func (p *Generator) EOWithCtx(ctx context.Context) func(string) string {
+func (p *Generator) EOWithCtx(ctx *Env) func(string) string {
 	return func(n string) string {
 		return p.EO(ctx, n)
 	}
@@ -273,27 +204,9 @@ func (p *Generator) NullMask(name ...string) string {
 	return strings.Join(name, "") + "NullMask"
 }
 
-type varNameCtx struct{}
-
-func WithVarName(ctx context.Context, n string) context.Context {
-	return context.WithValue(ctx, varNameCtx{}, n)
-}
-
-func (p *Generator) VarName(ctx context.Context, index ...interface{}) string {
-	n, _ := ctx.Value(varNameCtx{}).(string)
-	if n != "" {
-		return p.IVar(n, index...)
+func (p *Generator) VarName(ctx *Env, index ...interface{}) string {
+	if ctx.VarName != "" {
+		return p.IVar(ctx.VarName, index...)
 	}
 	return ""
-}
-
-type isOp struct{}
-
-func WithOp(ctx context.Context) context.Context {
-	return context.WithValue(ctx, isOp{}, true)
-}
-
-func IsOp(ctx context.Context) bool {
-	ok, _ := ctx.Value(isOp{}).(bool)
-	return ok
 }

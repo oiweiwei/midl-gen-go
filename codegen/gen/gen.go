@@ -13,7 +13,6 @@ import (
 
 	"github.com/oiweiwei/midl-gen-go/codegen/goprint"
 	"github.com/oiweiwei/midl-gen-go/desc"
-	go_names "github.com/oiweiwei/midl-gen-go/gonames"
 	"github.com/oiweiwei/midl-gen-go/logx"
 	"github.com/oiweiwei/midl-gen-go/midl"
 	"github.com/oiweiwei/midl-gen-go/midl/uuid"
@@ -79,7 +78,7 @@ func trimExt(p string) string {
 	return strings.TrimSuffix(p, filepath.Ext(p))
 }
 
-func (p *Generator) Reset(ctx context.Context, source interface{}, n ...string) {
+func (p *Generator) Reset(ctx *Env, source interface{}, n ...string) {
 
 	if p.out != nil {
 		p.Files = append(p.Files, p.out)
@@ -97,14 +96,14 @@ func (p *Generator) Reset(ctx context.Context, source interface{}, n ...string) 
 			p.out.IsRoot = true
 		}
 	case *midl.Interface:
-		path := filepath.Join(trimExt(File(ctx).Path), strings.ToLower(source.Name), source.Attrs.Version.String())
+		path := filepath.Join(trimExt(ctx.File.Path), strings.ToLower(source.Name), source.Attrs.Version.String())
 		p.out = NewFileBuffer(path, strings.ToLower(source.Name), n...)
 	case *midl.Module:
-		path := filepath.Join(trimExt(File(ctx).Path), strings.ToLower(source.Name))
+		path := filepath.Join(trimExt(ctx.File.Path), strings.ToLower(source.Name))
 		p.out = NewFileBuffer(path, strings.ToLower(source.Name), n...)
 	}
 
-	p.out.File = File(ctx)
+	p.out.File = ctx.File
 }
 
 func (p *Generator) P(args ...interface{}) {
@@ -121,16 +120,16 @@ func (p *Generator) T(args ...interface{}) {
 	}
 }
 
-func MSUnion(ctx context.Context) bool {
-	iff := Interface(ctx)
+func MSUnion(ctx *Env) bool {
+	iff := ctx.Interface
 	if iff != nil {
 		return iff.Attrs.MSUnion
 	}
 	return false
 }
 
-func PointerDefault(ctx context.Context) midl.PointerType {
-	iff := Interface(ctx)
+func PointerDefault(ctx *Env) midl.PointerType {
+	iff := ctx.Interface
 	if iff != nil && iff.Attrs.PointerDefault != midl.PointerTypeNone {
 		return iff.Attrs.PointerDefault
 	}
@@ -138,7 +137,7 @@ func PointerDefault(ctx context.Context) midl.PointerType {
 }
 
 // Gen generates the Go sources for the IDL file and its libraries.
-func (p *Generator) Gen(ctx context.Context, fn string) ([]OutputFile, error) {
+func (p *Generator) Gen(parent context.Context, fn string) ([]OutputFile, error) {
 
 	if p.Session == nil {
 		return nil, errors.New("gen: session is required")
@@ -147,8 +146,7 @@ func (p *Generator) Gen(ctx context.Context, fn string) ([]OutputFile, error) {
 	p.CheckErr = CheckErr1(p)
 	p.out, p.Files = nil, nil
 
-	ctx = WithSession(ctx, p.Session)
-	ctx = logx.With(ctx, p.Logger())
+	ctx := NewEnv(logx.With(parent, p.Logger()), p.Session)
 
 	f, err := p.Session.Load(fn)
 	if err != nil {
@@ -168,9 +166,9 @@ func (p *Generator) Gen(ctx context.Context, fn string) ([]OutputFile, error) {
 	return p.Finalize(ctx)
 }
 
-func (p *Generator) GenFile(ctx context.Context, fn string, f *midl.File) error {
+func (p *Generator) GenFile(ctx *Env, fn string, f *midl.File) error {
 
-	ctx = go_names.WithNamer(ctx, f.Namer())
+	ctx = ctx.WithNamer(f.Namer())
 
 	if f.IsEmpty() {
 		return nil
@@ -203,7 +201,7 @@ func (p *Generator) GenFile(ctx context.Context, fn string, f *midl.File) error 
 		p.MSDN = &openspecs.MSDN{}
 	}
 
-	ctx = WithFile(ctx, f)
+	ctx = ctx.WithFile(f)
 
 	p.Reset(ctx, f)
 
@@ -258,7 +256,7 @@ func (p *Generator) GenFile(ctx context.Context, fn string, f *midl.File) error 
 }
 
 // Finalize renders the accumulated buffers into output files.
-func (p *Generator) Finalize(ctx context.Context) ([]OutputFile, error) {
+func (p *Generator) Finalize(ctx *Env) ([]OutputFile, error) {
 
 	var (
 		err error
@@ -272,7 +270,7 @@ func (p *Generator) Finalize(ctx context.Context) ([]OutputFile, error) {
 		b := file.Reset()
 		p.out = file
 
-		ctx := WithFile(ctx, p.out.File)
+		ctx := ctx.WithFile(p.out.File)
 
 		if p.out.IsRoot {
 			p.P("//", "The", p.out.PackageName, "package", "implements", "the", strings.ToUpper(p.out.PackageName), "client", "protocol.")
@@ -343,7 +341,7 @@ func (p *Generator) XXX() string {
 	return "xxx_"
 }
 
-func (p *Generator) GenModule(ctx context.Context, module *midl.Module) {
+func (p *Generator) GenModule(ctx *Env, module *midl.Module) {
 
 	p.Reset(ctx, module)
 
@@ -355,9 +353,9 @@ func (p *Generator) GenModule(ctx context.Context, module *midl.Module) {
 
 }
 
-func (p *Generator) GenInterface(ctx context.Context, iff *midl.Interface) {
+func (p *Generator) GenInterface(ctx *Env, iff *midl.Interface) {
 
-	ctx = WithInterface(ctx, iff)
+	ctx = ctx.WithInterface(iff)
 
 	p.Reset(ctx, iff)
 
@@ -394,7 +392,7 @@ func (p *Generator) GenInterface(ctx context.Context, iff *midl.Interface) {
 	p.GenUnplementedServer(ctx, iff)
 }
 
-func (p *Generator) GenConst(ctx context.Context, c *midl.Const) {
+func (p *Generator) GenConst(ctx *Env, c *midl.Const) {
 	p.P()
 	p.P("//", GoName(ctx, c.Name), "represents the", c.Name, "RPC constant")
 	if midl.IsIntegerType(c.Type) && !c.Type.Signed() {
@@ -404,7 +402,7 @@ func (p *Generator) GenConst(ctx context.Context, c *midl.Const) {
 	p.P("var", GoName(ctx, c.Name), "=", p.FormatConstExpr(ctx, c.Value, 0))
 }
 
-func (p *Generator) GenType(ctx context.Context, t *midl.Type) {
+func (p *Generator) GenType(ctx *Env, t *midl.Type) {
 
 	pp := p.NewTypeGenerator(ctx, t)
 
@@ -428,37 +426,37 @@ func (p *Generator) GenType(ctx context.Context, t *midl.Type) {
 	}
 }
 
-func (p *Generator) GenDoTrailingGapMarshalNDR(ctx context.Context, gap int) {
+func (p *Generator) GenDoTrailingGapMarshalNDR(ctx *Env, gap int) {
 	if gap > 1 {
 		p.CheckErr(p.B("w.WriteTrailingGap", gap))
 	}
 }
 
-func (p *Generator) GenDoAlignmentMarshalNDR(ctx context.Context, alignment int) {
+func (p *Generator) GenDoAlignmentMarshalNDR(ctx *Env, alignment int) {
 	if alignment > 1 {
 		p.CheckErr(p.B("w.WriteAlign", alignment))
 	}
 }
 
-func (p *Generator) GenDoUnionAlignemntMarshalNDR(ctx context.Context, alignment int) {
+func (p *Generator) GenDoUnionAlignemntMarshalNDR(ctx *Env, alignment int) {
 	if alignment > 1 {
 		p.CheckErr(p.B("w.WriteUnionAlign", alignment))
 	}
 }
 
-func (p *Generator) GenDoTrailingGapUnmarshalNDR(ctx context.Context, gap int) {
+func (p *Generator) GenDoTrailingGapUnmarshalNDR(ctx *Env, gap int) {
 	if gap > 1 {
 		p.CheckErr(p.B("w.ReadTrailingGap", gap))
 	}
 }
 
-func (p *Generator) GenDoAlignmentUnmarshalNDR(ctx context.Context, alignment int) {
+func (p *Generator) GenDoAlignmentUnmarshalNDR(ctx *Env, alignment int) {
 	if alignment > 1 {
 		p.CheckErr(p.B("w.ReadAlign", alignment))
 	}
 }
 
-func (p *Generator) GenDoUnionAlignemntUnmarshalNDR(ctx context.Context, alignment int) {
+func (p *Generator) GenDoUnionAlignemntUnmarshalNDR(ctx *Env, alignment int) {
 	if alignment > 1 {
 		p.CheckErr(p.B("w.ReadUnionAlign", alignment))
 	}
@@ -476,7 +474,7 @@ using the following priority rules (1 is highest):
 5. Unique (Microsoft RPC default mode)
 */
 // Deprecated: unused, see EffectivePointer.
-func (p *Generator) GenPointerType(ctx context.Context, scopes *Scopes) midl.PointerType {
+func (p *Generator) GenPointerType(ctx *Env, scopes *Scopes) midl.PointerType {
 
 	var ptr midl.PointerType
 
@@ -486,7 +484,7 @@ func (p *Generator) GenPointerType(ctx context.Context, scopes *Scopes) midl.Poi
 		}
 	}
 
-	if iff := Interface(ctx); iff != nil {
+	if iff := ctx.Interface; iff != nil {
 		if ptr = iff.Attrs.PointerDefault; ptr != midl.PointerTypeNone {
 			return ptr
 		}
@@ -495,7 +493,7 @@ func (p *Generator) GenPointerType(ctx context.Context, scopes *Scopes) midl.Poi
 	return midl.PointerTypeUnique
 }
 
-func (p *Generator) GenWriteSize(ctx context.Context, sz interface{}) {
+func (p *Generator) GenWriteSize(ctx *Env, sz interface{}) {
 	p.CheckErr(p.B("w.WriteSize", sz))
 }
 
@@ -505,11 +503,11 @@ func (p *Generator) CB(f func()) {
 	p.inCB = false
 }
 
-func (p *Generator) GenCommentLine(ctx context.Context, line string) {
+func (p *Generator) GenCommentLine(ctx *Env, line string) {
 	p.GenComment(ctx, []string{line})
 }
 
-func (p *Generator) GenComment(ctx context.Context, docs []string) {
+func (p *Generator) GenComment(ctx *Env, docs []string) {
 	p.CB(func() {
 		for _, doc := range docs {
 			for _, ddoc := range strings.Split(doc, "\n") {
@@ -535,7 +533,7 @@ func (p *Generator) GenComment(ctx context.Context, docs []string) {
 	})
 }
 
-func (p *Generator) GenTag(ctx context.Context, field *midl.Field) string {
+func (p *Generator) GenTag(ctx *Env, field *midl.Field) string {
 	tag := []string{`name:` + field.Name}
 
 	for _, size := range []struct {

@@ -1,8 +1,6 @@
 package gen
 
 import (
-	"context"
-
 	"github.com/oiweiwei/midl-gen-go/midl"
 )
 
@@ -20,7 +18,7 @@ var (
 )
 
 // UTF16Len function returns the UTF16 length-count function call on variable `n`.
-func (p *Generator) UTF16Len(ctx context.Context, n string, isNullTerminated bool) string {
+func (p *Generator) UTF16Len(ctx *Env, n string, isNullTerminated bool) string {
 	if isNullTerminated {
 		return p.B(UTF16NLenFunc, n)
 	}
@@ -28,7 +26,7 @@ func (p *Generator) UTF16Len(ctx context.Context, n string, isNullTerminated boo
 }
 
 // ByteLen function returns the byte length-count function call on variable `n`.
-func (p *Generator) ByteLen(ctx context.Context, n string, isNullTerminated bool) string {
+func (p *Generator) ByteLen(ctx *Env, n string, isNullTerminated bool) string {
 	if isNullTerminated {
 		return p.B(ByteNLenFunc, n)
 	}
@@ -36,7 +34,7 @@ func (p *Generator) ByteLen(ctx context.Context, n string, isNullTerminated bool
 }
 
 // DataLen function returns the proper length-count function call on variable `n`.
-func (p *Generator) DataLen(ctx context.Context, field *midl.Field, scopes *Scopes, n string, defaultTypeSize ...string) string {
+func (p *Generator) DataLen(ctx *Env, field *midl.Field, scopes *Scopes, n string, defaultTypeSize ...string) string {
 
 	if field.Attrs.Format.MultiSize {
 		return p.B(MultiSzLenFunc, n)

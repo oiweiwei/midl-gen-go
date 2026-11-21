@@ -1,8 +1,6 @@
 package gen
 
 import (
-	"context"
-
 	"github.com/oiweiwei/midl-gen-go/desc"
 	"github.com/oiweiwei/midl-gen-go/midl"
 )
@@ -12,9 +10,9 @@ import (
 type Scopes = desc.Cursor
 
 // siteOf returns the use site the generator is emitting code for.
-func siteOf(ctx context.Context) desc.Site {
-	site := desc.Site{Operation: IsOp(ctx)}
-	if iff := Interface(ctx); iff != nil && iff.Attrs != nil {
+func siteOf(ctx *Env) desc.Site {
+	site := desc.Site{Operation: ctx.Operation}
+	if iff := ctx.Interface; iff != nil && iff.Attrs != nil {
 		site.PointerDefault = iff.Attrs.PointerDefault
 	}
 	return site
@@ -22,6 +20,6 @@ func siteOf(ctx context.Context) desc.Site {
 
 // IsIgnoredPointer reports whether the field starts with a pointer that does
 // not appear on the wire, see desc.Site.IsIgnoredPointer.
-func IsIgnoredPointer(ctx context.Context, field *midl.Field) bool {
+func IsIgnoredPointer(ctx *Env, field *midl.Field) bool {
 	return siteOf(ctx).IsIgnoredPointer(desc.Of(field))
 }

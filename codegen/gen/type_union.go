@@ -1,7 +1,6 @@
 package gen
 
 import (
-	"context"
 	"fmt"
 	"strings"
 
@@ -10,7 +9,7 @@ import (
 	"github.com/oiweiwei/midl-gen-go/midl"
 )
 
-func (p *TypeGenerator) GenUnion(ctx context.Context) {
+func (p *TypeGenerator) GenUnion(ctx *Env) {
 
 	sw := p.Union().Switch
 
@@ -63,7 +62,7 @@ func (p *TypeGenerator) GenUnion(ctx context.Context) {
 	}
 }
 
-func (p *TypeGenerator) GenerateUnionGetValue(ctx context.Context) {
+func (p *TypeGenerator) GenerateUnionGetValue(ctx *Env) {
 
 	p.P()
 
@@ -95,7 +94,7 @@ func (p *TypeGenerator) GenerateUnionGetValue(ctx context.Context) {
 
 }
 
-func (p *TypeGenerator) SwitchTypeZeroValue(ctx context.Context, switchType string) any {
+func (p *TypeGenerator) SwitchTypeZeroValue(ctx *Env, switchType string) any {
 	switch switchType {
 	case "string":
 		return `""`
@@ -103,7 +102,7 @@ func (p *TypeGenerator) SwitchTypeZeroValue(ctx context.Context, switchType stri
 	return 0
 }
 
-func (p *TypeGenerator) GenerateNDRSwitchValue(ctx context.Context) {
+func (p *TypeGenerator) GenerateNDRSwitchValue(ctx *Env) {
 
 	switchType := p.SwitchType(ctx, p.Scopes)
 
@@ -136,12 +135,12 @@ func (p *TypeGenerator) GenerateNDRSwitchValue(ctx context.Context) {
 	})
 }
 
-func (p *TypeGenerator) GenerateSwitchIs(ctx context.Context, field *midl.Field, scopes *Scopes, switchVar string) {
+func (p *TypeGenerator) GenerateSwitchIs(ctx *Env, field *midl.Field, scopes *Scopes, switchVar string) {
 	switchIs, switchType := field.Attrs.SwitchIs, p.SwitchType(ctx, scopes)
 	p.P(switchVar, ":=", p.B(switchType, p.GenExpr(ctx, switchIs, p.LookupExprField(ctx, switchIs), switchType)))
 }
 
-func (p *TypeGenerator) IsEnumSwitch(ctx context.Context, scopes *Scopes) bool {
+func (p *TypeGenerator) IsEnumSwitch(ctx *Env, scopes *Scopes) bool {
 	if p.Union() != nil && p.Union().IsEncapsulated() {
 		return false
 	}
@@ -149,7 +148,7 @@ func (p *TypeGenerator) IsEnumSwitch(ctx context.Context, scopes *Scopes) bool {
 	return desc.OfType(scopes.Layer().SwitchType).Is(midl.TypeEnum)
 }
 
-func (p *TypeGenerator) SwitchType(ctx context.Context, scopes *Scopes) string {
+func (p *TypeGenerator) SwitchType(ctx *Env, scopes *Scopes) string {
 
 	var switchType string
 
@@ -172,7 +171,7 @@ func (p *TypeGenerator) SwitchType(ctx context.Context, scopes *Scopes) string {
 	return switchType
 }
 
-func (p *TypeGenerator) GenUnionMarshalNDR(ctx context.Context) {
+func (p *TypeGenerator) GenUnionMarshalNDR(ctx *Env) {
 
 	p.P()
 
@@ -284,7 +283,7 @@ func (p *TypeGenerator) GenUnionMarshalNDR(ctx context.Context) {
 
 }
 
-func (p *TypeGenerator) GenUnionArmPrimitiveTypeMarshalNDR(ctx context.Context, cases *midl.UnionCase, armName string) {
+func (p *TypeGenerator) GenUnionArmPrimitiveTypeMarshalNDR(ctx *Env, cases *midl.UnionCase, armName string) {
 	p.P("_o, _ := o.Value.(*" + armName + ")")
 	p.If("_o", "!=", "nil", func() {
 		p.P("_ptr_o", ":=", "ndr.MarshalNDRFunc", "(", "func(ctx context.Context, w ndr.Writer) error {")
@@ -297,7 +296,7 @@ func (p *TypeGenerator) GenUnionArmPrimitiveTypeMarshalNDR(ctx context.Context, 
 	}))
 }
 
-func (p *TypeGenerator) IsArmPointerToPrimitiveType(ctx context.Context, cases *midl.UnionCase) bool {
+func (p *TypeGenerator) IsArmPointerToPrimitiveType(ctx *Env, cases *midl.UnionCase) bool {
 
 	if len(cases.Arms) != 1 {
 		return false
@@ -307,7 +306,7 @@ func (p *TypeGenerator) IsArmPointerToPrimitiveType(ctx context.Context, cases *
 	return scopes.Is(midl.TypePointer) && scopes.Next().Type().IsPrimitiveType()
 }
 
-func (p *TypeGenerator) UnionArmName(ctx context.Context, cases *midl.UnionCase) string {
+func (p *TypeGenerator) UnionArmName(ctx *Env, cases *midl.UnionCase) string {
 
 	caseName := p.GoTypeName
 
@@ -369,12 +368,12 @@ func (p *TypeGenerator) UnionArmName(ctx context.Context, cases *midl.UnionCase)
 	return caseName + "_" + fmt.Sprintf("%d", cases.Position)
 }
 
-func (p *TypeGenerator) GenUnionArmInterface(ctx context.Context, cases *midl.UnionCase) {
+func (p *TypeGenerator) GenUnionArmInterface(ctx *Env, cases *midl.UnionCase) {
 	p.P()
 	p.P("func", "(*"+p.UnionArmName(ctx, cases)+")", "is_"+p.GoTypeName, "()", "{}")
 }
 
-func (p *TypeGenerator) GenUnionArm(ctx context.Context, cases *midl.UnionCase) {
+func (p *TypeGenerator) GenUnionArm(ctx *Env, cases *midl.UnionCase) {
 
 	if cases.IsDefault && len(cases.Arms) == 0 {
 		return
@@ -407,7 +406,7 @@ func (p *TypeGenerator) GenUnionArm(ctx context.Context, cases *midl.UnionCase) 
 	}
 }
 
-func (p *TypeGenerator) ArmFields(ctx context.Context, cases *midl.UnionCase) []*midl.Field {
+func (p *TypeGenerator) ArmFields(ctx *Env, cases *midl.UnionCase) []*midl.Field {
 
 	if p.IsEmbeddedArmStruct(ctx, cases) {
 		return cases.Arms[0].Type.Struct.Fields
@@ -416,11 +415,11 @@ func (p *TypeGenerator) ArmFields(ctx context.Context, cases *midl.UnionCase) []
 	return cases.Arms
 }
 
-func (p *TypeGenerator) IsEmbeddedArmStruct(ctx context.Context, cases *midl.UnionCase) bool {
+func (p *TypeGenerator) IsEmbeddedArmStruct(ctx *Env, cases *midl.UnionCase) bool {
 	return len(cases.Arms) > 0 && (cases.Arms[0].Type.Is(midl.TypeStruct) || cases.Arms[0].Type.Is(midl.TypeUnion)) && cases.Arms[0].Type.Name == "" && cases.Arms[0].Type.Tag == ""
 }
 
-func (p *TypeGenerator) GenUnionArmMarshalNDR(ctx context.Context, arm *midl.UnionCase, caseName string) {
+func (p *TypeGenerator) GenUnionArmMarshalNDR(ctx *Env, arm *midl.UnionCase, caseName string) {
 
 	p.P()
 	p.P("func", "(o *"+caseName+")", "MarshalNDR(ctx context.Context, w ndr.Writer)", "error", "{")

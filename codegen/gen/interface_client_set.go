@@ -1,13 +1,12 @@
 package gen
 
 import (
-	"context"
 	"path/filepath"
 
 	"github.com/oiweiwei/midl-gen-go/midl"
 )
 
-func (p *Generator) GenClientSet(ctx context.Context, f *midl.File) {
+func (p *Generator) GenClientSet(ctx *Env, f *midl.File) {
 
 	n := "Client"
 

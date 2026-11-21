@@ -1,7 +1,6 @@
 package gen
 
 import (
-	"context"
 	"strings"
 
 	"github.com/oiweiwei/midl-gen-go/desc"
@@ -14,7 +13,7 @@ type ParamGenerator struct {
 	*TypeGenerator
 }
 
-func (p *Generator) NewParamGenerator(ctx context.Context, typ *midl.Type) *ParamGenerator {
+func (p *Generator) NewParamGenerator(ctx *Env, typ *midl.Type) *ParamGenerator {
 	return &ParamGenerator{
 		Generator:     p,
 		TypeGenerator: p.NewTypeGenerator(ctx, typ),
@@ -38,15 +37,15 @@ func ParamName(dir int) string {
 	return ""
 }
 
-func (p *Generator) GenOperation(ctx context.Context, op *midl.Operation) {
+func (p *Generator) GenOperation(ctx *Env, op *midl.Operation) {
 	if p.IsUnusedOp(op.Name) {
 		return
 	}
-	ctx = WithOp(ctx)
+	ctx = ctx.WithOperation()
 
 	mask := p.GenOperationNullMask(ctx, op)
 
-	ctx = WithNullMask(ctx, mask)
+	ctx = ctx.WithNullMask(mask)
 
 	p.GenOperationStruct(ctx, op, AnyParam)
 	p.GenOperationMarshalNDR(ctx, op, InParam)
@@ -57,7 +56,7 @@ func (p *Generator) GenOperation(ctx context.Context, op *midl.Operation) {
 	p.GenOperationStruct(ctx, op, OutParam)
 }
 
-func (p *Generator) GenOperationMarshalNDR(ctx context.Context, op *midl.Operation, dir int) {
+func (p *Generator) GenOperationMarshalNDR(ctx *Env, op *midl.Operation, dir int) {
 
 	pN := ParamName(dir)
 	fN := "MarshalNDR" + pN
@@ -129,14 +128,14 @@ func (p *Generator) GenOperationMarshalNDR(ctx context.Context, op *midl.Operati
 
 }
 
-func (p *Generator) PrepareOperationPayloadHook(ctx context.Context, dir int) {
+func (p *Generator) PrepareOperationPayloadHook(ctx *Env, dir int) {
 	pN := ParamName(dir)
 	p.If("hook, ok := (interface{})(o).(interface { AfterPrepare"+pN+"Payload(context.Context) error }); ok", func() {
 		p.CheckErr(p.B("hook.AfterPrepare"+pN+"Payload", "ctx"))
 	})
 }
 
-func (p *Generator) GenOperationUnmarshalNDR(ctx context.Context, op *midl.Operation, dir int) {
+func (p *Generator) GenOperationUnmarshalNDR(ctx *Env, op *midl.Operation, dir int) {
 
 	fn := "UnmarshalNDR"
 	if dir == InParam {
@@ -189,7 +188,7 @@ func (p *Generator) GenOperationUnmarshalNDR(ctx context.Context, op *midl.Opera
 
 }
 
-func (p *Generator) GenParamComment(ctx context.Context, param *midl.Param) string {
+func (p *Generator) GenParamComment(ctx *Env, param *midl.Param) string {
 	if param.Attrs == nil {
 		return "{}"
 	}
@@ -198,7 +197,7 @@ func (p *Generator) GenParamComment(ctx context.Context, param *midl.Param) stri
 	return "{" + (&attr).String() + "}"
 }
 
-func (p *Generator) MethodName(ctx context.Context, op *midl.Operation) string {
+func (p *Generator) MethodName(ctx *Env, op *midl.Operation) string {
 	n := GoName(ctx, op.Name)
 	if strings.HasPrefix(op.Name, "_") {
 		n = "_" + n
@@ -215,7 +214,7 @@ func (p *Generator) MethodName(ctx context.Context, op *midl.Operation) string {
 	return n
 }
 
-func (p *Generator) DirName(ctx context.Context, dir int) string {
+func (p *Generator) DirName(ctx *Env, dir int) string {
 	switch dir {
 	case InParam:
 		return "Request"
@@ -225,7 +224,7 @@ func (p *Generator) DirName(ctx context.Context, dir int) string {
 	return ""
 }
 
-func (p *Generator) OpName(ctx context.Context, op *midl.Operation, dir int) string {
+func (p *Generator) OpName(ctx *Env, op *midl.Operation, dir int) string {
 	n := p.MethodName(ctx, op)
 	if dir == InParam {
 		n += "Request"
@@ -237,7 +236,7 @@ func (p *Generator) OpName(ctx context.Context, op *midl.Operation, dir int) str
 	return p.XXX() + n + "Operation"
 }
 
-func (p *Generator) IsDir(ctx context.Context, pdir midl.Direction, dir int) bool {
+func (p *Generator) IsDir(ctx *Env, pdir midl.Direction, dir int) bool {
 	return dir == AnyParam || (dir == InParam && pdir.In) || (dir == OutParam && pdir.Out)
 }
 
@@ -245,7 +244,7 @@ func (p *Generator) ReturnValue() string {
 	return "Return"
 }
 
-func (p *Generator) OperationReturnValue(ctx context.Context, op *midl.Operation) *midl.Param {
+func (p *Generator) OperationReturnValue(ctx *Env, op *midl.Operation) *midl.Param {
 	return &midl.Param{
 		Name:  p.ReturnValue(),
 		Type:  op.Type,
@@ -253,7 +252,7 @@ func (p *Generator) OperationReturnValue(ctx context.Context, op *midl.Operation
 	}
 }
 
-func (p *Generator) OperationParams(ctx context.Context, op *midl.Operation) []*midl.Param {
+func (p *Generator) OperationParams(ctx *Env, op *midl.Operation) []*midl.Param {
 
 	params := make([]*midl.Param, len(op.Params))
 	copy(params, op.Params)
@@ -262,7 +261,7 @@ func (p *Generator) OperationParams(ctx context.Context, op *midl.Operation) []*
 		params = append(params, p.OperationReturnValue(ctx, op))
 	}
 
-	if !Interface(ctx).IsObject() {
+	if !ctx.Interface.IsObject() {
 		return params
 	}
 
@@ -280,7 +279,7 @@ func (p *Generator) OperationParams(ctx context.Context, op *midl.Operation) []*
 	}, params...)
 }
 
-func (p *Generator) GetExprIdents(ctx context.Context, expr ...midl.Expr) []string {
+func (p *Generator) GetExprIdents(ctx *Env, expr ...midl.Expr) []string {
 	ret := make([]string, 0, len(expr))
 	for _, expr := range expr {
 		val, ok := expr.FirstIdent()
@@ -291,7 +290,7 @@ func (p *Generator) GetExprIdents(ctx context.Context, expr ...midl.Expr) []stri
 	return ret
 }
 
-func (p *Generator) GetOutputParamImplicitDependents(ctx context.Context, op *midl.Operation, dir int) []*midl.Param {
+func (p *Generator) GetOutputParamImplicitDependents(ctx *Env, op *midl.Operation, dir int) []*midl.Param {
 
 	if dir != OutParam {
 		if dir == InParam {
@@ -335,7 +334,7 @@ func (p *Generator) GetOutputParamImplicitDependents(ctx context.Context, op *mi
 	return deps
 }
 
-func (p *Generator) GenOperationStruct(ctx context.Context, op *midl.Operation, dir int) {
+func (p *Generator) GenOperationStruct(ctx *Env, op *midl.Operation, dir int) {
 
 	p.P()
 	p.P("//", p.OpName(ctx, op, dir), "structure", "represents", "the", RPCName(op.Name),
@@ -343,7 +342,7 @@ func (p *Generator) GenOperationStruct(ctx context.Context, op *midl.Operation, 
 
 	doc, _ := p.MSDN.GetPage(ctx, op.Name)
 
-	mask := Mask(ctx)
+	mask := ctx.NullMask
 
 	// generate go structure for the in/out/any parameters.
 	p.Structure(p.OpName(ctx, op, dir), func() {
@@ -423,7 +422,7 @@ func (p *Generator) GenOperationStruct(ctx context.Context, op *midl.Operation, 
 	}
 }
 
-func (p *Generator) GenOperationNullMask(ctx context.Context, op *midl.Operation) string {
+func (p *Generator) GenOperationNullMask(ctx *Env, op *midl.Operation) string {
 
 	var nullable []*midl.Param
 
@@ -473,7 +472,7 @@ func (p *Generator) GenOperationNullMask(ctx context.Context, op *midl.Operation
 	return mask
 }
 
-func (p *Generator) GenMakeResponse(ctx context.Context, op *midl.Operation, dir int) {
+func (p *Generator) GenMakeResponse(ctx *Env, op *midl.Operation, dir int) {
 	implicit := p.GetOutputParamImplicitDependents(ctx, op, OutParam)
 	p.P()
 	p.P("//", "Make"+p.OpName(ctx, op, dir), "build a response structure from the given request structure.")
@@ -497,21 +496,21 @@ func (p *Generator) GenMakeResponse(ctx context.Context, op *midl.Operation, dir
 	})
 }
 
-func (p *Generator) GenOpNum(ctx context.Context, op *midl.Operation, dir int) {
+func (p *Generator) GenOpNum(ctx *Env, op *midl.Operation, dir int) {
 	p.P()
 	p.P("//", "OpNum", "returns", "the", "operation", "number", "of", op.Name, "operation.")
 	p.P("func", "(o *"+p.OpName(ctx, op, dir)+")", "OpNum()", "int", "{", "return", op.OpNum, "}")
 }
 
-func (p *Generator) GenOpName(ctx context.Context, op *midl.Operation, dir int) {
+func (p *Generator) GenOpName(ctx *Env, op *midl.Operation, dir int) {
 	p.P()
 	p.P("//", "OpName", "returns", "the", "operation", "name", "of", op.Name, "operation.")
 	p.P("func", "(o *"+p.OpName(ctx, op, dir)+")", "OpName()", "string", "{",
-		"return", p.Q("/"+Interface(ctx).Name+"/"+Interface(ctx).Attrs.Version.String()+"/"+op.Name),
+		"return", p.Q("/"+ctx.Interface.Name+"/"+ctx.Interface.Attrs.Version.String()+"/"+op.Name),
 		"}")
 }
 
-func (p *Generator) GenOperationToOp(ctx context.Context, op *midl.Operation, dir int, mask bool) {
+func (p *Generator) GenOperationToOp(ctx *Env, op *midl.Operation, dir int, mask bool) {
 
 	p.P()
 	p.P("func", "(o *"+p.OpName(ctx, op, dir)+")", p.XXX()+"ToOp(ctx context.Context, op *"+p.OpName(ctx, op, AnyParam), ")", "*"+p.OpName(ctx, op, AnyParam), "{")
@@ -563,7 +562,7 @@ func (p *Generator) GenOperationToOp(ctx context.Context, op *midl.Operation, di
 	p.P("}")
 }
 
-func (p *Generator) GenOperationFromOp(ctx context.Context, op *midl.Operation, dir int, mask bool) {
+func (p *Generator) GenOperationFromOp(ctx *Env, op *midl.Operation, dir int, mask bool) {
 	p.P()
 	p.P("func", "(o *"+p.OpName(ctx, op, dir)+")", p.XXX()+"FromOp(ctx context.Context, op *"+p.OpName(ctx, op, AnyParam), ")", "{")
 	p.If("o == nil", func() {

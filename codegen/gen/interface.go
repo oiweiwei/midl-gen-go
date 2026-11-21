@@ -1,7 +1,6 @@
 package gen
 
 import (
-	"context"
 	"fmt"
 	"regexp"
 	"strconv"
@@ -21,7 +20,7 @@ func (p *Generator) IsUnusedOp(n string) bool {
 
 // GenServerHandle generates the registration function and the operation
 // dispatcher of the server interface.
-func (p *Generator) GenServerHandle(ctx context.Context, iff *midl.Interface) {
+func (p *Generator) GenServerHandle(ctx *Env, iff *midl.Interface) {
 
 	n := GoName(ctx, iff.Name) + "Server"
 
@@ -95,7 +94,7 @@ func (p *Generator) GenServerHandle(ctx context.Context, iff *midl.Interface) {
 	})
 }
 
-func (p *Generator) GenServerInterface(ctx context.Context, iff *midl.Interface) {
+func (p *Generator) GenServerInterface(ctx *Env, iff *midl.Interface) {
 
 	n := GoName(ctx, iff.Name) + "Server"
 
@@ -140,7 +139,7 @@ func (p *Generator) GenServerInterface(ctx context.Context, iff *midl.Interface)
 	})
 }
 
-func (p *Generator) GenUnplementedServer(ctx context.Context, iff *midl.Interface) {
+func (p *Generator) GenUnplementedServer(ctx *Env, iff *midl.Interface) {
 
 	n := "Unimplemented" + GoName(ctx, iff.Name) + "Server"
 
@@ -168,7 +167,7 @@ func (p *Generator) GenUnplementedServer(ctx context.Context, iff *midl.Interfac
 	p.P("var", "_", GoName(ctx, iff.Name)+"Server", "=", p.B("", "*"+n), p.B("", "nil"))
 }
 
-func (p *Generator) GenClient(ctx context.Context, iff *midl.Interface) {
+func (p *Generator) GenClient(ctx *Env, iff *midl.Interface) {
 
 	n := GoName(ctx, iff.Name) + "Client"
 
@@ -326,7 +325,7 @@ func (p *Generator) GenClient(ctx context.Context, iff *midl.Interface) {
 	})
 }
 
-func (p *Generator) GenClientInterface(ctx context.Context, iff *midl.Interface) {
+func (p *Generator) GenClientInterface(ctx *Env, iff *midl.Interface) {
 	n := GoName(ctx, iff.Name) + "Client"
 	p.P()
 	p.P("//", iff.Name, "interface.")
@@ -384,7 +383,7 @@ func (p *Generator) GenClientInterface(ctx context.Context, iff *midl.Interface)
 	})
 }
 
-func (p *Generator) SyntaxName(ctx context.Context, iff *midl.Interface) string {
+func (p *Generator) SyntaxName(ctx *Env, iff *midl.Interface) string {
 	n := GoName(ctx, iff.Name) + "Syntax"
 	ver := iff.Attrs.Version
 	if ver == nil {
@@ -393,7 +392,7 @@ func (p *Generator) SyntaxName(ctx context.Context, iff *midl.Interface) string 
 	return fmt.Sprintf("%sV%d_%d", n, ver.Major, ver.Minor)
 }
 
-func (p *Generator) SyntaxNameWithImport(ctx context.Context, iff *midl.Interface) string {
+func (p *Generator) SyntaxNameWithImport(ctx *Env, iff *midl.Interface) string {
 	n := p.GoInterfaceTypeName(ctx, iff) + "Syntax"
 	ver := iff.Attrs.Version
 	if ver == nil {
@@ -402,7 +401,7 @@ func (p *Generator) SyntaxNameWithImport(ctx context.Context, iff *midl.Interfac
 	return fmt.Sprintf("%sV%d_%d", n, ver.Major, ver.Minor)
 }
 
-func (p *Generator) GenInterfaceID(ctx context.Context, iff *midl.Interface) {
+func (p *Generator) GenInterfaceID(ctx *Env, iff *midl.Interface) {
 
 	if iff.Attrs.UUID == nil {
 		return

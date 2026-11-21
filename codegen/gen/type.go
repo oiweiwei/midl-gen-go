@@ -1,7 +1,6 @@
 package gen
 
 import (
-	"context"
 	"fmt"
 	"strconv"
 	"strings"
@@ -22,7 +21,7 @@ type TypeGenerator struct {
 	OrigType     *midl.Type
 }
 
-func (p *Generator) NewTypeGenerator(ctx context.Context, typ *midl.Type) *TypeGenerator {
+func (p *Generator) NewTypeGenerator(ctx *Env, typ *midl.Type) *TypeGenerator {
 	scopes := desc.OfType(typ)
 	docs, ok := p.MSDN.GetPage(ctx, scopes.Alias())
 	if !ok {
@@ -41,7 +40,7 @@ func (p *TypeGenerator) Skip() bool {
 	return p.Scopes == nil || p.Layer().Alias == ""
 }
 
-func (p *TypeGenerator) GenPipeField(ctx context.Context, typ *midl.Type) *midl.Field {
+func (p *TypeGenerator) GenPipeField(ctx *Env, typ *midl.Type) *midl.Field {
 	return &midl.Field{
 		Attrs: &midl.FieldAttr{NoSizeLimit: false},
 		Type: &midl.Type{
@@ -53,7 +52,7 @@ func (p *TypeGenerator) GenPipeField(ctx context.Context, typ *midl.Type) *midl.
 	}
 }
 
-func (p *TypeGenerator) GenPipe(ctx context.Context) {
+func (p *TypeGenerator) GenPipe(ctx *Env) {
 
 	p.P("//", p.GoTypeName, "type", "represents", RPCName(p.Alias()), "RPC", "pipe.")
 	if p.Doc != nil {
@@ -136,7 +135,7 @@ func (p *TypeGenerator) GenPipe(ctx context.Context) {
 
 }
 
-func (p *TypeGenerator) GenEnum(ctx context.Context) {
+func (p *TypeGenerator) GenEnum(ctx *Env) {
 
 	p.P("//", p.GoTypeName, "type", "represents", RPCName(p.Alias()), "RPC", "enumeration.")
 	if p.Doc != nil {
@@ -176,7 +175,7 @@ func (p *TypeGenerator) GenEnum(ctx context.Context) {
 	})
 }
 
-func (p *TypeGenerator) GenCUnion(ctx context.Context) {
+func (p *TypeGenerator) GenCUnion(ctx *Env) {
 
 	p.Structure(p.GoTypeName, func() {
 		for _, cases := range p.Union().Body {
@@ -191,7 +190,7 @@ func (p *TypeGenerator) GenCUnion(ctx context.Context) {
 	}
 }
 
-func (p *TypeGenerator) GenStructField(ctx context.Context, field *midl.Field) {
+func (p *TypeGenerator) GenStructField(ctx *Env, field *midl.Field) {
 	if field.IsHandle() {
 		return
 	}
@@ -211,7 +210,7 @@ func (p *TypeGenerator) GenStructField(ctx context.Context, field *midl.Field) {
 	}
 }
 
-func (p *TypeGenerator) GenStructFieldComment(ctx context.Context, field *midl.Field, defaultPtr ...string) string {
+func (p *TypeGenerator) GenStructFieldComment(ctx *Env, field *midl.Field, defaultPtr ...string) string {
 	ret := ""
 	for i, scope := range desc.Resolve(field).Layers {
 		ret += fmt.Sprintf("(%d:", i+1)
@@ -249,15 +248,15 @@ func (p *TypeGenerator) GenStructFieldComment(ctx context.Context, field *midl.F
 	return ret
 }
 
-func (p *TypeGenerator) GenStructPreparePayloadAfterHook(ctx context.Context) {
+func (p *TypeGenerator) GenStructPreparePayloadAfterHook(ctx *Env) {
 	p.CheckErr(p.B("ndr.AfterPreparePayload", "ctx", "o"))
 }
 
-func (p *TypeGenerator) GenStructPreparePayloadBeforeHook(ctx context.Context) {
+func (p *TypeGenerator) GenStructPreparePayloadBeforeHook(ctx *Env) {
 	p.CheckErr(p.B("ndr.BeforePreparePayload", "ctx", "o"))
 }
 
-func (p *TypeGenerator) GenStructPreparePayloadFields(ctx context.Context, fields []*midl.Field) {
+func (p *TypeGenerator) GenStructPreparePayloadFields(ctx *Env, fields []*midl.Field) {
 
 	ranged := make([]*midl.Field, 0)
 	defaulted := make([]*midl.Field, 0)
@@ -361,7 +360,7 @@ ranged_loop:
 
 // LookupExprField returns the field of the current struct the expression refers to
 // (its first identifier), or nil.
-func (p *TypeGenerator) LookupExprField(ctx context.Context, e midl.Expr) *midl.Field {
+func (p *TypeGenerator) LookupExprField(ctx *Env, e midl.Expr) *midl.Field {
 
 	if p.Struct() == nil {
 		return nil
@@ -384,7 +383,7 @@ func (p *TypeGenerator) LookupExprField(ctx context.Context, e midl.Expr) *midl.
 // GenExpr renders the expression as a Go expression for the field and returns
 // it. A conditional on a non-reference, or any expression of a boolean field,
 // needs statements: they are emitted to a temporary variable which is returned.
-func (p *TypeGenerator) GenExpr(ctx context.Context, e midl.Expr, field *midl.Field, typ string, n ...string) string {
+func (p *TypeGenerator) GenExpr(ctx *Env, e midl.Expr, field *midl.Field, typ string, n ...string) string {
 
 	isBool := false
 	if field != nil {
@@ -431,7 +430,7 @@ func (p *TypeGenerator) GenExpr(ctx context.Context, e midl.Expr, field *midl.Fi
 	return varName
 }
 
-func (p *TypeGenerator) GenStructPreparePayload(ctx context.Context) {
+func (p *TypeGenerator) GenStructPreparePayload(ctx *Env) {
 
 	p.P("")
 	p.P("func", "(o *"+p.GoTypeName+")", p.XXX()+"PreparePayload(ctx context.Context)", "error", "{")
@@ -444,7 +443,7 @@ func (p *TypeGenerator) GenStructPreparePayload(ctx context.Context) {
 	p.P("}")
 }
 
-func (p *TypeGenerator) GenStructPreparePayloadSizeExpr(ctx context.Context, field *midl.Field, scopes *Scopes, sz midl.Expr) {
+func (p *TypeGenerator) GenStructPreparePayloadSizeExpr(ctx *Env, field *midl.Field, scopes *Scopes, sz midl.Expr) {
 
 	n := p.GoFieldName(ctx, field)
 	lenIdent := expr.Ident(p.DataLen(ctx, field, desc.Of(field), p.O(n), ""))
@@ -482,7 +481,7 @@ func (p *TypeGenerator) GenStructPreparePayloadSizeExpr(ctx context.Context, fie
 	}
 }
 
-func (p *TypeGenerator) GenSubTypes(ctx context.Context, fields []*midl.Field) {
+func (p *TypeGenerator) GenSubTypes(ctx *Env, fields []*midl.Field) {
 
 	for _, field := range fields {
 		p.GenSubType(ctx, field)
@@ -492,7 +491,7 @@ func (p *TypeGenerator) GenSubTypes(ctx context.Context, fields []*midl.Field) {
 	}
 }
 
-func (p *TypeGenerator) GenSubType(ctx context.Context, field *midl.Field) {
+func (p *TypeGenerator) GenSubType(ctx *Env, field *midl.Field) {
 
 	switch t := field.Type.Base(); {
 	case t.Is(midl.TypeStruct) || t.Is(midl.TypeUnion) || t.Is(midl.TypeCUnion):
@@ -520,13 +519,13 @@ func (p *TypeGenerator) GenSubType(ctx context.Context, field *midl.Field) {
 	}
 }
 
-func (p *TypeGenerator) GenInterface(ctx context.Context) {
+func (p *TypeGenerator) GenInterface(ctx *Env) {
 	tt := *p.Session.LookupType("MInterfacePointer")
 	tt.Attrs = tt.Attrs.Merge(p.OrigType.Attrs)
 	p.NewTypeGenerator(ctx, &tt).GenStruct(ctx)
 }
 
-func (p *TypeGenerator) GenStruct(ctx context.Context) {
+func (p *TypeGenerator) GenStruct(ctx *Env) {
 
 	if p.Layer().Parent != "" {
 		p.P("//", p.GoTypeName, "structure", "represents", RPCName(p.Layer().Parent), "structure", "anonymous", "member.")
@@ -551,7 +550,7 @@ func (p *TypeGenerator) GenStruct(ctx context.Context) {
 	} else {
 
 		mask := p.GenNullMask(ctx)
-		ctx = WithNullMask(ctx, mask)
+		ctx = ctx.WithNullMask(mask)
 
 		p.Structure(p.GoTypeName, func() {
 			if mask != "" {
@@ -575,7 +574,7 @@ func (p *TypeGenerator) GenStruct(ctx context.Context) {
 
 }
 
-func (p *TypeGenerator) GenNullMask(ctx context.Context) string {
+func (p *TypeGenerator) GenNullMask(ctx *Env) string {
 
 	nullable := []*midl.Field{}
 
@@ -609,13 +608,13 @@ func (p *TypeGenerator) GenNullMask(ctx context.Context) string {
 	return mask
 }
 
-func (p *TypeGenerator) GenLayout(ctx context.Context) {
+func (p *TypeGenerator) GenLayout(ctx *Env) {
 	if p.Layer().IsLayout {
 		p.P("func", "(o *"+p.GoTypeName+")", "NDRLayout()", "{}")
 	}
 }
 
-func (p *TypeGenerator) GenStructNDRSizeInfo(ctx context.Context) {
+func (p *TypeGenerator) GenStructNDRSizeInfo(ctx *Env) {
 
 	if !ndr.IsConformant(p.Scopes) {
 		return
@@ -644,7 +643,7 @@ func (p *TypeGenerator) GenStructNDRSizeInfo(ctx context.Context) {
 	p.P("}")
 }
 
-func (p *TypeGenerator) GenStructMarshalNDRSizePreamble(ctx context.Context, field *midl.Field) {
+func (p *TypeGenerator) GenStructMarshalNDRSizePreamble(ctx *Env, field *midl.Field) {
 	if !ndr.IsConformant(p.Scopes) {
 		return
 	}
@@ -658,7 +657,7 @@ func (p *TypeGenerator) GenStructMarshalNDRSizePreamble(ctx context.Context, fie
 	})
 }
 
-func (p *TypeGenerator) GenStructMarshalNDR(ctx context.Context) {
+func (p *TypeGenerator) GenStructMarshalNDR(ctx *Env) {
 
 	trailingField := p.Struct().LastFieldIndex()
 	if ndr.IsConformant(p.Scopes) || ndr.IsVarying(p.Scopes) {
@@ -692,7 +691,7 @@ func (p *TypeGenerator) GenStructMarshalNDR(ctx context.Context) {
 
 }
 
-func (p *TypeGenerator) GenFieldMarshalNDR(ctx context.Context, field *midl.Field, scopes *Scopes, index ...interface{}) {
+func (p *TypeGenerator) GenFieldMarshalNDR(ctx *Env, field *midl.Field, scopes *Scopes, index ...interface{}) {
 
 	if scopes == nil || field.Attrs.Ignore {
 		// end.
@@ -702,7 +701,7 @@ func (p *TypeGenerator) GenFieldMarshalNDR(ctx context.Context, field *midl.Fiel
 	// reserved field.
 	if p.GoFieldName(ctx, field) == "_" {
 		p.P("//", "reserved", field.Name)
-		p.GenZeroFieldMarshalNDR(WithVarName(ctx, ZeroLen), field, scopes, index...)
+		p.GenZeroFieldMarshalNDR(ctx.WithVarName(ZeroLen), field, scopes, index...)
 		return
 	}
 
@@ -806,11 +805,11 @@ func (p *TypeGenerator) GenFieldMarshalNDR(ctx context.Context, field *midl.Fiel
 				if nullChk != "" {
 					nullChk += "&& "
 				}
-				nullChk += fmt.Sprintf("(%s & %s == 0 || %s != %s)", p.O(p.NullMask()), Mask(ctx)+GoFieldName(ctx, field),
+				nullChk += fmt.Sprintf("(%s & %s == 0 || %s != %s)", p.O(p.NullMask()), ctx.NullMask+GoFieldName(ctx, field),
 					name, p.GoTypeZeroValue(ctx, p.Layer(), field, scopes))
 			}
 
-			if nullChk == "" && !scopes.Layer().Pointer.IsWeak(IsOp(ctx)) {
+			if nullChk == "" && !scopes.Layer().Pointer.IsWeak(ctx.Operation) {
 				p.P("// XXX: pointer default mask was not generated as conditions")
 				p.P("// for automatic generation were not met.")
 				p.P("// If this behavior is not desired, use goext_default_null([cond]) attribute.")
@@ -852,7 +851,7 @@ func (p *TypeGenerator) GenFieldMarshalNDR(ctx context.Context, field *midl.Fiel
 
 		// marshal array.
 
-		ctx := WithNullMask(ctx, "") /* clear null mask as arrays are unsupported */
+		ctx := ctx.WithNullMask("") /* clear null mask as arrays are unsupported */
 
 		if !p.GenMarshalSizeInfo(ctx, field, scopes, index...) {
 			break
@@ -862,7 +861,7 @@ func (p *TypeGenerator) GenFieldMarshalNDR(ctx context.Context, field *midl.Fiel
 
 		if scopes.Dim().IsString {
 			name = p.GenWriteStringBuffer(ctx, scopes, field, index...)
-			ctx, index = WithVarName(ctx, name), nil
+			ctx, index = ctx.WithVarName(name), nil
 		}
 
 		if scopes.Dim().NoSizeLimit {
@@ -900,7 +899,7 @@ func (p *TypeGenerator) GenFieldMarshalNDR(ctx context.Context, field *midl.Fiel
 
 		p.If(name, "!=", "nil", func() {
 			p.Range("_chunk", name+".Pipe()", func() {
-				p.GenFieldMarshalNDR(WithVarName(ctx, "_chunk"), field, desc.Of(field))
+				p.GenFieldMarshalNDR(ctx.WithVarName("_chunk"), field, desc.Of(field))
 			})
 		})
 		p.GenWriteSize(ctx, "0")
@@ -910,11 +909,11 @@ func (p *TypeGenerator) GenFieldMarshalNDR(ctx context.Context, field *midl.Fiel
 	}
 }
 
-func (p *TypeGenerator) IsNotLastFixedArray(ctx context.Context, scopes *Scopes, field *midl.Field) bool {
+func (p *TypeGenerator) IsNotLastFixedArray(ctx *Env, scopes *Scopes, field *midl.Field) bool {
 	return !ndr.IsTopLevelArray(scopes) && scopes.Array().IsFixed() && p.Struct() != nil && len(p.Struct().Fields) > 0 && field.Position != p.Struct().LastField().Position
 }
 
-func (p *TypeGenerator) GenMarshalSizeInfo(ctx context.Context, field *midl.Field, scopes *Scopes, index ...interface{}) bool {
+func (p *TypeGenerator) GenMarshalSizeInfo(ctx *Env, field *midl.Field, scopes *Scopes, index ...interface{}) bool {
 
 	// get variable name.
 	name := p.VarName(ctx, index...)
@@ -1013,7 +1012,7 @@ func (p *TypeGenerator) GenMarshalSizeInfo(ctx context.Context, field *midl.Fiel
 // GetMinVarValue reports whether the size expression can become negative when
 // its only identifier is zero, e.g. size_is(n - 1). It returns the identifier
 // and the value it must be at least.
-func (p *TypeGenerator) GetMinVarValue(ctx context.Context, sizeExpr midl.Expr) (midl.Expr, int64, bool) {
+func (p *TypeGenerator) GetMinVarValue(ctx *Env, sizeExpr midl.Expr) (midl.Expr, int64, bool) {
 	idents := sizeExpr.Idents()
 	if len(idents) != 1 {
 		return midl.Expr{}, 0, false
@@ -1029,7 +1028,7 @@ func (p *TypeGenerator) GetMinVarValue(ctx context.Context, sizeExpr midl.Expr) 
 	return expr.Ident(idents[0]), -val, true
 }
 
-func (p *TypeGenerator) GenArraySizeVar(ctx context.Context, field *midl.Field, i int, scopes *Scopes, name string, sizeExpr midl.Expr) string {
+func (p *TypeGenerator) GenArraySizeVar(ctx *Env, field *midl.Field, i int, scopes *Scopes, name string, sizeExpr midl.Expr) string {
 
 	if !scopes.IsNotFixedArray() {
 		return ""
@@ -1061,7 +1060,7 @@ func (p *TypeGenerator) GenArraySizeVar(ctx context.Context, field *midl.Field, 
 
 	// calculate size on the fly.
 	p.P(dimVar, ":=", "uint64(0)")
-	p.GenRange(ctx, p.O(p.GoFieldName(ctx, field)), 0, i, func(ctx context.Context, n string) {
+	p.GenRange(ctx, p.O(p.GoFieldName(ctx, field)), 0, i, func(ctx *Env, n string) {
 		lenVar := p.Var("len" + Title(dimVar))
 		p.If(lenVar, ":=", p.DataLen(ctx, field, scopes, n), ";", lenVar, ">", dimVar, func() {
 			p.P(dimVar, "=", lenVar)
@@ -1072,7 +1071,7 @@ func (p *TypeGenerator) GenArraySizeVar(ctx context.Context, field *midl.Field, 
 }
 
 // GenWriteStringBuffer function ...
-func (p *TypeGenerator) GenWriteStringBuffer(ctx context.Context, scopes *Scopes, field *midl.Field, index ...interface{}) string {
+func (p *TypeGenerator) GenWriteStringBuffer(ctx *Env, scopes *Scopes, field *midl.Field, index ...interface{}) string {
 
 	name := p.O(p.IVar(p.GoFieldName(ctx, field), index...))
 
@@ -1147,7 +1146,7 @@ func (p *TypeGenerator) GenWriteStringBuffer(ctx context.Context, scopes *Scopes
 	return varName
 }
 
-func (p *TypeGenerator) GoFieldName(ctx context.Context, field *midl.Field) string {
+func (p *TypeGenerator) GoFieldName(ctx *Env, field *midl.Field) string {
 
 	if field.Name == "" {
 		if field.Type.Base().Is(midl.TypeUnion) {
