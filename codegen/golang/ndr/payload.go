@@ -2,6 +2,7 @@ package ndr
 
 import (
 	"github.com/oiweiwei/midl-gen-go/codegen/golang/emit"
+	"github.com/oiweiwei/midl-gen-go/codegen/goprint"
 	"github.com/oiweiwei/midl-gen-go/desc"
 	"github.com/oiweiwei/midl-gen-go/midl"
 	"github.com/oiweiwei/midl-gen-go/midl/expr"
@@ -49,7 +50,7 @@ func (p *TypeGenerator) GenStructPreparePayloadFields(ctx *emit.Env, fields []*m
 					}
 					// check minimum value borders.
 					if to, val, ok := p.GetMinVarValue(ctx, sz.Is()); ok {
-						p.If(p.FormatExprO(ctx, to), "<", val, func() {
+						p.If(goprint.Tokens(p.FormatExprO(ctx, to), "<", val), func() {
 							p.P(p.FormatExprO(ctx, to), "=", val)
 						})
 					}
@@ -65,7 +66,7 @@ func (p *TypeGenerator) GenStructPreparePayloadFields(ctx *emit.Env, fields []*m
 						p.GenStructPreparePayloadSizeExpr(ctx, field, scopes, sz)
 					}
 					if to, val, ok := p.GetMinVarValue(ctx, sz); ok {
-						p.If(p.FormatExprO(ctx, to), "<", val, func() {
+						p.If(goprint.Tokens(p.FormatExprO(ctx, to), "<", val), func() {
 							p.P(p.FormatExprO(ctx, to), "=", val)
 						})
 					}
@@ -85,7 +86,7 @@ ranged_loop:
 		// process range statement for array.
 		for scopes := desc.Of(field); scopes != nil; scopes = scopes.Next() {
 			if scopes.Is(midl.TypeArray) {
-				p.If(p.Len(fL), ">", p.B("int", rng.Max), func() {
+				p.If(goprint.Tokens(p.Len(fL), ">", p.B("int", rng.Max)), func() {
 					p.P(`return fmt.Errorf("` + p.GoFieldName(ctx, field) + ` is out of range")`)
 				})
 				continue ranged_loop
@@ -94,11 +95,11 @@ ranged_loop:
 
 		// process range statement for primitive type.
 		if field.Type.Base().Kind.Signed() || rng.Min != 0 {
-			p.If(fL, "<", p.B(fT, rng.Min), "||", fL, ">", p.B(fT, rng.Max), func() {
+			p.If(goprint.Tokens(fL, "<", p.B(fT, rng.Min), "||", fL, ">", p.B(fT, rng.Max)), func() {
 				p.P(`return fmt.Errorf("` + p.GoFieldName(ctx, field) + ` is out of range")`)
 			})
 		} else if rng.Min == 0 {
-			p.If(fL, ">", p.B(fT, rng.Max), func() {
+			p.If(goprint.Tokens(fL, ">", p.B(fT, rng.Max)), func() {
 				p.P(`return fmt.Errorf("` + p.GoFieldName(ctx, field) + ` is out of range")`)
 			})
 		}
@@ -106,7 +107,7 @@ ranged_loop:
 
 	for _, field := range defaulted {
 		if !field.DefaultValue.IsEmpty() && !field.Attrs.Ignore {
-			p.If(p.EO(ctx, field.Name), "==", p.GoTypeZeroValue(ctx, p.Layer(), field, desc.Of(field)), func() {
+			p.If(goprint.Tokens(p.EO(ctx, field.Name), "==", p.GoTypeZeroValue(ctx, p.Layer(), field, desc.Of(field))), func() {
 				expr := field.DefaultValue
 				p.P(p.EO(ctx, field.Name), "=", p.B(
 					p.GoFieldTypeName(ctx, p.Layer(), field),
@@ -155,12 +156,12 @@ func (p *TypeGenerator) GenStructPreparePayloadSizeExpr(ctx *emit.Env, field *mi
 		szN := emit.GoMemberName(ctx, szField.Name)
 		szT := p.GoFieldTypeName(ctx, p.Layer(), szField)
 		// ... if o.Data != nil && o.DataLen == 0 ...
-		p.If(p.O(n), "!=", p.GoTypeZeroValue(ctx, p.Layer(), field, scopes), "&&", p.O(szN), "==", "0", func() {
+		p.If(goprint.Tokens(p.O(n), "!=", p.GoTypeZeroValue(ctx, p.Layer(), field, scopes), "&&", p.O(szN), "== 0"), func() {
 			// TODO: handle complex expressions.
 			p.P(p.O(szN), "=", p.B(szT, p.FormatExpr(ctx, sol.Value)))
 			// check variable borders.
 			if to, val, ok := p.GetMinVarValue(ctx, sol.Value); ok {
-				p.If(p.FormatExpr(ctx, to), "<", val, func() {
+				p.If(goprint.Tokens(p.FormatExpr(ctx, to), "<", val), func() {
 					p.P(p.O(szN), "=", p.B(szT, "0"))
 				})
 			}

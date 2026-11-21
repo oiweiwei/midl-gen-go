@@ -90,7 +90,7 @@ func (p *Generator) GenServerInterface(ctx *emit.Env, iff *midl.Interface) {
 
 	p.P()
 	p.P("//", iff.Name, "server interface.")
-	p.Block("type", n, "interface", func() {
+	p.Block(goprint.Tokens("type", n, "interface"), func() {
 		if iff.IsObject() && iff.Base != nil {
 			ctx := p.WithInterfaceBaseNamer(ctx, iff)
 			p.P()
@@ -135,7 +135,7 @@ func (p *Generator) GenUnplementedServer(ctx *emit.Env, iff *midl.Interface) {
 
 	p.P()
 	p.P("//", "Unimplemented", iff.Name)
-	p.Block("type", n, "struct", func() {
+	p.Block(goprint.Tokens("type", n, "struct"), func() {
 		if iff.IsObject() && iff.Base != nil {
 			ctx := p.WithInterfaceBaseNamer(ctx, iff)
 			p.P()

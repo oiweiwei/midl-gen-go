@@ -4,6 +4,7 @@ import (
 	"fmt"
 
 	"github.com/oiweiwei/midl-gen-go/codegen/golang/emit"
+	"github.com/oiweiwei/midl-gen-go/codegen/goprint"
 	"github.com/oiweiwei/midl-gen-go/desc"
 	"github.com/oiweiwei/midl-gen-go/desc/ndr"
 	"github.com/oiweiwei/midl-gen-go/midl"
@@ -45,7 +46,7 @@ func (p *TypeGenerator) GenStructMarshalNDRSizePreamble(ctx *emit.Env, field *mi
 	p.P("sizeInfo, ok := ctx.Value(ndr.SizeInfo).([]uint64)")
 	p.If("!ok", func() {
 		p.P("sizeInfo", "=", p.O("NDRSizeInfo()"))
-		p.Range("sz1", "sizeInfo", func() {
+		p.For("sz1 := range sizeInfo", func() {
 			p.GenWriteSize(ctx, p.IVar("sizeInfo", "sz1"))
 		})
 		p.P("ctx = context.WithValue(ctx, ndr.SizeInfo, sizeInfo)")
@@ -59,7 +60,7 @@ func (p *TypeGenerator) GenStructMarshalNDR(ctx *emit.Env) {
 		trailingField--
 	}
 
-	p.Block("func", "(o *"+p.GoTypeName+")", "MarshalNDR(ctx context.Context, w ndr.Writer)", "error", func() {
+	p.Block(goprint.Tokens("func", "(o *"+p.GoTypeName+")", "MarshalNDR(ctx context.Context, w ndr.Writer) error"), func() {
 		// prepare payload.
 		p.CheckErr("o." + p.XXX() + "PreparePayload(ctx)")
 		// write size information.
@@ -118,11 +119,11 @@ func (p *TypeGenerator) GenFieldMarshalNDR(ctx *emit.Env, field *midl.Field, sco
 
 		if scopes.IsBool() && midl.PrimitiveTypeSize(scopes.Kind()) > 1 {
 			typeName := emit.GoPrimitiveTypeName(scopes.Kind())
-			p.If("!", name, func() {
+			p.IfElse(goprint.Tokens("!", name), func() {
 				p.CheckErr(p.B("w.WriteData", p.B(typeName, "0")))
-			}, p.Else(func() {
+			}, func() {
 				p.CheckErr(p.B("w.WriteData", p.B(typeName, "1")))
-			}))
+			})
 		} else if scopes.Is(midl.TypeInt32_64) {
 			p.CheckErr(p.B("w.WriteData", p.B("ndr.Int3264", name)))
 		} else if scopes.Is(midl.TypeUint32_64) {
@@ -153,25 +154,25 @@ func (p *TypeGenerator) GenFieldMarshalNDR(ctx *emit.Env, field *midl.Field, sco
 			p.GenerateSwitchIs(ctx, field, scopes, switchVar)
 		}
 
-		p.If(name, "!=", "nil", func() {
+		p.IfElse(goprint.Tokens(name, "!= nil"), func() {
 			if !scopes.Union().IsEncapsulated() {
 				p.CheckErr(p.B(name+".MarshalUnionNDR", "ctx", "w", switchVar))
 			} else {
 				p.CheckErr(p.B(name+".MarshalNDR", "ctx", "w"))
 			}
-		}, p.Else(func() {
+		}, func() {
 			p.GenZeroUnionFieldMarshalNDR(ctx, field, scopes, index...)
-		}))
+		})
 
 	case scopes.Is(midl.TypeStruct), scopes.Is(midl.TypeInterface):
 
 		// marshal structure.
 
-		p.If(name, "!=", "nil", func() {
+		p.IfElse(goprint.Tokens(name, "!= nil"), func() {
 			p.CheckErr(p.B(name+".MarshalNDR", "ctx", "w"))
-		}, p.Else(func() {
+		}, func() {
 			p.GenZeroStructFieldMarshalNDR(ctx, field, scopes, index...)
-		}))
+		})
 
 	case scopes.Is(midl.TypePointer):
 
@@ -212,16 +213,16 @@ func (p *TypeGenerator) GenFieldMarshalNDR(ctx *emit.Env, field *midl.Field, sco
 		}
 
 		if nullChk != "" {
-			p.If(nullChk, func() {
+			p.IfElse(goprint.Tokens(nullChk), func() {
 				fN := "_ptr_" + field.Name
 				p.P(fN, ":=", "ndr.MarshalNDRFunc", "(", "func(ctx context.Context, w ndr.Writer) error {")
 				p.GenFieldMarshalNDR(ctx, field, scopes.Next(), index...)
 				p.P("return nil")
 				p.P("})")
 				p.CheckErr(p.B("w.WritePointer", p.Amp(name), fN))
-			}, p.Else(func() {
+			}, func() {
 				p.GenZeroPointerFieldMarshalNDR(ctx, field, scopes, index...)
-			}))
+			})
 		} else {
 
 			sizeChk := ""
@@ -230,16 +231,16 @@ func (p *TypeGenerator) GenFieldMarshalNDR(ctx *emit.Env, field *midl.Field, sco
 				sizeChk = fmt.Sprintf("|| %s > 0", p.GenExpr(ctx, next.Dim().Size().Is(), p.LookupExprField(ctx, next.Dim().Size().Is()), ""))
 			}
 
-			p.If(name, "!=", p.GoTypeZeroValue(ctx, p.Layer(), field, scopes), sizeChk, func() {
+			p.IfElse(goprint.Tokens(name, "!=", p.GoTypeZeroValue(ctx, p.Layer(), field, scopes), sizeChk), func() {
 				fN := "_ptr_" + field.Name
 				p.P(fN, ":=", "ndr.MarshalNDRFunc", "(", "func(ctx context.Context, w ndr.Writer) error {")
 				p.GenFieldMarshalNDR(ctx, field, scopes.Next(), index...)
 				p.P("return nil")
 				p.P("})")
 				p.CheckErr(p.B("w.WritePointer", p.Amp(name), fN))
-			}, p.Else(func() {
+			}, func() {
 				p.GenZeroPointerFieldMarshalNDR(ctx, field, scopes, index...)
-			}))
+			})
 		}
 
 	case scopes.Is(midl.TypeArray):
@@ -260,24 +261,24 @@ func (p *TypeGenerator) GenFieldMarshalNDR(ctx *emit.Env, field *midl.Field, sco
 		}
 
 		if scopes.Dim().NoSizeLimit {
-			p.Range(idx, name, func() {
+			p.For(goprint.Tokens(idx, ":= range", name), func() {
 				p.P(idx, ":=", idx)
 				p.GenFieldMarshalNDR(ctx, field, scopes.Next(), append(index, idx)...)
 			})
 			break
 		}
 
-		p.Range(idx, name, func() {
+		p.For(goprint.Tokens(idx, ":= range", name), func() {
 			// iterate over the array.
 			p.P(idx, ":=", idx)
 			if scopes.Array().IsFixed() && (!scopes.Dim().IsString || p.IsNotLastFixedArray(ctx, scopes, field)) {
 				// break if index exceeds the fixed-array limit.
-				p.If(p.B("uint64", idx), ">=", scopes.Array().Size(), func() {
+				p.If(goprint.Tokens(p.B("uint64", idx), ">=", scopes.Array().Size()), func() {
 					p.P("break")
 				})
 			} else {
 				// break if index exceeds the conformance/varyingness limit.
-				p.If(p.B("uint64", idx), ">=", p.IVar("sizeInfo", scopes.Dim().Dimension), func() {
+				p.If(goprint.Tokens(p.B("uint64", idx), ">=", p.IVar("sizeInfo", scopes.Dim().Dimension)), func() {
 					p.P("break")
 				})
 			}
@@ -292,8 +293,8 @@ func (p *TypeGenerator) GenFieldMarshalNDR(ctx *emit.Env, field *midl.Field, sco
 
 		field := p.GenPipeField(ctx, scopes.Type())
 
-		p.If(name, "!=", "nil", func() {
-			p.Range("_chunk", name+".Pipe()", func() {
+		p.If(goprint.Tokens(name, "!= nil"), func() {
+			p.For(goprint.Tokens("_chunk := range", name+".Pipe()"), func() {
 				p.GenFieldMarshalNDR(ctx.WithVarName("_chunk"), field, desc.Of(field))
 			})
 		})
@@ -387,12 +388,12 @@ func (p *TypeGenerator) GenMarshalSizeInfo(ctx *emit.Env, field *midl.Field, sco
 			if !isConformant {
 				p.P(p.IVar("sizeInfo", scopes.Dim().Dimension), "=", dim)
 			} else {
-				p.If(dim, ">", p.IVar("sizeInfo", scopes.Dim().Dimension), func() {
+				p.IfElse(goprint.Tokens(dim, ">", p.IVar("sizeInfo", scopes.Dim().Dimension)), func() {
 					p.P(dim, "=", p.IVar("sizeInfo", scopes.Dim().Dimension))
-				}, p.Else(func() {
+				}, func() {
 					// reset the size information back for padding and etc.
 					p.P(p.IVar("sizeInfo", scopes.Dim().Dimension), "=", dim)
-				}))
+				})
 			}
 			// write offset.
 			p.GenWriteSize(ctx, 0)
@@ -416,7 +417,7 @@ func (p *TypeGenerator) GenArraySizeVar(ctx *emit.Env, field *midl.Field, i int,
 		p.P(dimVar, ":=", p.B("uint64", p.GenExpr(ctx, sizeExpr, p.LookupExprField(ctx, sizeExpr), "uint64")))
 		// check minimum value borders.
 		if to, val, ok := p.GetMinVarValue(ctx, sizeExpr); ok {
-			p.If(p.GenExpr(ctx, to, p.LookupExprField(ctx, to), ""), "<", val, func() {
+			p.If(goprint.Tokens(p.GenExpr(ctx, to, p.LookupExprField(ctx, to), ""), "<", val), func() {
 				p.P(dimVar, "=", "uint64(0)")
 			})
 		}
@@ -438,7 +439,7 @@ func (p *TypeGenerator) GenArraySizeVar(ctx *emit.Env, field *midl.Field, i int,
 	p.P(dimVar, ":=", "uint64(0)")
 	p.GenRange(ctx, p.O(p.GoFieldName(ctx, field)), 0, i, func(ctx *emit.Env, n string) {
 		lenVar := p.Var("len" + emit.Title(dimVar))
-		p.If(lenVar, ":=", p.DataLen(ctx, field, scopes, n), ";", lenVar, ">", dimVar, func() {
+		p.If(goprint.Tokens(lenVar, ":=", p.DataLen(ctx, field, scopes, n), ";", lenVar, ">", dimVar), func() {
 			p.P(dimVar, "=", lenVar)
 		})
 	})
@@ -458,7 +459,7 @@ func (p *TypeGenerator) GenWriteStringBuffer(ctx *emit.Env, scopes *desc.Cursor,
 
 	if field.Attrs.Format.MultiSize {
 		p.P("var", varName, "[]uint16")
-		p.Range("i1", name, func() {
+		p.For(goprint.Tokens("i1 := range", name), func() {
 			p.P(varName, "=", p.B("append", varName, p.B("utf16.Encode", p.B("[]rune", p.Var(name, "[i1]")))+"..."))
 			p.P(varName, "=", p.B("append", varName, p.B("uint16", "0")))
 		})
@@ -487,12 +488,12 @@ func (p *TypeGenerator) GenWriteStringBuffer(ctx *emit.Env, scopes *desc.Cursor,
 
 		if scopes.Array().IsFixed() {
 			size := scopes.Array().Size()
-			p.If(p.B("uint64", p.Len(varName)), ">", size, "-", "1", func() {
+			p.If(goprint.Tokens(p.B("uint64", p.Len(varName)), ">", size, "- 1"), func() {
 				p.P(varName, "=", varName+fmt.Sprintf("[:%d-1]", size))
 			})
 		} else {
 			sizeInfo := p.IVar("sizeInfo", scopes.Dim().Dimension)
-			p.If(p.B("uint64", p.Len(varName)), ">", sizeInfo, "-", "1", func() {
+			p.If(goprint.Tokens(p.B("uint64", p.Len(varName)), ">", sizeInfo, "- 1"), func() {
 				p.P(varName, "=", varName+p.IVar("", ":"+sizeInfo+"-1"))
 			})
 		}
@@ -500,7 +501,7 @@ func (p *TypeGenerator) GenWriteStringBuffer(ctx *emit.Env, scopes *desc.Cursor,
 		zeroValue := p.B(emit.GoPrimitiveTypeName(scopes.Next().Kind()), "0")
 
 		// append zeroValue only if string is not zero.
-		p.If(name, "!=", "ndr.ZeroString", func() {
+		p.If(goprint.Tokens(name, "!= ndr.ZeroString"), func() {
 			p.P(varName, "=", p.B("append", varName, zeroValue))
 		})
 
@@ -508,12 +509,12 @@ func (p *TypeGenerator) GenWriteStringBuffer(ctx *emit.Env, scopes *desc.Cursor,
 
 		if scopes.Array().IsFixed() {
 			size := scopes.Array().Size()
-			p.If(p.B("uint64", p.Len(varName)), ">", size, func() {
+			p.If(goprint.Tokens(p.B("uint64", p.Len(varName)), ">", size), func() {
 				p.P(varName, "=", varName+fmt.Sprintf("[:%d]", size))
 			})
 		} else {
 			sizeInfo := p.IVar("sizeInfo", scopes.Dim().Dimension)
-			p.If(p.B("uint64", p.Len(varName)), ">", sizeInfo, func() {
+			p.If(goprint.Tokens(p.B("uint64", p.Len(varName)), ">", sizeInfo), func() {
 				p.P(varName, "=", varName+p.IVar("", ":"+sizeInfo))
 			})
 		}

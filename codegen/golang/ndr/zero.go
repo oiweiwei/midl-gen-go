@@ -2,6 +2,7 @@ package ndr
 
 import (
 	"github.com/oiweiwei/midl-gen-go/codegen/golang/emit"
+	"github.com/oiweiwei/midl-gen-go/codegen/goprint"
 	"github.com/oiweiwei/midl-gen-go/desc"
 	"github.com/oiweiwei/midl-gen-go/desc/ndr"
 	"github.com/oiweiwei/midl-gen-go/midl"
@@ -52,11 +53,11 @@ func (p *TypeGenerator) GenZeroArrayFieldMarhalNDR(ctx *emit.Env, field *midl.Fi
 	idx := p.Var("i", len(index)+1)
 
 	if scopes.Array().IsFixed() && (!scopes.Dim().IsString || p.IsNotLastFixedArray(ctx, scopes, field)) {
-		p.Block("for", idx, ":=", p.Len(name), ";", p.B("uint64", idx), "<", scopes.Array().Size(), ";", idx, "++", func() {
+		p.Block(goprint.Tokens("for", idx, ":=", p.Len(name), ";", p.B("uint64", idx), "<", scopes.Array().Size(), ";", idx, "++"), func() {
 			p.GenZeroFieldMarshalNDR(ctx, field, scopes.Next(), append(index, idx)...)
 		})
 	} else if ndr.IsConformant(scopes) {
-		p.Block("for", idx, ":=", p.Len(name), ";", p.B("uint64", idx), "<", p.IVar("sizeInfo", scopes.Dim().Dimension), ";", idx, "++", func() {
+		p.Block(goprint.Tokens("for", idx, ":=", p.Len(name), ";", p.B("uint64", idx), "<", p.IVar("sizeInfo", scopes.Dim().Dimension), ";", idx, "++"), func() {
 			p.GenZeroFieldMarshalNDR(ctx, field, scopes.Next(), append(index, idx)...)
 		})
 	}

@@ -2,6 +2,7 @@ package ndr
 
 import (
 	"github.com/oiweiwei/midl-gen-go/codegen/golang/emit"
+	"github.com/oiweiwei/midl-gen-go/codegen/goprint"
 	"github.com/oiweiwei/midl-gen-go/desc"
 	"github.com/oiweiwei/midl-gen-go/desc/ndr"
 	"github.com/oiweiwei/midl-gen-go/midl"
@@ -14,7 +15,7 @@ func (p *TypeGenerator) GenStructUnmarshalNDR(ctx *emit.Env) {
 		trailingField--
 	}
 
-	p.Block("func", "(o *"+p.GoTypeName+")", "UnmarshalNDR(ctx context.Context, w ndr.Reader)", "error", func() {
+	p.Block(goprint.Tokens("func", "(o *"+p.GoTypeName+")", "UnmarshalNDR(ctx context.Context, w ndr.Reader) error"), func() {
 		// size checks.
 		p.GenStructUnmarshalNDRSizeCheck(ctx)
 		// write size information.
@@ -54,17 +55,17 @@ func (p *TypeGenerator) GenStructUnmarshalNDR(ctx *emit.Env) {
 func (p *TypeGenerator) GenStructUnmarshalNDRSizeCheck(ctx *emit.Env) {
 	if rng := p.Layer().Range; rng != nil {
 		if rng.Min == rng.Max && rng.Min > 0 {
-			p.If("w.Len()", "!=", rng.Min, "/* size-is check */", func() {
+			p.If(goprint.Tokens("w.Len() !=", rng.Min, "/* size-is check */"), func() {
 				p.P("return", "nil")
 			})
 		} else {
 			if rng.Min > 0 {
-				p.If("w.Len()", "<", rng.Min, "/* min-is check */", func() {
+				p.If(goprint.Tokens("w.Len() <", rng.Min, "/* min-is check */"), func() {
 					p.P("return", "nil")
 				})
 			}
 			if rng.Max > 0 {
-				p.If("w.Len()", ">", rng.Max, "/* max-is check */", func() {
+				p.If(goprint.Tokens("w.Len() >", rng.Max, "/* max-is check */"), func() {
 					p.P("return", "nil")
 				})
 			}
@@ -79,7 +80,7 @@ func (p *TypeGenerator) GenStructUnmarshalNDRSizePreamble(ctx *emit.Env, field *
 	p.P("sizeInfo, ok := ctx.Value(ndr.SizeInfo).([]uint64)")
 	p.If("!ok", func() {
 		p.P("sizeInfo", "=", p.O("NDRSizeInfo()"))
-		p.Range("i1", "sizeInfo", func() {
+		p.For("i1 := range sizeInfo", func() {
 			p.GenReadSize(ctx, "sizeInfo[i1]")
 		})
 		p.P("ctx = context.WithValue(ctx, ndr.SizeInfo, sizeInfo)")
@@ -171,7 +172,7 @@ func (p *TypeGenerator) GenFieldUnmarshalNDR(ctx *emit.Env, field *midl.Field, s
 
 		typeName := p.GoScopeTypeName(ctx, p.Layer(), field, scopes, true)
 
-		p.If(name, "==", "nil", func() {
+		p.If(goprint.Tokens(name, "== nil"), func() {
 			p.P(name, "=", p.Amp(typeName), "{}")
 		})
 
@@ -192,7 +193,7 @@ func (p *TypeGenerator) GenFieldUnmarshalNDR(ctx *emit.Env, field *midl.Field, s
 
 		typeName := p.GoScopeTypeName(ctx, p.Layer(), field, scopes, true)
 
-		p.If(name, "==", "nil", func() {
+		p.If(goprint.Tokens(name, "== nil"), func() {
 			p.P(name, "=", p.Amp(typeName), "{}")
 		})
 
@@ -212,14 +213,14 @@ func (p *TypeGenerator) GenFieldUnmarshalNDR(ctx *emit.Env, field *midl.Field, s
 		sN := "_s" + "_" + field.Name
 		decl := p.GoScopeTypeName(ctx, p.Layer(), field, scopes)
 
-		p.Block(sN, ":=", "func(ptr any)", func() {
+		p.Block(goprint.Tokens(sN, ":= func(ptr any)"), func() {
 			p.Switch("ptr := ptr.(type)", func() {
 				p.P("case", p.Ptr(decl), ":")
-				p.If("ptr", "==", "nil", func() {
+				p.IfElse("ptr == nil", func() {
 					p.P(name, "=", p.GoTypeZeroValue(ctx, p.Layer(), field, scopes))
-				}, p.Else(func() {
+				}, func() {
 					p.P(name, "=", p.Ptr("ptr"))
-				}))
+				})
 				p.P("default:")
 				p.P(p.B("w.SetErr", `fmt.Errorf("invalid pointer type %T for field `+name+`", ptr)`))
 			})
@@ -279,7 +280,7 @@ func (p *TypeGenerator) GenFieldUnmarshalNDR(ctx *emit.Env, field *midl.Field, s
 					}
 				})
 
-				p.Range("sz1", "sizeInfo", func() {
+				p.For("sz1 := range sizeInfo", func() {
 					// read max count.
 					p.GenReadSize(ctx, p.IVar("sizeInfo", "sz1"))
 				})
@@ -294,13 +295,13 @@ func (p *TypeGenerator) GenFieldUnmarshalNDR(ctx *emit.Env, field *midl.Field, s
 				p.P("//", "XXX: for opaque unmarshaling")
 				if to, val, ok := p.GetMinVarValue(ctx, sz.Is()); ok {
 					exprTo := p.GenExpr(ctx, to, field, "uint64", "_to")
-					p.If(exprTo, ">", val, "&&", szVar, "==", "0", func() {
+					p.If(goprint.Tokens(exprTo, ">", val, "&&", szVar, "== 0"), func() {
 						exprSz := p.GenExpr(ctx, sz.Is(), field, "", "_sz")
 						p.P(szVar, "=", p.B("uint64", exprSz))
 					})
 				} else {
 					exprSz := p.GenExpr(ctx, sz.Is(), field, "uint64")
-					p.If(exprSz, ">", "0", "&&", szVar, "==", "0", func() {
+					p.If(goprint.Tokens(exprSz, "> 0 &&", szVar, "== 0"), func() {
 						p.P(szVar, "=", p.B("uint64", exprSz))
 					})
 				}
@@ -318,7 +319,7 @@ func (p *TypeGenerator) GenFieldUnmarshalNDR(ctx *emit.Env, field *midl.Field, s
 				})
 			}
 
-			p.Range("sz1", "sizeInfo", func() {
+			p.For("sz1 := range sizeInfo", func() {
 				// read offset.
 				p.GenReadSize(ctx, p.IVar("sizeInfo", "sz1"))
 				// read actual count.
@@ -347,7 +348,7 @@ func (p *TypeGenerator) GenFieldUnmarshalNDR(ctx *emit.Env, field *midl.Field, s
 		}
 
 		if scopes.Dim().NoSizeLimit {
-			p.Block("for", idx+" := 0;", "w.Len() > 0;", idx+"++", func() {
+			p.Block(goprint.Tokens("for", idx+" := 0;", "w.Len() > 0;", idx+"++"), func() {
 				p.P(idx, ":=", idx)
 				p.P(name, "=", p.B("append", name, p.GoTypeZeroValue(ctx, p.Layer(), field, scopes.Next())))
 				p.GenFieldUnmarshalNDR(ctx, field, scopes.Next(), append(index, idx)...)
@@ -357,7 +358,7 @@ func (p *TypeGenerator) GenFieldUnmarshalNDR(ctx *emit.Env, field *midl.Field, s
 				if field.Attrs.Format.MultiSize {
 					tmpName := "_tmp" + name
 					p.P(tmpName, ":=", p.B("string", p.B("utf16.Decode", name)))
-					p.If(tmpName, "=", p.B("strings.TrimRight", tmpName, "ndr.ZeroString"), ";", tmpName, "!=", `""`, func() {
+					p.If(goprint.Tokens(tmpName, "=", p.B("strings.TrimRight", tmpName, "ndr.ZeroString"), ";", tmpName, "!= \"\""), func() {
 						p.P(origName, "=", p.B("strings.Split", tmpName, "ndr.ZeroString"))
 					})
 					break
@@ -373,13 +374,13 @@ func (p *TypeGenerator) GenFieldUnmarshalNDR(ctx *emit.Env, field *midl.Field, s
 			p.P(name, "=", p.B("make", decl, scopes.Array().Size()))
 		} else {
 			szVar := p.IVar("sizeInfo", scopes.Dim().Dimension)
-			p.If(szVar, ">", p.B("uint64", "w.Len()"), "/* sanity-check */", func() {
+			p.If(goprint.Tokens(szVar, ">", p.B("uint64", "w.Len()"), "/* sanity-check */"), func() {
 				p.P("return", `fmt.Errorf("buffer overflow for size %d of array `+name+`", `, szVar, `)`)
 			})
 			p.P(name, "=", "make(", decl, ",", szVar, ")")
 		}
 
-		p.Range(idx, name, func() {
+		p.For(goprint.Tokens(idx, ":= range", name), func() {
 			// iterate over the array.
 			p.P(idx, ":=", idx)
 			p.GenFieldUnmarshalNDR(ctx, field, scopes.Next(), append(index, idx)...)
@@ -390,7 +391,7 @@ func (p *TypeGenerator) GenFieldUnmarshalNDR(ctx *emit.Env, field *midl.Field, s
 			if field.Attrs.Format.MultiSize {
 				tmpName := "_tmp" + name
 				p.P(tmpName, ":=", p.B("string", p.B("utf16.Decode", name)))
-				p.If(tmpName, "=", p.B("strings.TrimRight", tmpName, "ndr.ZeroString"), ";", tmpName, "!=", `""`, func() {
+				p.If(goprint.Tokens(tmpName, "=", p.B("strings.TrimRight", tmpName, "ndr.ZeroString"), ";", tmpName, "!= \"\""), func() {
 					p.P(origName, "=", p.B("strings.Split", tmpName, "ndr.ZeroString"))
 				})
 				break
@@ -403,17 +404,17 @@ func (p *TypeGenerator) GenFieldUnmarshalNDR(ctx *emit.Env, field *midl.Field, s
 	case scopes.Is(midl.TypePipe):
 
 		{
-			p.If(name, "==", "nil", func() {
+			p.If(goprint.Tokens(name, "== nil"), func() {
 				p.P(name, "=", p.B(p.GoScopeTypeNameWithN(ctx, p.Layer(), field, scopes, true, "New")))
 			})
 
 			field := p.GenPipeField(ctx, scopes.Type())
 			scopes := desc.Of(field)
 
-			p.Range(func() {
+			p.For("", func() {
 				p.P("var", "_chunk", p.GoFieldTypeName(ctx, desc.Of(field).Layer(), field))
 				p.GenFieldUnmarshalNDR(ctx.WithVarName("_chunk"), field, scopes)
-				p.If(p.Len("_chunk"), "==", "0", "/* end */", func() {
+				p.If(goprint.Tokens(p.Len("_chunk"), "== 0 /* end */"), func() {
 					p.P("break")
 				})
 
@@ -430,7 +431,7 @@ func (p *TypeGenerator) GenFieldUnmarshalNDR(ctx *emit.Env, field *midl.Field, s
 		if field.Attrs.Format.Hex {
 			varName := "_hex_" + field.Name
 			p.P(varName, ",", "err", ":=", p.B(p.AddImport(emit.HexImport)+"."+"DecodeString", p.B("string", name)))
-			p.If("err", "!=", "nil", func() {
+			p.If("err != nil", func() {
 				p.P("return", "err")
 			})
 			p.P(name, "=", varName)
@@ -443,7 +444,7 @@ func (p *TypeGenerator) GenFieldUnmarshalNDR(ctx *emit.Env, field *midl.Field, s
 				p.GenFieldUnmarshalNDR(ctx, field, desc.Of(field), index...)
 				p.P("return nil")
 				p.P("})")
-				p.If(p.Len(name), ">", "0", func() {
+				p.If(goprint.Tokens(p.Len(name), "> 0"), func() {
 					p.CheckErr(p.B(p.B("w.WithBytes", name)+".Unmarshal", "ctx", fN))
 				})
 			}

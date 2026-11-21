@@ -4,6 +4,7 @@ import (
 	"strings"
 
 	"github.com/oiweiwei/midl-gen-go/codegen/golang/emit"
+	"github.com/oiweiwei/midl-gen-go/codegen/goprint"
 	"github.com/oiweiwei/midl-gen-go/desc"
 	"github.com/oiweiwei/midl-gen-go/desc/ndr"
 	"github.com/oiweiwei/midl-gen-go/midl"
@@ -51,7 +52,7 @@ func (p *TypeGenerator) GenUnionUnmarshalNDR(ctx *emit.Env) {
 		p.GenDoUnionAlignemntUnmarshalNDR(ctx, ndr.Alignment(p.Cursor))
 	}
 
-	p.Block("switch", swVar, func() {
+	p.Block(goprint.Tokens("switch", swVar), func() {
 		var defaultCase *midl.UnionCase
 		for _, cases := range p.Union().Body {
 			if cases.IsDefault {
@@ -103,14 +104,14 @@ func (p *TypeGenerator) GenUnionArmPrimitiveTypeUnmarshalNDR(ctx *emit.Env, case
 	p.CheckErr(p.B("o.Value.UnmarshalNDR", "ctx", "w"))
 	p.P("return nil")
 	p.P("})")
-	p.Block("_s_o", ":=", "func(ptr any)", func() {
+	p.Block("_s_o := func(ptr any)", func() {
 		p.Switch("ptr := ptr.(type)", func() {
 			p.P("case", "**"+armName, ":")
-			p.If("ptr == nil", func() {
+			p.IfElse("ptr == nil", func() {
 				p.P("o.Value", "=", "nil")
-			}, p.Else(func() {
+			}, func() {
 				p.P("o.Value", "=", "*ptr")
-			}))
+			})
 			p.P("default", ":")
 			p.P(p.B("w.SetErr", `fmt.Errorf("invalid pointer type %T for field o.Value", ptr)`))
 		})

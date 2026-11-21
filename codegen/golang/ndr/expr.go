@@ -4,6 +4,7 @@ import (
 	"strings"
 
 	"github.com/oiweiwei/midl-gen-go/codegen/golang/emit"
+	"github.com/oiweiwei/midl-gen-go/codegen/goprint"
 	"github.com/oiweiwei/midl-gen-go/desc"
 	"github.com/oiweiwei/midl-gen-go/midl"
 	"github.com/oiweiwei/midl-gen-go/midl/expr"
@@ -72,11 +73,11 @@ func (p *TypeGenerator) GenExpr(ctx *emit.Env, e midl.Expr, field *midl.Field, t
 		chk = "!= 0"
 	}
 
-	p.If(p.FormatExprO(ctx, cond), chk, func() {
+	p.IfElse(goprint.Tokens(p.FormatExprO(ctx, cond), chk), func() {
 		p.P(varName, "=", p.B(typ, p.FormatExprO(ctx, lval)))
-	}, p.Else(func() {
+	}, func() {
 		p.P(varName, "=", p.B(typ, p.FormatExprO(ctx, rval)))
-	}))
+	})
 
 	return varName
 }

@@ -2,6 +2,7 @@ package goprint
 
 import (
 	"bytes"
+	"fmt"
 	"strconv"
 	"strings"
 )
@@ -45,6 +46,15 @@ func (w *Writer) Block(header string, body func()) {
 		body()
 	}
 	w.Line("}")
+}
+
+// Composite writes "header {", the body and "}" followed by the tail, for a
+// composite literal that is part of a larger statement: Composite("return &T",
+// body, ", nil") is "return &T { body }, nil".
+func (w *Writer) Composite(header string, body func(), tail string) {
+	w.Line(header, "{")
+	run(body)
+	w.Line("}" + tail)
 }
 
 // Branch is one arm of a conditional, see Cond.
@@ -222,6 +232,13 @@ func (w *Writer) decl(kw, name, typ, value string) {
 		parts = append(parts, "=", value)
 	}
 	w.Line(parts...)
+}
+
+// Tokens joins the parts with a space, formatting each as fmt.Print does: a
+// line of Go written as a list of tokens, e.g. Tokens("if", n, "> 0") is
+// "if 3 > 0" for n = 3.
+func Tokens(parts ...any) string {
+	return strings.TrimSuffix(fmt.Sprintln(parts...), "\n")
 }
 
 // Call returns the call expression fn(args...).

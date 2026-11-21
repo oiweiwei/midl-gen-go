@@ -4,6 +4,7 @@ import (
 	"strings"
 
 	"github.com/oiweiwei/midl-gen-go/codegen/golang/emit"
+	"github.com/oiweiwei/midl-gen-go/codegen/goprint"
 	"github.com/oiweiwei/midl-gen-go/desc"
 	"github.com/oiweiwei/midl-gen-go/desc/ndr"
 	"github.com/oiweiwei/midl-gen-go/midl"
@@ -69,14 +70,14 @@ func (p *Emitter) GenOperationMarshalNDR(ctx *emit.Env, op *midl.Operation, dir 
 	pp := p.NewTypeGenerator(ctx, strct)
 
 	p.P()
-	p.Block("func", "(o *"+opN+")", p.XXX()+"Prepare"+pN+"Payload", "(ctx context.Context)", "error", func() {
+	p.Block(goprint.Tokens("func", "(o *"+opN+")", p.XXX()+"Prepare"+pN+"Payload", "(ctx context.Context) error"), func() {
 		pp.GenStructPreparePayloadFields(ctx, strct.Elem.Struct.Fields)
 		p.PrepareOperationPayloadHook(ctx, dir)
 		p.P("return nil")
 	})
 
 	p.P()
-	p.Block("func", "(o *"+opN+")", fN, "(ctx context.Context, w ndr.Writer)", "error", func() {
+	p.Block(goprint.Tokens("func", "(o *"+opN+")", fN, "(ctx context.Context, w ndr.Writer) error"), func() {
 
 		p.CheckErr("o." + p.XXX() + "Prepare" + pN + "Payload(ctx)")
 
@@ -114,7 +115,7 @@ func (p *Emitter) GenOperationMarshalNDR(ctx *emit.Env, op *midl.Operation, dir 
 
 func (p *Emitter) PrepareOperationPayloadHook(ctx *emit.Env, dir int) {
 	pN := emit.ParamName(dir)
-	p.If("hook, ok := (interface{})(o).(interface { AfterPrepare"+pN+"Payload(context.Context) error }); ok", func() {
+	p.If(goprint.Tokens("hook, ok := (interface{})(o).(interface { AfterPrepare"+pN+"Payload(context.Context) error }); ok"), func() {
 		p.CheckErr(p.B("hook.AfterPrepare"+pN+"Payload", "ctx"))
 	})
 }
@@ -129,7 +130,7 @@ func (p *Emitter) GenOperationUnmarshalNDR(ctx *emit.Env, op *midl.Operation, di
 	}
 
 	p.P()
-	p.Block("func", "(o *"+p.OpName(ctx, op, emit.AnyParam)+")", fn, "(ctx context.Context, w ndr.Reader)", "error", func() {
+	p.Block(goprint.Tokens("func", "(o *"+p.OpName(ctx, op, emit.AnyParam)+")", fn, "(ctx context.Context, w ndr.Reader) error"), func() {
 
 		strct := &midl.Type{
 			Kind: midl.TypeAttribute,
@@ -295,11 +296,11 @@ func (p *Emitter) GenOperationStruct(ctx *emit.Env, op *midl.Operation, dir int)
 
 	dirN := emit.ParamName(dir)
 
-	p.Block("func", "(o *"+p.OpName(ctx, op, dir)+")", "MarshalNDR", "(ctx context.Context, w ndr.Writer)", "error", func() {
+	p.Block(goprint.Tokens("func", "(o *"+p.OpName(ctx, op, dir)+")", "MarshalNDR (ctx context.Context, w ndr.Writer) error"), func() {
 		p.P("return", "o."+p.XXX()+"ToOp(ctx, nil).MarshalNDR"+dirN+"(ctx, w)")
 	})
 
-	p.Block("func", "(o *"+p.OpName(ctx, op, dir)+")", "UnmarshalNDR", "(ctx context.Context, r ndr.Reader)", "error", func() {
+	p.Block(goprint.Tokens("func", "(o *"+p.OpName(ctx, op, dir)+")", "UnmarshalNDR (ctx context.Context, r ndr.Reader) error"), func() {
 		p.P("_o", ":=", p.Amp(p.OpName(ctx, op, emit.AnyParam))+"{}")
 		p.CheckErr("_o.UnmarshalNDR" + dirN + "(ctx, r)")
 		p.P("o." + p.XXX() + "FromOp(ctx, _o)")
@@ -367,7 +368,7 @@ func (p *Emitter) GenMakeResponse(ctx *emit.Env, op *midl.Operation, dir int) {
 	implicit := p.GetOutputParamImplicitDependents(ctx, op, emit.OutParam)
 	p.P()
 	p.P("//", "Make"+p.OpName(ctx, op, dir), "build a response structure from the given request structure.")
-	p.Block("func", "(o *"+p.OpName(ctx, op, dir)+")", "MakeResponse()", "*"+p.OpName(ctx, op, emit.OutParam), func() {
+	p.Block(goprint.Tokens("func", "(o *"+p.OpName(ctx, op, dir)+")", "MakeResponse()", "*"+p.OpName(ctx, op, emit.OutParam)), func() {
 		if len(implicit) == 0 {
 			p.P("return", "&"+p.OpName(ctx, op, emit.OutParam)+"{}")
 			return
@@ -375,7 +376,7 @@ func (p *Emitter) GenMakeResponse(ctx *emit.Env, op *midl.Operation, dir int) {
 		p.If("o == nil", func() {
 			p.P("return", "&"+p.OpName(ctx, op, emit.OutParam)+"{}")
 		})
-		p.Block("return", "&"+p.OpName(ctx, op, emit.OutParam), func() {
+		p.Block(goprint.Tokens("return", "&"+p.OpName(ctx, op, emit.OutParam)), func() {
 			for _, param := range implicit {
 				n := emit.GoParamName(ctx, param)
 				if n == "_" {
@@ -426,7 +427,7 @@ func (p *Emitter) GenOperationToOp(ctx *emit.Env, op *midl.Operation, dir int, m
 			}
 
 			// if op.(n) is zero value, you can set it.
-			p.If("op."+n, "==", p.GoTypeZeroValue(ctx, f.Type.Attrs, f, desc.Of(f)), func() {
+			p.If(goprint.Tokens("op."+n, "==", p.GoTypeZeroValue(ctx, f.Type.Attrs, f, desc.Of(f))), func() {
 				p.P("op."+n, "=", p.O(n))
 			})
 		}

@@ -23,89 +23,52 @@ func (p *Emitter) GenRange(ctx *Env, n string, i, upto int, fn func(*Env, string
 		return
 	}
 	idx := fmt.Sprintf("i%d", i+1)
-	p.Range(idx, n, func() {
+	p.For(goprint.Tokens(idx, ":= range", n), func() {
 		p.GenRange(ctx, p.IVar(n, idx), i+1, upto, fn)
 	})
 }
 
-func (p *Emitter) If(args ...interface{}) {
-	p.Block(append([]interface{}{"if"}, args...)...)
-}
-
-var (
-	CheckErr1 = func(p *Emitter) func(...interface{}) {
-		return func(args ...interface{}) {
-			p.Block(append(append([]interface{}{"if", "err", ":="}, args...), ";", "err != nil", func() {
-				p.P("return", "err")
-			}))
-		}
-	}
-
-	CheckErr2 = func(p *Emitter) func(...interface{}) {
-		return func(args ...interface{}) {
-			p.P(args...)
-		}
-	}
-)
-
-func (p *Emitter) Structure(args ...interface{}) {
-	p.Block(append([]interface{}{"type", args[0], "struct"}, args[1:]...)...)
-}
-
-func (p *Emitter) Range(args ...interface{}) {
-
-	switch len(args) {
-	case 0:
-		panic("unknown range")
-	case 1:
-		p.Block("for", args[0])
-	case 2:
-		p.Block(append([]interface{}{"for", "range"}, args...)...)
-	case 3:
-		p.Block(append([]interface{}{"for", args[0], ":=", "range"}, args[1:]...)...)
-	default:
-		p.Block(append([]interface{}{"for", args[0], ",", args[1], ":=", "range"}, args[2:]...)...)
+// CheckErr1 returns the function that emits a call with the check of its error:
+// CheckErr(call) writes "if err := call; err != nil { return err }".
+var CheckErr1 = func(p *Emitter) func(...interface{}) {
+	return func(args ...interface{}) {
+		p.If("err := "+goprint.Tokens(args...)+"; err != nil", func() {
+			p.P("return", "err")
+		})
 	}
 }
 
-func (p *Emitter) ElseIf(args ...interface{}) []interface{} {
-	return append([]interface{}{"else", "if"}, args...)
-}
-
-func (p *Emitter) Else(args ...interface{}) []interface{} {
-	return append([]interface{}{"else"}, args...)
-}
-
-func (p *Emitter) Switch(args ...interface{}) {
-	p.Block(append([]interface{}{"switch"}, args...)...)
-}
-
-func (p *Emitter) Block(args ...interface{}) {
-
-	var (
-		printable []interface{}
-	)
-
-	for _, arg := range args {
-		switch arg := arg.(type) {
-		case func():
-			if len(printable) > 0 {
-				p.P(append(printable, "{")...)
-			}
-			printable = []interface{}{"}"}
-			arg()
-		case []interface{}:
-			p.Block(append(printable, arg...)...)
-			printable = nil
-		default:
-			printable = append(printable, arg)
-		}
+// CheckErr2 is CheckErr without the check: it writes the call as it is.
+var CheckErr2 = func(p *Emitter) func(...interface{}) {
+	return func(args ...interface{}) {
+		p.P(args...)
 	}
+}
 
-	if len(printable) > 0 {
-		p.P(printable...)
-	}
+// Block writes "header {", the body and "}".
+func (p *Emitter) Block(header string, body func()) { p.W().Block(header, body) }
 
+// If writes "if cond { body }".
+func (p *Emitter) If(cond string, body func()) { p.W().If(cond, body) }
+
+// IfElse writes "if cond { then } else { otherwise }".
+func (p *Emitter) IfElse(cond string, then, otherwise func()) {
+	p.W().Cond(goprint.If(cond, then), goprint.Else(otherwise))
+}
+
+// For writes "for clause { body }"; an empty clause is an infinite loop.
+func (p *Emitter) For(clause string, body func()) { p.W().For(clause, body) }
+
+// Switch writes "switch tag { body }"; the body writes the case lines.
+func (p *Emitter) Switch(tag string, body func()) { p.W().Switch(tag, body) }
+
+// Structure writes the declaration of a struct type; the body writes the fields.
+func (p *Emitter) Structure(name string, body func()) { p.Block("type "+name+" struct", body) }
+
+// Composite writes "header {", the body and "}" followed by the tail, for a
+// composite literal that is part of a larger statement.
+func (p *Emitter) Composite(header string, body func(), tail string) {
+	p.W().Composite(header, body, tail)
 }
 
 // Var function generates the variable name.

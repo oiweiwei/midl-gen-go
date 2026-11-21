@@ -94,6 +94,22 @@ func TestImportConflict(t *testing.T) {
 	}
 }
 
+func TestTokens(t *testing.T) {
+	if got := Tokens("if", 3, "> 0", true, 'a'); got != "if 3 > 0 true 97" {
+		t.Errorf("got %q", got)
+	}
+	if got := Tokens(); got != "" {
+		t.Errorf("got %q", got)
+	}
+}
+
+func TestComposite(t *testing.T) {
+	got := write(func(w *Writer) { w.Composite("return &T", func() { w.Line("a: 1,") }, ", nil") })
+	if got != "return &T {\na: 1,\n}, nil\n" {
+		t.Errorf("got %q", got)
+	}
+}
+
 func TestCond(t *testing.T) {
 	got := write(func(w *Writer) {
 		w.Cond(If("a", func() { w.Line("x()") }), ElseIf("b", func() { w.Line("y()") }), Else(func() { w.Line("z()") }))
