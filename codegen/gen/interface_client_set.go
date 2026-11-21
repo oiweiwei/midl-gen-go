@@ -31,15 +31,13 @@ func (p *Generator) GenClientSet(ctx context.Context, f *midl.File) {
 
 	if !f.PkgIs("dcom") {
 		p.AddImport(Import{
-			Name:  "dcom_client",
-			Path:  filepath.Join(dcom.GoPkgBase, "dcom", "client"),
-			Guard: "dcom_client.GoPackage",
+			Name: "dcom_client",
+			Path: filepath.Join(dcom.GoPkgBase, "dcom", "client"),
 		})
 	}
 	p.AddImport(Import{
-		Name:  "dcom",
-		Path:  filepath.Join(dcom.GoPkgBase, "dcom"),
-		Guard: "dcom.GoPackage",
+		Name: "dcom",
+		Path: filepath.Join(dcom.GoPkgBase, "dcom"),
 	})
 
 	p.P("//", f.GoPkg, "client set.")

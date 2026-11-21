@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/oiweiwei/midl-gen-go/codegen/goprint"
 	"github.com/oiweiwei/midl-gen-go/midl"
 )
 
@@ -184,8 +185,15 @@ func (p *Generator) Var(n string, idx ...interface{}) string {
 	return n
 }
 
+// Q returns the Go string literal for n; quotes, backslashes and control characters are escaped.
 func (p *Generator) Q(n string) string {
-	return `"` + n + `"`
+	return goprint.Quote(n)
+}
+
+// W returns a typed writer appending to the file being generated. It must be
+// called again after the file changes (Reset): it is not meant to be kept.
+func (p *Generator) W() *goprint.Writer {
+	return goprint.NewWriter(p.out.Out)
 }
 
 func (p *Generator) B(pre interface{}, s ...interface{}) string {

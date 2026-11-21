@@ -5,6 +5,7 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/oiweiwei/midl-gen-go/codegen/goprint"
 	"github.com/oiweiwei/midl-gen-go/midl"
 )
 
@@ -12,7 +13,7 @@ type FileBuffer struct {
 	Out         *bytes.Buffer
 	Path        string
 	PackageName string
-	Imports     []Import
+	Imports     *goprint.Imports
 	FileName    string
 	IsRoot      bool
 	File        *midl.File
@@ -35,7 +36,6 @@ func NewFileBuffer(path string, pkg string, n ...string) *FileBuffer {
 		f.FileName = n[0]
 	}
 
-	f.Imports = make([]Import, len(DefaultImports))
-	copy(f.Imports, DefaultImports)
+	f.Imports = goprint.NewImports(DefaultImports...)
 	return f
 }

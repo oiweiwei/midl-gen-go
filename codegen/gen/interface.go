@@ -4,7 +4,9 @@ import (
 	"context"
 	"fmt"
 	"regexp"
+	"strconv"
 
+	"github.com/oiweiwei/midl-gen-go/codegen/goprint"
 	"github.com/oiweiwei/midl-gen-go/desc"
 	"github.com/oiweiwei/midl-gen-go/midl"
 )
@@ -17,26 +19,43 @@ func (p *Generator) IsUnusedOp(n string) bool {
 	return notUsedOpRe.MatchString(n)
 }
 
+// GenServerHandle generates the registration function and the operation
+// dispatcher of the server interface.
 func (p *Generator) GenServerHandle(ctx context.Context, iff *midl.Interface) {
 
 	n := GoName(ctx, iff.Name) + "Server"
 
-	p.P()
-	p.Block("func", p.B("Register"+n, "conn dcerpc.Conn", "o "+n, "opts ...dcerpc.Option"), func() {
-		p.P(p.B("conn.RegisterServer", p.B("New"+n+"Handle", "o"),
-			p.B("append", "opts", p.B("dcerpc.WithAbstractSyntax", p.SyntaxName(ctx, iff)))+"..."))
+	w := p.W()
 
+	handleParams := []goprint.Param{goprint.Named("ctx", "context.Context"), goprint.Named("opNum", "int"), goprint.Named("r", "ndr.Reader")}
+	handleResults := []goprint.Param{goprint.Unnamed("dcerpc.Operation"), goprint.Unnamed("error")}
+
+	w.Blank()
+	w.Func(goprint.Func{
+		Name:   "Register" + n,
+		Params: []goprint.Param{goprint.Named("conn", "dcerpc.Conn"), goprint.Named("o", n), goprint.Named("opts", "...dcerpc.Option")},
+	}, func() {
+		w.Line(goprint.Call("conn.RegisterServer", goprint.Call("New"+n+"Handle", "o"),
+			goprint.Call("append", "opts", goprint.Call("dcerpc.WithAbstractSyntax", p.SyntaxName(ctx, iff)))+"..."))
 	})
 
-	p.P()
-	p.Block("func", p.B("New"+n+"Handle", "o "+n), "dcerpc.ServerHandle", func() {
-		p.Block("return", p.B("func", "ctx context.Context", "opNum int", "r ndr.Reader"), p.B("", "dcerpc.Operation", "error"), func() {
-			p.P("return", p.B(n+"Handle", "ctx", "o", "opNum", "r"))
+	w.Blank()
+	w.Func(goprint.Func{
+		Name:    "New" + n + "Handle",
+		Params:  []goprint.Param{goprint.Named("o", n)},
+		Results: []goprint.Param{goprint.Unnamed("dcerpc.ServerHandle")},
+	}, func() {
+		w.Block("return "+goprint.Func{Params: handleParams, Results: handleResults}.Signature(), func() {
+			w.Return(goprint.Call(n+"Handle", "ctx", "o", "opNum", "r"))
 		})
 	})
 
-	p.P()
-	p.Block("func", p.B(n+"Handle", "ctx context.Context", "o "+n, "opNum int", "r ndr.Reader"), p.B("", "dcerpc.Operation", "error"), func() {
+	w.Blank()
+	w.Func(goprint.Func{
+		Name:    n + "Handle",
+		Params:  append([]goprint.Param{goprint.Named("ctx", "context.Context"), goprint.Named("o", n)}, handleParams[1:]...),
+		Results: handleResults,
+	}, func() {
 
 		first := 0
 		if len(iff.Body.Operations) > 0 {
@@ -44,35 +63,35 @@ func (p *Generator) GenServerHandle(ctx context.Context, iff *midl.Interface) {
 		}
 
 		if first > 0 {
-			p.If("opNum", "<", first, func() {
+			w.If("opNum < "+strconv.Itoa(first), func() {
 				ctx := p.WithInterfaceBaseNamer(ctx, iff)
-				p.P("//", iff.BaseName, "base method.")
-				p.P("return", p.B(p.GoInterfaceTypeName(ctx, iff.Base, func(n string) string {
+				w.Comment(iff.BaseName + " base method.")
+				w.Return(goprint.Call(p.GoInterfaceTypeName(ctx, iff.Base, func(n string) string {
 					return n + "ServerHandle"
 				}), "ctx", "o", "opNum", "r"))
 			})
 		}
 
-		p.Block("switch opNum", func() {
+		w.Switch("opNum", func() {
 			for _, op := range iff.Body.Operations {
-				p.P("case", op.OpNum, ":", "//", op.Name)
+				w.Line("case "+strconv.Itoa(op.OpNum)+":", "//", op.Name)
 				if p.IsUnusedOp(op.Name) {
-					p.P("//", op.Name)
-					p.P("return", "nil, nil")
+					w.Comment(op.Name)
+					w.Return("nil", "nil")
 					continue
 				}
-				p.P("op", ":=", p.Amp(p.OpName(ctx, op, AnyParam))+"{}")
-				p.If("err := op.UnmarshalNDRRequest(ctx, r);", "err != nil", func() {
-					p.P("return", "nil, err")
+				w.Line("op", ":=", goprint.Amp(p.OpName(ctx, op, AnyParam))+"{}")
+				w.If("err := op.UnmarshalNDRRequest(ctx, r); err != nil", func() {
+					w.Return("nil", "err")
 				})
-				p.P("req", ":=", p.Amp(p.OpName(ctx, op, InParam)+"{}"))
-				p.P("req", ".", p.B(p.XXX()+"FromOp", "ctx", "op"))
-				p.P("resp, err", ":=", p.B("o."+p.MethodName(ctx, op), "ctx", "req"))
-				p.P("return", "resp."+p.XXX()+"ToOp(ctx, op)", ", err")
+				w.Line("req", ":=", goprint.Amp(p.OpName(ctx, op, InParam)+"{}"))
+				w.Line("req." + goprint.Call(p.XXX()+"FromOp", "ctx", "op"))
+				w.Line("resp, err", ":=", goprint.Call("o."+p.MethodName(ctx, op), "ctx", "req"))
+				w.Return("resp."+p.XXX()+"ToOp(ctx, op)", "err")
 			}
 		})
 
-		p.P("return", "nil, nil")
+		w.Return("nil", "nil")
 	})
 }
 

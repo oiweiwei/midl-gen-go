@@ -85,9 +85,8 @@ func (p *Generator) GoInterfaceTypeName(ctx context.Context, iff *midl.Interface
 		pkgName := lastPart(pkg)
 
 		p.AddImport(Import{
-			Name:  pkgName,
-			Path:  filepath.Join(base, pkg, ver.String()),
-			Guard: pkgName + "." + "GoPackage",
+			Name: pkgName,
+			Path: filepath.Join(base, pkg, ver.String()),
 		})
 
 		return pkgName + "." + n
@@ -258,15 +257,13 @@ func (p *Generator) GoPackage(ctx context.Context, scopes *Scopes) (*Package, er
 
 	if pkg.Version != nil {
 		p.AddImport(Import{
-			Name:  pkgName,
-			Path:  filepath.Join(pkg.Base, pkg.Name, pkg.Version.String()),
-			Guard: pkgName + "." + "GoPackage",
+			Name: pkgName,
+			Path: filepath.Join(pkg.Base, pkg.Name, pkg.Version.String()),
 		})
 	} else {
 		p.AddImport(Import{
-			Name:  pkgName,
-			Path:  filepath.Join(pkg.Base, pkg.Name),
-			Guard: pkgName + "." + "GoPackage",
+			Name: pkgName,
+			Path: filepath.Join(pkg.Base, pkg.Name),
 		})
 	}
 
