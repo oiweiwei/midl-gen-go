@@ -22,6 +22,8 @@ make gen     # regenerate midl/parse.go from parse.y
 ```sh
 midl-gen-go generate [flags] file.idl ...
 midl-gen-go dump     [flags] file.idl
+midl-gen-go symbols  [flags] file.idl ...
+midl-gen-go features
 midl-gen-go msdn     [flags] index-name [object-name...]
 ```
 
@@ -35,12 +37,27 @@ midl-gen-go msdn     [flags] index-name [object-name...]
 | `--msdn-openspecs-cache-dir` | `.cache/doc/` | Cache directory for MSDN documentation |
 | `--msdn-openspecs-indexer-file` | `/msdn/index.yaml` | Protocol indexer file for MSDN documentation (empty = skip MSDN sync) |
 | `--msdn-openspecs-indexer-extra-file` | `/msdn/extra.yaml` | Extra indexer file for MSDN documentation |
-| `--verbose` | `false` | Enable trace output |
+| `--features` | `all` | What to generate besides the types and operations: `client`, `server`, `all`, `none`, `-name` to leave one out, e.g. `all,-server` (see `features`) |
+| `--verbose` | `false` | Log progress and decisions (debug level) to stderr |
+| `--emit-trace` | `false` | Add trace comments to the generated code |
 | `--no-format` | `false` | Skip `gofmt` on generated files |
 
 Setting `--msdn-openspecs-indexer-file` to an empty string disables MSDN documentation
 fetching entirely. Generated files will have no doc-comments sourced from MS Open
 Specifications pages.
+
+### `symbols`
+
+Lists the names of IDL files (constants, types, fields, union arms, enumeration elements,
+interfaces, operations, parameters) with the Go name the generator gives each, the words, and
+the naming rules that fired; `--explain` shows every step. Use it to check how a name comes
+out and to find the key of a scoped override. Flags: `-I`, `--kind`, `--match`, `--explain`,
+`--json`.
+
+### `features`
+
+Lists the features of the generator that can be switched on and off with `generate --features`.
+See [codegen/golang/FEATURES.md](codegen/golang/FEATURES.md) for how to add one.
 
 ### `dump` flags
 
@@ -206,7 +223,21 @@ For an IDL file `myidl.idl` the generator creates:
 ## Naming
 
 See [gonames/README.md](gonames/README.md) for the full documentation on identifier naming
-rules and `.midl/config.yaml` configuration.
+rules and `.midl/config.yaml` configuration, including how to override the name of one field of
+one struct, and `midl-gen-go symbols` to see how a name is derived.
+
+## Layout
+
+```
+midl/            IDL parser and AST; midl/expr: constant and symbolic expressions
+desc/            the resolved type of a field (pointers, arrays, dimensions); desc/ndr: NDR layout rules
+gonames/         IDL identifier -> Go name rules
+codegen/goprint  typed Go source writer and import management
+codegen/golang   the Go generator: files, interfaces, features, symbols
+  ndr/             NDR marshalling of types and operations
+  emit/            printing, names, imports, output files
+msdn/openspecs   documentation comments from the MS Open Specifications
+```
 
 ## Docker
 

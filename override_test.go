@@ -24,7 +24,10 @@ func TestScopedOverride(t *testing.T) {
 	sess := midl.NewSession(midl.WithInclude(dir))
 	out := t.TempDir()
 
-	p := golang.New(golang.Options{Session: sess, ImportsPath: "x/", Format: true})
+	p, err := golang.New(golang.Options{Session: sess, ImportsPath: "x/", Format: true})
+	if err != nil {
+		t.Fatal(err)
+	}
 	files, err := p.Gen(context.Background(), filepath.Join(dir, "ov.idl"))
 	if err != nil {
 		t.Fatal(err)
@@ -89,7 +92,10 @@ func TestSymbolsAgreeWithGeneratedCode(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	p := golang.New(golang.Options{Session: sess})
+	p, err := golang.New(golang.Options{Session: sess})
+	if err != nil {
+		t.Fatal(err)
+	}
 	symbols := p.Symbols(context.Background(), f)
 
 	type key struct{ kind, owner, idl string }
@@ -119,7 +125,10 @@ func TestSymbolsAgreeWithGeneratedCode(t *testing.T) {
 	}
 
 	// every field of every struct listed must be in the generated code under the name listed.
-	g := golang.New(golang.Options{Session: sess, ImportsPath: "x/", Format: true})
+	g, err := golang.New(golang.Options{Session: sess, ImportsPath: "x/", Format: true})
+	if err != nil {
+		t.Fatal(err)
+	}
 	files, err := g.Gen(context.Background(), filepath.Join(dir, "ov.idl"))
 	if err != nil {
 		t.Fatal(err)

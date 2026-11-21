@@ -80,6 +80,7 @@ func newGenerateCmd() *cobra.Command {
 		verbose                   bool
 		emitTrace                 bool
 		noFormat                  bool
+		featuresSpec              string
 	)
 
 	cmd := &cobra.Command{
@@ -97,10 +98,16 @@ func newGenerateCmd() *cobra.Command {
 
 			ctx := context.Background()
 
+			features, err := golang.ParseFeatures(featuresSpec)
+			if err != nil {
+				return fmt.Errorf("--features: %w", err)
+			}
+
 			for _, fn := range files {
-				p := golang.New(golang.Options{
+				p, err := golang.New(golang.Options{
 					Session:              sess,
 					Log:                  log,
+					Features:             features,
 					ImportsPath:          pkg,
 					Format:               !noFormat,
 					EmitTrace:            emitTrace,
@@ -108,6 +115,9 @@ func newGenerateCmd() *cobra.Command {
 					MSDNIndexerFile:      msdnOpenspecsIndexer,
 					MSDNIndexerExtraFile: msdnOpenspecsIndexerExtra,
 				})
+				if err != nil {
+					return fmt.Errorf("%s: %w", fn, err)
+				}
 				out, err := p.Gen(ctx, fn)
 				if err != nil {
 					return fmt.Errorf("%s: %w", fn, err)
@@ -128,6 +138,9 @@ func newGenerateCmd() *cobra.Command {
 	cmd.Flags().StringVar(&msdnOpenspecsIndexer, "msdn-openspecs-indexer-file", "", "indexer file for MSDN documentation")
 	cmd.Flags().StringVar(&msdnOpenspecsIndexerExtra, "msdn-openspecs-indexer-extra-file", "", "extra indexer file for MSDN documentation; repeatable")
 	cmd.Flags().BoolVar(&verbose, "verbose", false, "enable verbose/trace output")
+	cmd.Flags().StringVar(&featuresSpec, "features", "all",
+		"what to generate besides the types and operations: a comma separated list of features, "+
+			"\"all\", \"none\" and \"-name\" to leave one out (see the features command)")
 	cmd.Flags().BoolVar(&emitTrace, "emit-trace", false, "add trace comments to the generated sources")
 	cmd.Flags().BoolVar(&noFormat, "no-format", false, "skip gofmt on generated files")
 
@@ -216,7 +229,10 @@ Use --explain to see every step of the derivation of a name.`,
 				if err != nil {
 					return fmt.Errorf("%s: %w", fn, err)
 				}
-				p := golang.New(golang.Options{Session: sess})
+				p, err := golang.New(golang.Options{Session: sess})
+				if err != nil {
+					return err
+				}
 				for _, sym := range p.Symbols(context.Background(), f) {
 					if len(want) > 0 && !want[sym.Kind] {
 						continue
@@ -261,6 +277,22 @@ Use --explain to see every step of the derivation of a name.`,
 	cmd.Flags().BoolVar(&asJSON, "json", false, "output JSON")
 
 	return cmd
+}
+
+func newFeaturesCmd() *cobra.Command {
+	return &cobra.Command{
+		Use:   "features",
+		Short: "List the features of the generator that can be switched on and off",
+		Args:  cobra.NoArgs,
+		Run: func(cmd *cobra.Command, args []string) {
+			w := tabwriter.NewWriter(os.Stdout, 0, 4, 2, ' ', 0)
+			fmt.Fprintln(w, "FEATURE\tREQUIRES\tDESCRIPTION")
+			for _, f := range golang.Features() {
+				fmt.Fprintf(w, "%s\t%s\t%s\n", f.Name(), strings.Join(f.Requires(), ","), f.Doc())
+			}
+			w.Flush()
+		},
+	}
 }
 
 func newMSDNCmd() *cobra.Command {
@@ -354,7 +386,7 @@ func main() {
 		SilenceErrors: true,
 	}
 
-	root.AddCommand(newGenerateCmd(), newDumpCmd(), newSymbolsCmd(), newMSDNCmd())
+	root.AddCommand(newGenerateCmd(), newDumpCmd(), newSymbolsCmd(), newFeaturesCmd(), newMSDNCmd())
 
 	if err := root.Execute(); err != nil {
 		fmt.Fprintln(os.Stderr, err)

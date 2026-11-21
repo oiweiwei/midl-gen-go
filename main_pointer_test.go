@@ -37,7 +37,10 @@ func TestFullPointerReads(t *testing.T) {
 
 	out := t.TempDir()
 	for name, want := range pointerGolden {
-		p := golang.New(golang.Options{Session: sess, ImportsPath: "x/"})
+		p, err := golang.New(golang.Options{Session: sess, ImportsPath: "x/"})
+		if err != nil {
+			t.Fatal(err)
+		}
 		files, err := p.Gen(context.Background(), filepath.Join(dir, name+".idl"))
 		if err != nil {
 			t.Fatalf("%s: %v", name, err)

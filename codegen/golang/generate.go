@@ -123,9 +123,10 @@ func (p *Generator) GenFile(ctx *emit.Env, fn string, f *midl.File) error {
 		}
 	}
 
-	if f.IsDCOM() {
-		p.Reset(ctx, f, "client")
-		p.GenClientSet(ctx, f)
+	for _, feature := range p.features {
+		if ff, ok := feature.(FileFeature); ok {
+			ff.File(ctx, p, f)
+		}
 	}
 
 	return nil
@@ -150,7 +151,7 @@ func (p *Generator) GenInterface(ctx *emit.Env, iff *midl.Interface) {
 	p.Reset(ctx, iff)
 
 	p.GenInterfaceID(ctx, iff)
-	p.GenClientInterface(ctx, iff)
+	p.phase(ctx, iff, BeforeTypes)
 
 	for _, sym := range iff.Exports() {
 		if sym.Const != nil {
@@ -169,17 +170,13 @@ func (p *Generator) GenInterface(ctx *emit.Env, iff *midl.Interface) {
 		return
 	}
 
-	p.GenClient(ctx, iff)
+	p.phase(ctx, iff, AfterTypes)
 
 	for _, op := range iff.Body.Operations {
 		p.GenOperation(ctx, op)
 	}
 
-	p.Reset(ctx, iff, "server")
-
-	p.GenServerInterface(ctx, iff)
-	p.GenServerHandle(ctx, iff)
-	p.GenUnplementedServer(ctx, iff)
+	p.files(ctx, iff)
 }
 
 func (p *Generator) GenConst(ctx *emit.Env, c *midl.Const) {
