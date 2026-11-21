@@ -4,6 +4,8 @@ import (
 	"context"
 	"strings"
 
+	"github.com/oiweiwei/midl-gen-go/desc"
+	"github.com/oiweiwei/midl-gen-go/desc/ndr"
 	"github.com/oiweiwei/midl-gen-go/midl"
 )
 
@@ -103,9 +105,9 @@ func (p *Generator) GenOperationMarshalNDR(ctx context.Context, op *midl.Operati
 
 			field := param.Field()
 
-			scopes := NewScopes(field.Scopes())
+			scopes := desc.Of(field)
 			if scopes.Is(midl.TypePointer) &&
-				(scopes.Scope().Pointer == midl.PointerTypeNone || scopes.Scope().Pointer == midl.PointerTypeRef || scopes.Scope().Pointer == midl.PointerTypeRefWeak) &&
+				(scopes.Layer().Pointer == midl.PointerTypeNone || scopes.Layer().Pointer == midl.PointerTypeRef || scopes.Layer().Pointer == midl.PointerTypeRefWeak) &&
 				// pointers to interfaces are always unique pointers.
 				!scopes.Next().Is(midl.TypeInterface) {
 				// skip ref pointer.
@@ -115,7 +117,7 @@ func (p *Generator) GenOperationMarshalNDR(ctx context.Context, op *midl.Operati
 			p.P("//", field.Name, pp.GenParamComment(ctx, param), pp.GenStructFieldComment(ctx, field))
 			p.Block("", func() {
 				pp.GenFieldMarshalNDR(ctx, field, scopes)
-				if scopes.IsDeferrable() {
+				if ndr.IsDeferrable(scopes) {
 					p.CheckErr(p.B("w.WriteDeferred"))
 				}
 			})
@@ -165,8 +167,8 @@ func (p *Generator) GenOperationUnmarshalNDR(ctx context.Context, op *midl.Opera
 
 			field := param.Field()
 
-			scopes := NewScopes(field.Scopes())
-			if scopes.Is(midl.TypePointer) && scopes.Scope().Pointer.IsWeak(true) &&
+			scopes := desc.Of(field)
+			if scopes.Is(midl.TypePointer) && scopes.Layer().Pointer.IsWeak(true) &&
 				// pointers to interfaces are always unique pointers.
 				!scopes.Next().Is(midl.TypeInterface) {
 				scopes = scopes.Next()
@@ -175,7 +177,7 @@ func (p *Generator) GenOperationUnmarshalNDR(ctx context.Context, op *midl.Opera
 			p.P("//", field.Name, pp.GenParamComment(ctx, param), pp.GenStructFieldComment(ctx, field, "ref"))
 			p.P("{")
 			pp.GenFieldUnmarshalNDR(ctx, field, scopes)
-			if scopes.IsDeferrable() {
+			if ndr.IsDeferrable(scopes) {
 				p.CheckErr(p.B("w.ReadDeferred"))
 			}
 			p.P("}")
@@ -534,7 +536,7 @@ func (p *Generator) GenOperationToOp(ctx context.Context, op *midl.Operation, di
 			}
 
 			// if op.(n) is zero value, you can set it.
-			p.If("op."+n, "==", p.GoTypeZeroValue(ctx, f.Type.Attrs, f, NewScopes(f.Scopes())), func() {
+			p.If("op."+n, "==", p.GoTypeZeroValue(ctx, f.Type.Attrs, f, desc.Of(f)), func() {
 				p.P("op."+n, "=", p.O(n))
 			})
 		}

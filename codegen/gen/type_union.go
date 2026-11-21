@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/oiweiwei/midl-gen-go/desc"
+	"github.com/oiweiwei/midl-gen-go/desc/ndr"
 	"github.com/oiweiwei/midl-gen-go/midl"
 )
 
@@ -12,8 +14,8 @@ func (p *TypeGenerator) GenUnion(ctx context.Context) {
 
 	sw := p.Union().Switch
 
-	if p.Scope().Parent != "" {
-		p.P("//", p.GoTypeName, "structure", "represents", RPCName(p.Scope().Parent), "union", "anonymous", "member.")
+	if p.Layer().Parent != "" {
+		p.P("//", p.GoTypeName, "structure", "represents", RPCName(p.Layer().Parent), "union", "anonymous", "member.")
 	} else {
 		p.P("//", p.GoTypeName, "structure", "represents", RPCName(p.Alias()), "RPC", "union.")
 	}
@@ -144,7 +146,7 @@ func (p *TypeGenerator) IsEnumSwitch(ctx context.Context, scopes *Scopes) bool {
 		return false
 	}
 
-	return NewScopes(scopes.Scope().SwitchType.Scopes()).Is(midl.TypeEnum)
+	return desc.OfType(scopes.Layer().SwitchType).Is(midl.TypeEnum)
 }
 
 func (p *TypeGenerator) SwitchType(ctx context.Context, scopes *Scopes) string {
@@ -152,17 +154,17 @@ func (p *TypeGenerator) SwitchType(ctx context.Context, scopes *Scopes) string {
 	var switchType string
 
 	if p.Union() != nil && p.Union().IsEncapsulated() {
-		switchType = p.Generator.GoFieldTypeName(ctx, p.Scope(), &midl.Field{
+		switchType = p.Generator.GoFieldTypeName(ctx, p.Layer(), &midl.Field{
 			Attrs: &midl.FieldAttr{},
 			Type:  p.Union().Switch.Type,
 		})
 	} else {
-		if scope := NewScopes(scopes.Scope().SwitchType.Scopes()); scope.Is(midl.TypeEnum) {
+		if scope := desc.OfType(scopes.Layer().SwitchType); scope.Is(midl.TypeEnum) {
 			switchType = scope.EnumType().String()
 		} else {
-			switchType = p.Generator.GoFieldTypeName(ctx, p.Scope(), &midl.Field{
+			switchType = p.Generator.GoFieldTypeName(ctx, p.Layer(), &midl.Field{
 				Attrs: &midl.FieldAttr{},
-				Type:  scopes.Scope().SwitchType,
+				Type:  scopes.Layer().SwitchType,
 			})
 		}
 	}
@@ -195,7 +197,7 @@ func (p *TypeGenerator) GenUnionMarshalNDR(ctx context.Context) {
 		swVar = p.O(GoName(ctx, sw.Name))
 	}
 
-	p.GenDoUnionAlignemntMarshalNDR(ctx, p.Alignment())
+	p.GenDoUnionAlignemntMarshalNDR(ctx, ndr.Alignment(p.Scopes))
 
 	if sw != nil {
 		if p.IsEnumSwitch(ctx, p.Scopes) {
@@ -213,9 +215,9 @@ func (p *TypeGenerator) GenUnionMarshalNDR(ctx context.Context) {
 
 	if MSUnion(ctx) && sw == nil {
 		p.P("//", "ms_union")
-		p.GenDoAlignmentMarshalNDR(ctx, p.Alignment())
+		p.GenDoAlignmentMarshalNDR(ctx, ndr.Alignment(p.Scopes))
 	} else {
-		p.GenDoUnionAlignemntMarshalNDR(ctx, p.Alignment())
+		p.GenDoUnionAlignemntMarshalNDR(ctx, ndr.Alignment(p.Scopes))
 	}
 
 	p.Block("switch", swVar, func() {
@@ -301,7 +303,7 @@ func (p *TypeGenerator) IsArmPointerToPrimitiveType(ctx context.Context, cases *
 		return false
 	}
 
-	scopes := NewScopes(cases.Arms[0].Scopes())
+	scopes := desc.Of(cases.Arms[0])
 	return scopes.Is(midl.TypePointer) && scopes.Next().Type().IsPrimitiveType()
 }
 
@@ -342,7 +344,7 @@ func (p *TypeGenerator) UnionArmName(ctx context.Context, cases *midl.UnionCase)
 	}
 
 	// try find suitable name by enumeration label.
-	if switchType := p.Scope().SwitchType; switchType != nil {
+	if switchType := p.Layer().SwitchType; switchType != nil {
 		if switchType = switchType.Base(); switchType.Is(midl.TypeEnum) {
 			for _, e := range switchType.Enum.Elems {
 				for _, label := range cases.Labels {
@@ -424,11 +426,11 @@ func (p *TypeGenerator) GenUnionArmMarshalNDR(ctx context.Context, arm *midl.Uni
 	p.P("func", "(o *"+caseName+")", "MarshalNDR(ctx context.Context, w ndr.Writer)", "error", "{")
 
 	if p.IsEmbeddedArmStruct(ctx, arm) {
-		p.GenDoAlignmentMarshalNDR(ctx, NewScopes(arm.Arms[0].Scopes()).Alignment())
+		p.GenDoAlignmentMarshalNDR(ctx, ndr.Alignment(desc.Of(arm.Arms[0])))
 	}
 
 	for _, field := range p.ArmFields(ctx, arm) {
-		scopes := NewScopes(field.Scopes())
+		scopes := desc.Of(field)
 		if p.IsArmPointerToPrimitiveType(ctx, arm) {
 			scopes = scopes.Next()
 		}

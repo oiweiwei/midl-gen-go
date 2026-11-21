@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"regexp"
 
+	"github.com/oiweiwei/midl-gen-go/desc"
 	"github.com/oiweiwei/midl-gen-go/midl"
 )
 
@@ -221,7 +222,7 @@ func (p *Generator) GenClient(ctx context.Context, iff *midl.Interface) {
 				cmp = "<"
 			}
 
-			p.If("op."+GoName(ctx, field.Name), cmp, p.GoTypeZeroValue(ctx, nil, field, NewScopes(field.Scopes())), func() {
+			p.If("op."+GoName(ctx, field.Name), cmp, p.GoTypeZeroValue(ctx, nil, field, desc.Of(field)), func() {
 				p.P("return", "out", ",", p.B("fmt.Errorf", `"%s: %w"`, "op.OpName()", p.B("o.cc.Error", "ctx", "op."+GoName(ctx, field.Name))))
 			})
 		}
@@ -393,7 +394,7 @@ func (p *Generator) GenInterfaceID(ctx context.Context, iff *midl.Interface) {
 	p.P()
 	p.P("var", "(")
 	if iff.IsObject() {
-		_ = p.GoPackageName(ctx, NewScopes(p.Session.LookupType("IID").Scopes()))
+		_ = p.GoPackageName(ctx, desc.OfType(p.Session.LookupType("IID")))
 		p.P("//", iff.Name, "interface", "identifier", iff.Attrs.UUID)
 		p.P(GoName(ctx, iff.Name)+"IID", "=", "&dcom.IID", UUIDToGUID(iff.Attrs.UUID))
 	}

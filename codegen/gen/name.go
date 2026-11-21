@@ -6,6 +6,7 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/oiweiwei/midl-gen-go/desc"
 	go_names "github.com/oiweiwei/midl-gen-go/gonames"
 	"github.com/oiweiwei/midl-gen-go/midl"
 )
@@ -112,7 +113,7 @@ func (p *Generator) GoScopeTypeName(ctx context.Context, attr *midl.TypeAttr, fi
 }
 
 func (p *Generator) GoFieldTypeName(ctx context.Context, attr *midl.TypeAttr, field *midl.Field, n ...string) string {
-	return p.GoTypeName(ctx, attr, field, NewScopes(field.Scopes()), n...)
+	return p.GoTypeName(ctx, attr, field, desc.Of(field), n...)
 }
 
 func (p *Generator) EmbeddedTypeName(ctx context.Context, attrs *midl.TypeAttr, field *midl.Field) string {
@@ -379,7 +380,7 @@ func LookupName(ctx context.Context, scopes *Scopes) string {
 	if alias := scopes.Alias(); alias != "" {
 		if strings.HasPrefix(alias, "PDNS") {
 			// FIXME: dnsp.idl
-			alias = scopes.Scope().Names[0]
+			alias = scopes.Layer().Names[0]
 		}
 		return alias
 	}

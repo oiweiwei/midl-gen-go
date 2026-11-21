@@ -487,7 +487,8 @@ func (t *TypeAttr) withAlias(a string) *TypeAttr {
 	return t
 }
 
-func (t *TypeAttr) clone() *TypeAttr {
+// Clone returns a copy of the attributes.
+func (t *TypeAttr) Clone() *TypeAttr {
 	return &TypeAttr{
 		t.TransmitAs,
 		t.Handle,
@@ -512,7 +513,7 @@ func (t *TypeAttr) clone() *TypeAttr {
 
 func (t *TypeAttr) Merge(tt *TypeAttr) *TypeAttr {
 
-	if t = t.clone(); tt == nil {
+	if t = t.Clone(); tt == nil {
 		return t
 	}
 

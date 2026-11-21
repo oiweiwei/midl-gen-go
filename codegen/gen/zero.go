@@ -3,6 +3,7 @@ package gen
 import (
 	"context"
 
+	"github.com/oiweiwei/midl-gen-go/desc/ndr"
 	"github.com/oiweiwei/midl-gen-go/midl"
 )
 
@@ -13,7 +14,7 @@ func (p *TypeGenerator) GenZeroUnionFieldMarshalNDR(ctx context.Context, field *
 		name = p.O(p.IVar(p.GoFieldName(ctx, field), index...))
 	}
 
-	typeName := p.GoScopeTypeName(ctx, p.Scope(), field, scopes, true)
+	typeName := p.GoScopeTypeName(ctx, p.Layer(), field, scopes, true)
 
 	if scopes.Union().IsEncapsulated() {
 		p.CheckErr(p.B("("+p.Amp(typeName)+"{}).MarshalNDR", "ctx", "w"))
@@ -25,7 +26,7 @@ func (p *TypeGenerator) GenZeroUnionFieldMarshalNDR(ctx context.Context, field *
 
 func (p *TypeGenerator) GenZeroStructFieldMarshalNDR(ctx context.Context, field *midl.Field, scopes *Scopes, index ...interface{}) {
 
-	typeName := p.GoScopeTypeName(ctx, p.Scope(), field, scopes, true)
+	typeName := p.GoScopeTypeName(ctx, p.Layer(), field, scopes, true)
 
 	p.CheckErr(p.B("("+p.Amp(typeName)+"{}).MarshalNDR", "ctx", "w"))
 }
@@ -36,7 +37,7 @@ func (p *TypeGenerator) GenZeroPointerFieldMarshalNDR(ctx context.Context, field
 
 func (p *TypeGenerator) GenZeroEnumFieldMarshalNDR(ctx context.Context, field *midl.Field, scopes *Scopes, index ...interface{}) {
 
-	p.CheckErr(p.B("w.WriteData", p.B(scopes.Scope().EnumType(), "0")))
+	p.CheckErr(p.B("w.WriteData", p.B(scopes.Layer().EnumType(), "0")))
 }
 
 func (p *TypeGenerator) GenZeroArrayFieldMarhalNDR(ctx context.Context, field *midl.Field, scopes *Scopes, index ...interface{}) {
@@ -54,7 +55,7 @@ func (p *TypeGenerator) GenZeroArrayFieldMarhalNDR(ctx context.Context, field *m
 		p.Block("for", idx, ":=", p.Len(name), ";", p.B("uint64", idx), "<", scopes.Array().Size(), ";", idx, "++", func() {
 			p.GenZeroFieldMarshalNDR(ctx, field, scopes.Next(), append(index, idx)...)
 		})
-	} else if scopes.IsConformant() {
+	} else if ndr.IsConformant(scopes) {
 		p.Block("for", idx, ":=", p.Len(name), ";", p.B("uint64", idx), "<", p.IVar("sizeInfo", scopes.Dim().Dimension), ";", idx, "++", func() {
 			p.GenZeroFieldMarshalNDR(ctx, field, scopes.Next(), append(index, idx)...)
 		})
@@ -70,7 +71,7 @@ func (p *TypeGenerator) GenZeroFieldMarshalNDR(ctx context.Context, field *midl.
 	switch {
 
 	case scopes.Type().IsPrimitiveType():
-		p.CheckErr(p.B("w.WriteData", p.GoTypeZeroValue(ctx, p.Scope(), field, scopes)))
+		p.CheckErr(p.B("w.WriteData", p.GoTypeZeroValue(ctx, p.Layer(), field, scopes)))
 	case scopes.Is(midl.TypeEnum):
 		p.GenZeroEnumFieldMarshalNDR(ctx, field, scopes, index...)
 	case scopes.Is(midl.TypeUnion):

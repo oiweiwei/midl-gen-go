@@ -272,7 +272,7 @@ func (a *TypeAttr) String() string {
 	}
 
 	if a.SwitchType != nil {
-		for _, scope := range a.SwitchType.Scopes() {
+		for _, scope := range a.SwitchType.Layers() {
 			typName := scope.Types[0].Name
 			if typName == "" {
 				typName = scope.Types[0].Kind.String()
@@ -381,7 +381,7 @@ func (a *FieldAttr) String() string {
 	}
 
 	if a.SwitchType != nil {
-		for _, scope := range a.SwitchType.Scopes() {
+		for _, scope := range a.SwitchType.Layers() {
 			ret = append(ret, fmt.Sprintf("switch_type={%s}", scope.Attr.String()))
 		}
 	}

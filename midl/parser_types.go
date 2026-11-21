@@ -138,14 +138,14 @@ func (p *pTypedef) pToExport_() []*Export {
 			// add alias right after the type declarator.
 			decl.Type = decl.Type.Append(&Type{
 				Kind:  TypeAttribute,
-				Attrs: p.Attrs.clone().withAlias(alias),
+				Attrs: p.Attrs.Clone().withAlias(alias),
 			})
 		}
 
 		// type is an attribute.
 		decl.Type = &Type{
 			Kind:  TypeAttribute,
-			Attrs: p.Attrs.clone().withAlias(decl.Name),
+			Attrs: p.Attrs.Clone().withAlias(decl.Name),
 			Elem:  decl.Type,
 		}
 

@@ -12,6 +12,7 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/oiweiwei/midl-gen-go/desc"
 	go_names "github.com/oiweiwei/midl-gen-go/gonames"
 	"github.com/oiweiwei/midl-gen-go/logx"
 	"github.com/oiweiwei/midl-gen-go/midl"
@@ -219,7 +220,7 @@ func (p *Generator) GenFile(ctx context.Context, fn string, f *midl.File) error 
 	}
 
 	if len(f.ComClasses) > 0 || len(f.Libraries) > 0 {
-		_ = p.GoPackageName(ctx, NewScopes(p.Session.LookupType("CLSID").Scopes()))
+		_ = p.GoPackageName(ctx, desc.OfType(p.Session.LookupType("CLSID")))
 	}
 
 	for _, sym := range f.ComClasses {
@@ -479,7 +480,7 @@ func (p *Generator) GenPointerType(ctx context.Context, scopes *Scopes) midl.Poi
 	var ptr midl.PointerType
 
 	if scopes.IsTopLevelPointer() {
-		if ptr = scopes.Scope().Pointer; ptr != midl.PointerTypeNone {
+		if ptr = scopes.Layer().Pointer; ptr != midl.PointerTypeNone {
 			return ptr
 		}
 	}

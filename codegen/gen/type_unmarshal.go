@@ -3,13 +3,15 @@ package gen
 import (
 	"context"
 
+	"github.com/oiweiwei/midl-gen-go/desc"
+	"github.com/oiweiwei/midl-gen-go/desc/ndr"
 	"github.com/oiweiwei/midl-gen-go/midl"
 )
 
 func (p *TypeGenerator) GenStructUnmarshalNDR(ctx context.Context) {
 
 	trailingField := p.Struct().LastFieldIndex()
-	if p.IsConformant() || p.IsVarying() {
+	if ndr.IsConformant(p.Scopes) || ndr.IsVarying(p.Scopes) {
 		trailingField--
 	}
 
@@ -19,19 +21,19 @@ func (p *TypeGenerator) GenStructUnmarshalNDR(ctx context.Context) {
 		// write size information.
 		p.GenStructUnmarshalNDRSizePreamble(ctx, p.StructLastField())
 		// align the structure.
-		p.GenDoAlignmentUnmarshalNDR(ctx, p.Alignment())
+		p.GenDoAlignmentUnmarshalNDR(ctx, ndr.Alignment(p.Scopes))
 		// unmarshal fields.
 		for i, field := range p.Struct().Fields {
-			p.GenFieldUnmarshalNDR(ctx, field, NewScopes(field.Scopes()))
+			p.GenFieldUnmarshalNDR(ctx, field, desc.Of(field))
 			if i == trailingField {
-				if f := NewScopes(field.Scopes()); f.alignment(false) != p.alignment(false) {
-					p.GenDoTrailingGapUnmarshalNDR(ctx, p.Alignment())
+				if f := desc.Of(field); ndr.PlainAlignment(f) != ndr.PlainAlignment(p.Scopes) {
+					p.GenDoTrailingGapUnmarshalNDR(ctx, ndr.Alignment(p.Scopes))
 				}
 			}
 		}
-		if p.Scope().Pad != 0 {
-			p.P("//", "pad", p.Scope().Pad)
-			p.GenDoAlignmentUnmarshalNDR(ctx, int(p.Scope().Pad))
+		if p.Layer().Pad != 0 {
+			p.P("//", "pad", p.Layer().Pad)
+			p.GenDoAlignmentUnmarshalNDR(ctx, int(p.Layer().Pad))
 		}
 
 		for _, field := range p.Struct().Fields {
@@ -39,7 +41,7 @@ func (p *TypeGenerator) GenStructUnmarshalNDR(ctx context.Context) {
 				p.P("//", "default value for ignored field", field.Name)
 				expr := field.DefaultValue
 				p.P(p.EO(ctx, field.Name), "=", p.B(
-					p.GoFieldTypeName(ctx, p.Scope(), field),
+					p.GoFieldTypeName(ctx, p.Layer(), field),
 					p.GenExpr(ctx, expr, p.LookupExprField(ctx, expr), ""),
 				))
 			}
@@ -51,7 +53,7 @@ func (p *TypeGenerator) GenStructUnmarshalNDR(ctx context.Context) {
 }
 
 func (p *TypeGenerator) GenStructUnmarshalNDRSizeCheck(ctx context.Context) {
-	if rng := p.Scope().Range; rng != nil {
+	if rng := p.Layer().Range; rng != nil {
 		if rng.Min == rng.Max && rng.Min > 0 {
 			p.If("w.Len()", "!=", rng.Min, "/* size-is check */", func() {
 				p.P("return", "nil")
@@ -72,7 +74,7 @@ func (p *TypeGenerator) GenStructUnmarshalNDRSizeCheck(ctx context.Context) {
 }
 
 func (p *TypeGenerator) GenStructUnmarshalNDRSizePreamble(ctx context.Context, field *midl.Field) {
-	if !p.IsConformant() {
+	if !ndr.IsConformant(p.Scopes) {
 		return
 	}
 	p.P("sizeInfo, ok := ctx.Value(ndr.SizeInfo).([]uint64)")
@@ -101,7 +103,7 @@ func (p *TypeGenerator) GenFieldUnmarshalNDR(ctx context.Context, field *midl.Fi
 	// reserved field.
 	if p.GoFieldName(ctx, field) == "_" && !IsReserved(ctx) {
 		ctx = WithReserved(ctx)
-		typeName := p.GoScopeTypeName(ctx, p.Scope(), field, scopes)
+		typeName := p.GoScopeTypeName(ctx, p.Layer(), field, scopes)
 		p.P("//", "reserved", field.Name)
 		name = "_" + field.Name
 		p.P("var", name, typeName)
@@ -159,7 +161,7 @@ func (p *TypeGenerator) GenFieldUnmarshalNDR(ctx context.Context, field *midl.Fi
 			varName := "_e" + p.ToVar(name)
 			p.P(varName, ":=", p.B(scopes.EnumType(), name))
 			p.CheckErr(p.B("w.ReadEnum", p.Amp(varName)))
-			p.P(name, "=", p.B(p.GoScopeTypeName(ctx, p.Scope(), field, scopes), varName))
+			p.P(name, "=", p.B(p.GoScopeTypeName(ctx, p.Layer(), field, scopes), varName))
 		} else {
 			p.CheckErr(p.B("w.ReadEnum", p.B(p.BPtr(scopes.EnumType()), p.Amp(name))))
 		}
@@ -168,7 +170,7 @@ func (p *TypeGenerator) GenFieldUnmarshalNDR(ctx context.Context, field *midl.Fi
 
 		// marshal union.
 
-		typeName := p.GoScopeTypeName(ctx, p.Scope(), field, scopes, true)
+		typeName := p.GoScopeTypeName(ctx, p.Layer(), field, scopes, true)
 
 		p.If(name, "==", "nil", func() {
 			p.P(name, "=", p.Amp(typeName), "{}")
@@ -189,7 +191,7 @@ func (p *TypeGenerator) GenFieldUnmarshalNDR(ctx context.Context, field *midl.Fi
 
 		// marshal structure.
 
-		typeName := p.GoScopeTypeName(ctx, p.Scope(), field, scopes, true)
+		typeName := p.GoScopeTypeName(ctx, p.Layer(), field, scopes, true)
 
 		p.If(name, "==", "nil", func() {
 			p.P(name, "=", p.Amp(typeName), "{}")
@@ -209,13 +211,13 @@ func (p *TypeGenerator) GenFieldUnmarshalNDR(ctx context.Context, field *midl.Fi
 
 		// render setter function.
 		sN := "_s" + "_" + field.Name
-		decl := p.GoScopeTypeName(ctx, p.Scope(), field, scopes)
+		decl := p.GoScopeTypeName(ctx, p.Layer(), field, scopes)
 
 		p.Block(sN, ":=", "func(ptr any)", func() {
 			p.Switch("ptr := ptr.(type)", func() {
 				p.P("case", p.Ptr(decl), ":")
 				p.If("ptr", "==", "nil", func() {
-					p.P(name, "=", p.GoTypeZeroValue(ctx, p.Scope(), field, scopes))
+					p.P(name, "=", p.GoTypeZeroValue(ctx, p.Layer(), field, scopes))
 				}, p.Else(func() {
 					p.P(name, "=", p.Ptr("ptr"))
 				}))
@@ -240,14 +242,14 @@ func (p *TypeGenerator) GenFieldUnmarshalNDR(ctx context.Context, field *midl.Fi
 
 		ctx := WithNullMask(ctx, "") /* clear null mask as arrays are unsupported */
 
-		isConformant, isVarying := scopes.IsConformant(), scopes.IsVarying()
+		isConformant, isVarying := ndr.IsConformant(scopes), ndr.IsVarying(scopes)
 
 		dim := 0
 		for scopes := scopes; scopes.IsNotFixedArray(); scopes = scopes.Next() {
 			dim++
 		}
 
-		if field.Position == 0 || scopes.IsTopLevelArray() {
+		if field.Position == 0 || ndr.IsTopLevelArray(scopes) {
 
 			if dim := scopes.Dim(); dim.IsString && !dim.NoSizeLimit && dim.Size().Empty() && dim.LengthIs.IsEmpty() {
 
@@ -327,7 +329,7 @@ func (p *TypeGenerator) GenFieldUnmarshalNDR(ctx context.Context, field *midl.Fi
 
 		idx := p.Var("i", len(index)+1)
 
-		origName, decl := name, p.GoScopeTypeName(ctx, p.Scope(), field, scopes)
+		origName, decl := name, p.GoScopeTypeName(ctx, p.Layer(), field, scopes)
 
 		if scopes.Dim().IsString {
 
@@ -348,7 +350,7 @@ func (p *TypeGenerator) GenFieldUnmarshalNDR(ctx context.Context, field *midl.Fi
 		if scopes.Dim().NoSizeLimit {
 			p.Block("for", idx+" := 0;", "w.Len() > 0;", idx+"++", func() {
 				p.P(idx, ":=", idx)
-				p.P(name, "=", p.B("append", name, p.GoTypeZeroValue(ctx, p.Scope(), field, scopes.Next())))
+				p.P(name, "=", p.B("append", name, p.GoTypeZeroValue(ctx, p.Layer(), field, scopes.Next())))
 				p.GenFieldUnmarshalNDR(ctx, field, scopes.Next(), append(index, idx)...)
 			})
 
@@ -403,14 +405,14 @@ func (p *TypeGenerator) GenFieldUnmarshalNDR(ctx context.Context, field *midl.Fi
 
 		{
 			p.If(name, "==", "nil", func() {
-				p.P(name, "=", p.B(p.GoScopeTypeNameWithN(ctx, p.Scope(), field, scopes, true, "New")))
+				p.P(name, "=", p.B(p.GoScopeTypeNameWithN(ctx, p.Layer(), field, scopes, true, "New")))
 			})
 
 			field := p.GenPipeField(ctx, scopes.Type())
-			scopes := NewScopes(field.Scopes())
+			scopes := desc.Of(field)
 
 			p.Range(func() {
-				p.P("var", "_chunk", p.GoFieldTypeName(ctx, NewScopes(field.Scopes()).Scope(), field))
+				p.P("var", "_chunk", p.GoFieldTypeName(ctx, desc.Of(field).Layer(), field))
 				p.GenFieldUnmarshalNDR(WithVarName(ctx, "_chunk"), field, scopes)
 				p.If(p.Len("_chunk"), "==", "0", "/* end */", func() {
 					p.P("break")
@@ -439,7 +441,7 @@ func (p *TypeGenerator) GenFieldUnmarshalNDR(ctx context.Context, field *midl.Fi
 			for _, field := range field.Attrs.Layout {
 				fN := "_layout_" + field.Name
 				p.P(fN, ":=", "ndr.UnmarshalNDRFunc", "(", "func(ctx context.Context, w ndr.Reader) error {")
-				p.GenFieldUnmarshalNDR(ctx, field, NewScopes(field.Scopes()), index...)
+				p.GenFieldUnmarshalNDR(ctx, field, desc.Of(field), index...)
 				p.P("return nil")
 				p.P("})")
 				p.If(p.Len(name), ">", "0", func() {

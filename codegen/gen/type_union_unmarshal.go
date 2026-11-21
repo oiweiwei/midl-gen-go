@@ -4,6 +4,8 @@ import (
 	"context"
 	"strings"
 
+	"github.com/oiweiwei/midl-gen-go/desc"
+	"github.com/oiweiwei/midl-gen-go/desc/ndr"
 	"github.com/oiweiwei/midl-gen-go/midl"
 )
 
@@ -26,7 +28,7 @@ func (p *TypeGenerator) GenUnionUnmarshalNDR(ctx context.Context) {
 		swVar = p.O(GoName(ctx, sw.Name))
 	}
 
-	p.GenDoUnionAlignemntUnmarshalNDR(ctx, p.Alignment())
+	p.GenDoUnionAlignemntUnmarshalNDR(ctx, ndr.Alignment(p.Scopes))
 
 	if sw != nil {
 		if p.IsEnumSwitch(ctx, p.Scopes) {
@@ -44,9 +46,9 @@ func (p *TypeGenerator) GenUnionUnmarshalNDR(ctx context.Context) {
 
 	if MSUnion(ctx) && sw == nil {
 		p.P("//", "ms_union")
-		p.GenDoAlignmentUnmarshalNDR(ctx, p.Alignment())
+		p.GenDoAlignmentUnmarshalNDR(ctx, ndr.Alignment(p.Scopes))
 	} else {
-		p.GenDoUnionAlignemntUnmarshalNDR(ctx, p.Alignment())
+		p.GenDoUnionAlignemntUnmarshalNDR(ctx, ndr.Alignment(p.Scopes))
 	}
 
 	p.Block("switch", swVar, func() {
@@ -113,7 +115,7 @@ func (p *TypeGenerator) GenUnionArmPrimitiveTypeUnmarshalNDR(ctx context.Context
 			p.P(p.B("w.SetErr", `fmt.Errorf("invalid pointer type %T for field o.Value", ptr)`))
 		})
 	})
-	p.CheckErr(p.GenReadPointer(ctx, NewScopes(cases.Arms[0].Scopes()), p.Amp("o.Value"), "_s_o", "", "_ptr_o"))
+	p.CheckErr(p.GenReadPointer(ctx, desc.Of(cases.Arms[0]), p.Amp("o.Value"), "_s_o", "", "_ptr_o"))
 }
 
 func (p *TypeGenerator) GenUnionArmUnmarshalNDR(ctx context.Context, arm *midl.UnionCase, caseName string) {
@@ -121,11 +123,11 @@ func (p *TypeGenerator) GenUnionArmUnmarshalNDR(ctx context.Context, arm *midl.U
 	p.P("func", "(o *"+caseName+")", "UnmarshalNDR(ctx context.Context, w ndr.Reader)", "error", "{")
 
 	if p.IsEmbeddedArmStruct(ctx, arm) {
-		p.GenDoAlignmentUnmarshalNDR(ctx, NewScopes(arm.Arms[0].Scopes()).Alignment())
+		p.GenDoAlignmentUnmarshalNDR(ctx, ndr.Alignment(desc.Of(arm.Arms[0])))
 	}
 
 	for _, field := range p.ArmFields(ctx, arm) {
-		scopes := NewScopes(field.Scopes())
+		scopes := desc.Of(field)
 		if p.IsArmPointerToPrimitiveType(ctx, arm) {
 			scopes = scopes.Next()
 		}
