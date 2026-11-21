@@ -2,7 +2,6 @@ package gen
 
 import (
 	"context"
-	"fmt"
 	"sort"
 	"strings"
 
@@ -131,7 +130,7 @@ func (p *Generator) AddImport(imp Import) string {
 			return imps.Name[strings.LastIndex(imps.Name, "/")+1:]
 		}
 	}
-	fmt.Println("[ADD IMPORT]", imp)
+	p.Logger().Debug("add import", "name", imp.Name, "path", imp.Path)
 	p.out.Imports = append(p.out.Imports, imp)
 	return imp.Name[strings.LastIndex(imp.Name, "/")+1:]
 }

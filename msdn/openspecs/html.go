@@ -13,7 +13,7 @@ import (
 	"strings"
 
 	"github.com/PuerkitoBio/goquery"
-	"github.com/rs/zerolog"
+	"github.com/oiweiwei/midl-gen-go/logx"
 	"jaytaylor.com/html2text"
 )
 
@@ -35,14 +35,11 @@ func RenderImage(ctx context.Context, q *goquery.Selection) string {
 // plain text representation.
 func RenderHTML(ctx context.Context, q *goquery.Selection) string {
 
-	log := zerolog.Ctx(ctx).With().
-		Str("method", "render_html").
-		Stringer("html", goqueryStringer{q}).
-		Logger()
+	log := logx.From(ctx).With("method", "render_html", "html", goqueryStringer{q})
 
 	ret, err := html2text.FromHTMLNode(q.Nodes[0])
 	if err != nil {
-		log.Warn().Err(err).Msg("rendering html")
+		log.Warn("rendering html", "err", err)
 	}
 	return ret
 }
@@ -51,10 +48,7 @@ func RenderHTML(ctx context.Context, q *goquery.Selection) string {
 // tables and those with colspan attributes.
 func RenderTable(ctx context.Context, table *goquery.Selection) string {
 
-	log := zerolog.Ctx(ctx).With().
-		Str("method", "render_table").
-		Stringer("html", goqueryStringer{table}).
-		Logger()
+	log := logx.From(ctx).With("method", "render_table", "html", goqueryStringer{table})
 
 	table.Find("td").Each(func(_ int, tx *goquery.Selection) {
 		// normalize text.
@@ -65,7 +59,7 @@ func RenderTable(ctx context.Context, table *goquery.Selection) string {
 
 	html, err := goquery.OuterHtml(table)
 	if err != nil {
-		log.Warn().Err(err).Msg("rendering table")
+		log.Warn("rendering table", "err", err)
 	}
 
 	opts := html2text.Options{
@@ -80,7 +74,7 @@ func RenderTable(ctx context.Context, table *goquery.Selection) string {
 	if !strings.Contains(html, "colspan=") {
 		html, err := html2text.FromString(html, opts)
 		if err != nil {
-			log.Warn().Err(err).Msg("rendering table")
+			log.Warn("rendering table", "err", err)
 		}
 		fmt.Fprintln(buf, html)
 		return buf.String()
@@ -89,14 +83,14 @@ func RenderTable(ctx context.Context, table *goquery.Selection) string {
 	// render table header separately.
 	html, err = goquery.OuterHtml(table.Find("th").First().Parent())
 	if err != nil {
-		log.Warn().Err(err).Msg("rendering table header")
+		log.Warn("rendering table header", "err", err)
 	}
 
 	html = "<table>" + html + "</table>"
 
 	header, err := html2text.FromString(html, opts)
 	if err != nil {
-		log.Warn().Err(err).Msg("rendering table header")
+		log.Warn("rendering table header", "err", err)
 	}
 
 	last := ""
@@ -120,7 +114,7 @@ func RenderTable(ctx context.Context, table *goquery.Selection) string {
 
 			colspan, err := strconv.Atoi(attr)
 			if err != nil {
-				log.Warn().Err(err).Str("attr", attr).Msg("parse colspan")
+				log.Warn("parse colspan", "err", err, "attr", attr)
 			}
 
 			txt := DocString(td)

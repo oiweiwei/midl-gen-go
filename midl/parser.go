@@ -4,30 +4,27 @@ package midl
 
 import (
 	"fmt"
-	"os"
 	"strings"
-	"sync"
-
-	log "github.com/sirupsen/logrus"
 )
 
-var dceTypesOnce = new(sync.Once)
-
-func Setup() {
-	dceTypesOnce.Do(func() {
-		// load global default.
-		_, err := NewFile("dcetypes.idl", "").Load()
-		if err != nil {
-			fmt.Fprintln(os.Stderr, "[WARNING] unable to load dcetypes.idl:", err)
-		}
-	})
+func init() {
+	// report the expected tokens on syntax errors.
+	RPCErrorVerbose = true
 }
 
-// Parse ...
-func Parse(s string) (*File, error) {
+// Import loads the imported file into the parser session.
+func (p *Parser) Import(name string) error {
+	_, err := p.sess.Load(name)
+	return err
+}
+
+// Parse parses the IDL source. Type and constant references that are not
+// local to the source are resolved against the files already loaded in the
+// session.
+func (s *Session) Parse(src string) (*File, error) {
 
 	var (
-		p = NewParser(s)
+		p = NewParser(s, src)
 	)
 
 	if RPCParse(p); p.errLex != nil {
@@ -40,6 +37,7 @@ func Parse(s string) (*File, error) {
 
 	// save exportSyms to the file for further reference.
 	p.result.exportSyms = p.exportSyms
+	p.result.sess = s
 
 	// resolve defered type rederences.
 	for _, ref := range p.refs {
@@ -113,6 +111,8 @@ func storeConst(p interface{}, n string, val Expr, typ ...Kind) {
 type Parser struct {
 	// The lexer entity.
 	*Lexer
+	// The session used to resolve external references.
+	sess *Session
 	// The result.
 	result *File
 	// The export symbols for the resulting file.
@@ -124,9 +124,10 @@ type Parser struct {
 }
 
 // NewParser function returns the parser entity.
-func NewParser(s string) *Parser {
+func NewParser(sess *Session, src string) *Parser {
 	return &Parser{
-		Lexer:      NewLexer(s),
+		sess:       sess,
+		Lexer:      NewLexer(src),
 		exportSyms: make(map[string]*Export),
 	}
 }
@@ -146,7 +147,7 @@ func (p *Parser) LookupType(n string) (*Type, bool) {
 	)
 
 	if e, ok = p.exportSyms[n]; !ok {
-		for _, f := range Files() {
+		for _, f := range p.sess.Files() {
 			if e, ok = f.exportSyms[n]; !ok {
 				continue
 			}
@@ -157,7 +158,7 @@ func (p *Parser) LookupType(n string) (*Type, bool) {
 	if !ok {
 		return nil, false
 	} else if e.Type == nil {
-		log.Warnf("parse: %s: not a type reference", n)
+		p.sess.log.Warn("not a type reference", "name", n)
 		return nil, false
 	}
 
@@ -174,7 +175,7 @@ func (p *Parser) LookupConst(n string) (*Const, bool) {
 	)
 
 	if e, ok = p.exportSyms[n]; !ok {
-		for _, f = range Files() {
+		for _, f = range p.sess.Files() {
 			if e, ok = f.exportSyms[n]; !ok {
 				continue
 			}
@@ -184,7 +185,7 @@ func (p *Parser) LookupConst(n string) (*Const, bool) {
 	if !ok {
 		return nil, false
 	} else if e.Const == nil {
-		log.Warnf("not a const reference %s", n)
+		p.sess.log.Warn("not a const reference", "name", n)
 		return nil, false
 	}
 

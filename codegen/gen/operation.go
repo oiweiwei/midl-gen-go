@@ -267,12 +267,12 @@ func (p *Generator) OperationParams(ctx context.Context, op *midl.Operation) []*
 	return append([]*midl.Param{
 		{
 			Name:  "This",
-			Type:  midl.LookupType("ORPCTHIS"),
+			Type:  p.Session.LookupType("ORPCTHIS"),
 			Attrs: &midl.ParamAttr{FieldAttr: &midl.FieldAttr{}, Direction: midl.Direction{In: true}},
 		},
 		{
 			Name:  "That",
-			Type:  midl.LookupType("ORPCTHAT"),
+			Type:  p.Session.LookupType("ORPCTHAT"),
 			Attrs: &midl.ParamAttr{FieldAttr: &midl.FieldAttr{}, Direction: midl.Direction{Out: true}},
 		},
 	}, params...)

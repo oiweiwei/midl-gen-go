@@ -29,6 +29,21 @@ demo:
 		-I examples/demo/idl/ \
 			examples/demo/idl/**
 
+# Golden regression check of the generator against a recorded output.
+#   make golden-record IDL=../go-msrpc/idl GOLDEN=/path/to/golden
+#   make golden        IDL=../go-msrpc/idl GOLDEN=/path/to/golden
+# IDL must have msdn/ (index.yaml, extra.yaml, .cache/) as its sibling directory.
+IDL    ?= ../go-msrpc/idl
+GOLDEN ?= .golden
+
+.PHONY: golden-record
+golden-record:
+	scripts/golden.sh record $(IDL) $(GOLDEN)
+
+.PHONY: golden
+golden:
+	scripts/golden.sh check $(IDL) $(GOLDEN)
+
 .PHONY: test
 test:
 	go test ./...

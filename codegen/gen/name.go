@@ -31,7 +31,7 @@ func GoHex(n int) func(uint64) string {
 var defaultVersion = &midl.Version{}
 
 func (p *Generator) WithInterfaceNamer(ctx context.Context, iff *midl.Interface) context.Context {
-	for _, f := range midl.Files() {
+	for _, f := range p.Session.Files() {
 		if _, ok := f.LookupType(iff.Name); !ok {
 			continue
 		}
@@ -45,7 +45,7 @@ func (p *Generator) WithInterfaceBaseNamer(ctx context.Context, iff *midl.Interf
 	if iff.Base != nil {
 		name = iff.Base.Name
 	}
-	for _, f := range midl.Files() {
+	for _, f := range p.Session.Files() {
 		if _, ok := f.LookupType(name); !ok {
 			continue
 		}
@@ -58,7 +58,7 @@ func (p *Generator) GoInterfaceTypeName(ctx context.Context, iff *midl.Interface
 
 	n := iff.Name
 
-	for _, f := range midl.Files() {
+	for _, f := range p.Session.Files() {
 
 		if _, ok := f.LookupType(iff.Name); !ok {
 			continue
@@ -341,7 +341,7 @@ func GoPackage(ctx context.Context, n string) (*Package, bool) {
 		}
 	}
 
-	for _, f := range midl.Files() {
+	for _, f := range Session(ctx).Files() {
 		if _, ok := f.Export[n]; ok {
 			return &Package{
 				Name: f.GoPkg,

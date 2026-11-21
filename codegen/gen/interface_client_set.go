@@ -17,7 +17,7 @@ func (p *Generator) GenClientSet(ctx context.Context, f *midl.File) {
 
 	var dcom *midl.File
 
-	for _, f := range midl.Files() {
+	for _, f := range p.Session.Files() {
 		if f.PkgIs("dcom") {
 			dcom = f
 			break

@@ -6,7 +6,6 @@ import (
 	"path"
 	"path/filepath"
 	"strings"
-	"sync"
 
 	go_names "github.com/oiweiwei/midl-gen-go/gonames"
 	"gopkg.in/yaml.v3"
@@ -60,22 +59,19 @@ func (c *Config) For(idl string) *Config {
 	return &cc
 }
 
-var (
-	configsStoreMu = &sync.RWMutex{}
-	configsStore   = make(map[string]*Config)
-)
-
 const ConfigDir = ".midl"
 
-func LoadConfig(dir string) (*Config, error) {
-	configsStoreMu.RLock()
-	if c, ok := configsStore[dir]; ok {
-		configsStoreMu.RUnlock()
+// LoadConfig loads (once per session) the .midl/config.yaml of the directory.
+// It returns nil, nil if the directory has no .midl folder.
+func (s *Session) LoadConfig(dir string) (*Config, error) {
+	s.mu.Lock()
+	c, ok := s.configs[dir]
+	s.mu.Unlock()
+	if ok {
 		return c, nil
 	}
-	configsStoreMu.RUnlock()
 
-	fmt.Println("loading config for dir", dir)
+	s.log.Debug("loading config", "dir", dir)
 
 	stat, err := os.Stat(filepath.Join(dir, ConfigDir))
 	if err != nil {
@@ -89,7 +85,7 @@ func LoadConfig(dir string) (*Config, error) {
 		return nil, fmt.Errorf("load config: .midl is not a directory")
 	}
 
-	c := &Config{}
+	c = &Config{}
 
 	b, err := os.ReadFile(filepath.Join(dir, ConfigDir, "config.yaml"))
 	if err != nil {
@@ -110,9 +106,9 @@ func LoadConfig(dir string) (*Config, error) {
 		c.Namer = &go_names.Namer{Config: c.Namer.Merge(c.GoNames.Global)}
 	}
 
-	configsStoreMu.Lock()
-	configsStore[dir] = c
-	configsStoreMu.Unlock()
+	s.mu.Lock()
+	s.configs[dir] = c
+	s.mu.Unlock()
 
 	return c, nil
 }

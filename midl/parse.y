@@ -1152,7 +1152,7 @@ import1                 : IMPORT import_list ';'
                                 $$ = $2
                                 // XXX: load import files.
                                 for _, f := range $2 {
-                                    if _, err := NewFile(f, "").Load(); err != nil {
+                                    if err := RPClex.(*Parser).Import(f); err != nil {
                                         RPClex.Error("unable to load file: " + err.Error())
                                         return 0
                                     }

@@ -33,13 +33,16 @@ func TestFullPointerReads(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	applyIncludes([]string{dir})
-	midl.Setup()
+	sess := midl.NewSession(midl.WithInclude(dir))
 
 	out := t.TempDir()
 	for name, want := range pointerGolden {
-		p := &gen.Generator{ImportsPath: "x/", Format: false, Dir: out}
-		if err := p.Gen(context.Background(), filepath.Join(dir, name+".idl")); err != nil {
+		p := &gen.Generator{Session: sess, ImportsPath: "x/", Format: false, Dir: out}
+		files, err := p.Gen(context.Background(), filepath.Join(dir, name+".idl"))
+		if err != nil {
+			t.Fatalf("%s: %v", name, err)
+		}
+		if err := gen.WriteFiles(nil, out, files); err != nil {
 			t.Fatalf("%s: %v", name, err)
 		}
 		b, err := os.ReadFile(filepath.Join(out, name, name, "v1", "v1.go"))

@@ -19,6 +19,19 @@ func File(ctx context.Context) *midl.File {
 	return f
 }
 
+type sessionCtx struct{}
+
+// WithSession returns a context carrying the IDL session the generator runs in.
+func WithSession(ctx context.Context, s *midl.Session) context.Context {
+	return context.WithValue(ctx, sessionCtx{}, s)
+}
+
+// Session returns the IDL session the generator runs in.
+func Session(ctx context.Context) *midl.Session {
+	s, _ := ctx.Value(sessionCtx{}).(*midl.Session)
+	return s
+}
+
 type reservedCtx struct{}
 
 func WithReserved(ctx context.Context) context.Context {

@@ -67,7 +67,7 @@ func TestCallbackOpNums(t *testing.T) {
 		{"interleaved", "long A([in] long x); [callback] long C([in] long x); long B([in] long x); [callback] long D([in] long x);", map[string]int{"A": 0, "B": 1}, map[string]int{"C": 0, "D": 1}},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
-			f, err := Parse(`[uuid(12345678-1234-1234-1234-123456789012), version(1.0)] interface cbtest { ` + tc.body + ` }`)
+			f, err := NewSession(WithoutBuiltins()).Parse(`[uuid(12345678-1234-1234-1234-123456789012), version(1.0)] interface cbtest { ` + tc.body + ` }`)
 			if err != nil {
 				t.Fatal(err)
 			}

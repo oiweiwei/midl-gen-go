@@ -4,27 +4,33 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"log/slog"
 	"os"
 	"path/filepath"
 	"strings"
 
 	"github.com/oiweiwei/midl-gen-go/codegen/gen"
+	"github.com/oiweiwei/midl-gen-go/logx"
 	"github.com/oiweiwei/midl-gen-go/midl"
 	"github.com/oiweiwei/midl-gen-go/msdn/openspecs"
-	"github.com/rs/zerolog"
 	"github.com/spf13/cobra"
 )
 
-func applyIncludes(includes []string) {
-	if len(includes) == 0 {
-		return
+// newSession builds the IDL session from -I flags followed by MSIDLPATH entries.
+func newSession(includes []string, log *slog.Logger) *midl.Session {
+	if env := os.Getenv("MSIDLPATH"); env != "" {
+		includes = append(append([]string{}, includes...), strings.Split(env, ":")...)
 	}
-	existing := midl.GetPathVar()
-	parts := includes
-	if existing != "" {
-		parts = append(parts, strings.Split(existing, ":")...)
+	return midl.NewSession(midl.WithInclude(includes...), midl.WithLogger(log))
+}
+
+// newLogger returns a stderr logger; debug level if verbose.
+func newLogger(verbose bool) *slog.Logger {
+	level := slog.LevelWarn
+	if verbose {
+		level = slog.LevelDebug
 	}
-	midl.SetPathVar(strings.Join(parts, ":"))
+	return slog.New(slog.NewTextHandler(os.Stderr, &slog.HandlerOptions{Level: level}))
 }
 
 func collectFiles(paths []string) ([]string, error) {
@@ -70,6 +76,7 @@ func newGenerateCmd() *cobra.Command {
 		msdnOpenspecsIndexer      string
 		msdnOpenspecsIndexerExtra string
 		verbose                   bool
+		emitTrace                 bool
 		noFormat                  bool
 	)
 
@@ -78,33 +85,33 @@ func newGenerateCmd() *cobra.Command {
 		Short: "Generate Go client stubs from IDL files",
 		Args:  cobra.MinimumNArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			applyIncludes(includes)
-			midl.RPCErrorVerbose = true
-			midl.Setup()
+			log := newLogger(verbose)
+			sess := newSession(includes, log)
 
 			files, err := collectFiles(args)
 			if err != nil {
 				return fmt.Errorf("collect files: %w", err)
 			}
 
+			ctx := context.Background()
+
 			for _, fn := range files {
-
-				ctx := context.Background()
-
-				if verbose {
-					ctx = zerolog.New(os.Stdout).Level(zerolog.DebugLevel).WithContext(ctx)
-				}
-
 				p := &gen.Generator{
+					Session:              sess,
+					Log:                  log,
 					ImportsPath:          pkg,
 					Format:               !noFormat,
-					Trace:                verbose,
+					EmitTrace:            emitTrace,
 					Dir:                  output,
 					MSDNCache:            msdnOpenspecsCache,
 					MSDNIndexerFile:      msdnOpenspecsIndexer,
 					MSDNIndexerExtraFile: msdnOpenspecsIndexerExtra,
 				}
-				if err := p.Gen(ctx, fn); err != nil {
+				out, err := p.Gen(ctx, fn)
+				if err != nil {
+					return fmt.Errorf("%s: %w", fn, err)
+				}
+				if err := gen.WriteFiles(log, output, out); err != nil {
 					return fmt.Errorf("%s: %w", fn, err)
 				}
 			}
@@ -120,6 +127,7 @@ func newGenerateCmd() *cobra.Command {
 	cmd.Flags().StringVar(&msdnOpenspecsIndexer, "msdn-openspecs-indexer-file", "", "indexer file for MSDN documentation")
 	cmd.Flags().StringVar(&msdnOpenspecsIndexerExtra, "msdn-openspecs-indexer-extra-file", "", "extra indexer file for MSDN documentation; repeatable")
 	cmd.Flags().BoolVar(&verbose, "verbose", false, "enable verbose/trace output")
+	cmd.Flags().BoolVar(&emitTrace, "emit-trace", false, "add trace comments to the generated sources")
 	cmd.Flags().BoolVar(&noFormat, "no-format", false, "skip gofmt on generated files")
 
 	return cmd
@@ -133,10 +141,7 @@ func newDumpCmd() *cobra.Command {
 		Short: "Dump parsed IDL as JSON",
 		Args:  cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			applyIncludes(includes)
-			midl.Setup()
-
-			file, err := midl.NewFile(args[0], "").Load()
+			file, err := newSession(includes, newLogger(false)).Load(args[0])
 			if err != nil {
 				return err
 			}
@@ -172,10 +177,8 @@ func newMSDNCmd() *cobra.Command {
 		RunE: func(cmd *cobra.Command, args []string) error {
 			protocolName, pageNames := args[0], args[1:]
 
-			ctx := context.Background()
-			if verbose {
-				ctx = zerolog.New(os.Stdout).Level(zerolog.DebugLevel).WithContext(ctx)
-			}
+			// page output goes to stdout, so logs go to stderr.
+			ctx := logx.With(context.Background(), newLogger(verbose))
 
 			indexer, err := openspecs.NewProtocolIndexerFromFile(msdnOpenspecsIndexer)
 			if err != nil {

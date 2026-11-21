@@ -9,7 +9,7 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/rs/zerolog"
+	"github.com/oiweiwei/midl-gen-go/logx"
 )
 
 // ErrProtocolNotFound is returned by Sync when the protocol name is not in the indexer, i.e. the IDL is not a
@@ -151,19 +151,19 @@ func (m *MSDN) Sync(ctx context.Context, protocolName string) error {
 
 	worker := func(ctx context.Context, wg *sync.WaitGroup, i int) {
 
-		log := zerolog.Ctx(ctx).With().Int("worker", i).Logger()
+		log := logx.From(ctx).With("worker", i)
 
-		log.Debug().Msg("starting worker")
+		log.Debug("starting worker")
 
 		defer wg.Done()
 		for {
 			select {
 			case <-ctx.Done():
-				log.Debug().Msg("stopping worker: context canceled")
+				log.Debug("stopping worker: context canceled")
 				return
 			case payload, ok := <-ch:
 				if !ok {
-					log.Debug().Msg("stopping worker")
+					log.Debug("stopping worker")
 					return
 				}
 				page, err := GetProtocolDocumentationPage(ctx,

@@ -1,232 +1,12 @@
 package midl
 
 import (
-	"fmt"
-	"os"
 	"path/filepath"
-	"runtime"
 	"sort"
 	"strings"
-	"sync"
 
 	go_names "github.com/oiweiwei/midl-gen-go/gonames"
 )
-
-var (
-	fileStore   = make(map[string]*File)
-	fileStoreMu = new(sync.Mutex)
-)
-
-// Load function loads the file content.
-func (f *File) Load() (*File, error) {
-
-	var path *Path
-	var err error
-
-	if path, err = FindFile(f.Path); err != nil {
-		if err != nil {
-			return f, fmt.Errorf("midl: find file: %s: %w", f.Path, err)
-		}
-	}
-
-	if rf, ok := FileLoad(path.File); ok {
-		return rf, nil
-	}
-
-	b, err := os.ReadFile(path.File)
-	if err != nil {
-		return f, fmt.Errorf("midl: load file: %s: %w", path.File, err)
-	}
-	rf, err := Parse(string(b))
-	if err != nil {
-		return f, fmt.Errorf("midl: parse file: %w", err)
-	}
-
-	rf.FullPath = path.File
-	rf.GoPkg = filepath.Join(path.Base, f.GoPkg)
-	rf.Path = filepath.Join(path.Base, filepath.Base(f.Path))
-	rf.GoPkgBase = path.GoBase
-	rf.MIDLConfig = path.Config
-
-	*f = *rf
-
-	// process lib files.
-	for _, lib := range f.Libraries {
-		dir, pkg := filepath.Dir(rf.FullPath), strings.ToLower(lib.Name)
-		pkgFile := pkg + ".idl"
-		ff := lib.Body
-		ff.FullPath = filepath.Join(dir, f.GoPkg, pkgFile)
-		ff.GoPkg = filepath.Join(f.GoPkg, pkg)
-		ff.GoPkgBase = f.GoPkgBase
-		ff.Path = filepath.Join(f.GoPkg, pkgFile)
-		ff.MIDLConfig = f.MIDLConfig
-
-		FileStore(ff.FullPath, ff)
-	}
-
-	FileStore(path.File, f)
-
-	return f, nil
-}
-
-// FileLoad ...
-func FileLoad(p string) (*File, bool) {
-	fileStoreMu.Lock()
-	defer fileStoreMu.Unlock()
-	file, ok := fileStore[p]
-	return file, ok
-}
-
-func Files() []*File {
-	fileStoreMu.Lock()
-	defer fileStoreMu.Unlock()
-
-	keys := make([]string, 0, len(fileStore))
-	for k := range fileStore {
-		keys = append(keys, k)
-	}
-
-	sort.Strings(keys)
-
-	ret := make([]*File, len(fileStore))
-	for i := range keys {
-		ret[i] = fileStore[keys[i]]
-	}
-
-	return ret
-}
-
-func FileStore(p string, f *File) {
-	fileStoreMu.Lock()
-	defer fileStoreMu.Unlock()
-	fileStore[p] = f
-}
-
-type Path struct {
-	Dir    string
-	Base   string
-	File   string
-	GoBase string
-	Config *Config
-}
-
-func GetPathVar() string {
-	if p := os.Getenv("MSIDLPATH"); p != "" {
-		return p
-	}
-	return ""
-}
-
-func SetPathVar(p string) {
-	os.Setenv("MSIDLPATH", p)
-}
-
-func ParsePathVar(p string) []*Path {
-	var paths []*Path
-	for _, dir := range strings.Split(p, ":") {
-		if strings.Contains(dir, "=") {
-			parts := strings.SplitN(dir, "=", 2)
-			paths = append(paths, &Path{Dir: parts[1], GoBase: parts[0]})
-		} else {
-			paths = append(paths, &Path{Dir: dir})
-		}
-	}
-	return paths
-}
-
-func FindPath() []*Path {
-	var paths []*Path
-	_, p, _, ok := runtime.Caller(0)
-	if ok {
-		paths = append(paths, &Path{Dir: filepath.Join(filepath.Dir(p), "idl")})
-	}
-
-	if p := GetPathVar(); p != "" {
-		paths = append(paths, ParsePathVar(p)...)
-	}
-
-	if wd, err := os.Getwd(); err == nil {
-		paths = append(paths, &Path{Dir: wd})
-	}
-
-	return paths
-}
-
-func LookupType(n string) *Type {
-	for _, f := range Files() {
-		t, ok := f.exportSyms[n]
-		if !ok || t.Type == nil {
-			continue
-		}
-		return t.Type
-	}
-	return nil
-}
-
-func FindFile(f string) (*Path, error) {
-	for _, p := range FindPath() {
-
-		dir := p.Dir
-
-		reldirs := []string{""}
-
-		if idx := strings.LastIndex(f, "/"); idx > 0 {
-			reldirs[0], f = f[:idx], f[idx+1:]
-		}
-
-		ps, err := filepath.Glob(filepath.Join(dir, "*"))
-		if err != nil {
-			return nil, err
-		}
-
-		for _, p := range ps {
-			if info, _ := os.Stat(p); info != nil && info.IsDir() {
-				reldirs = append(reldirs, filepath.Base(p))
-			}
-		}
-		for _, reldir := range reldirs {
-			dir := dir
-			if reldir != "" {
-				dir = filepath.Join(dir, reldir)
-			}
-			for file := range map[string]struct{}{
-				strings.TrimPrefix(f, "ms-"): {},
-				strings.TrimPrefix(f, "mc-"): {},
-				f:                            {},
-			} {
-				path := filepath.Join(dir, file)
-				if _, err := os.Stat(path); err != nil {
-					continue
-				}
-
-				var cc *Config
-
-				for _, dir := range []string{dir, p.Dir} {
-					if cc, err = LoadConfig(dir); err == nil && cc != nil {
-						break
-					}
-				}
-
-				if err != nil {
-					return nil, fmt.Errorf("cannot load config for file %q: %w", path, err)
-				}
-
-				if p.GoBase == "" && cc != nil {
-					p.GoBase = cc.Go.Pkg
-				}
-
-				return &Path{
-					File:   path,
-					Base:   reldir,
-					Dir:    p.Dir,
-					GoBase: p.GoBase,
-					Config: cc.For(path),
-				}, nil
-			}
-		}
-	}
-	return nil, fmt.Errorf("cannot find file %q: path: %s", f, GetPathVar())
-}
 
 func NewFile(p, pkg string) *File {
 
@@ -250,6 +30,8 @@ type File struct {
 	GoPkgBase string `json:"go_pkg_base,omitempty"`
 	// MIDLConfig is the MIDL configuration for the file.
 	MIDLConfig *Config `json:"-"`
+	// sess is the session the file was loaded in.
+	sess *Session
 	// The list of imports.
 	Imports []string `json:"imports,omitempty"`
 	// Export is a map of exported symbols on file level.
@@ -364,7 +146,7 @@ func (f *File) GoPackage(tn string) (string, bool) {
 		return "", true
 	}
 
-	for _, file := range Files() {
+	for _, file := range f.Session().Files() {
 		if _, ok := file.exportSyms[tn]; ok {
 			return file.GoPkg, true
 		}
@@ -384,4 +166,9 @@ func (f *File) IsDCOM() bool {
 
 func (f *File) PkgIs(pkg string) bool {
 	return f.GoPkg == pkg
+}
+
+// Session returns the session the file was loaded in.
+func (f *File) Session() *Session {
+	return f.sess
 }

@@ -17,7 +17,7 @@ import (
 	"time"
 
 	"github.com/PuerkitoBio/goquery"
-	"github.com/rs/zerolog"
+	"github.com/oiweiwei/midl-gen-go/logx"
 )
 
 type Client struct {
@@ -60,11 +60,9 @@ func (c *Client) GetPageURL(protocolName, pageUUID string) string {
 // It respects Retry-After headers on 429 responses and returns an error for any other non-200 status code.
 func (c *Client) MustGetDocument(ctx context.Context, url string) (*goquery.Document, error) {
 
-	log := zerolog.Ctx(ctx).With().
-		Str("url", url).
-		Logger()
+	log := logx.From(ctx).With("url", url)
 
-	ctx = log.WithContext(ctx)
+	ctx = logx.With(ctx, log)
 
 	// do whatever it takes to get the document.
 	for {
@@ -74,7 +72,7 @@ func (c *Client) MustGetDocument(ctx context.Context, url string) (*goquery.Docu
 
 		resp, err := cli.Get(url)
 		if err != nil {
-			log.Warn().Err(err).Msg("fetching document")
+			log.Warn("fetching document", "err", err)
 			continue
 		}
 
@@ -82,7 +80,7 @@ func (c *Client) MustGetDocument(ctx context.Context, url string) (*goquery.Docu
 			// drain and close the body before sleeping.
 			readAllAndClose(ctx, resp.Body) //nolint:errcheck
 			delay := retryAfterDelay(resp, 5*time.Second)
-			log.Warn().Dur("delay", delay).Msg("rate limited, waiting before retry")
+			log.Warn("rate limited, waiting before retry", "delay", delay)
 			select {
 			case <-ctx.Done():
 				return nil, ctx.Err()
@@ -98,7 +96,7 @@ func (c *Client) MustGetDocument(ctx context.Context, url string) (*goquery.Docu
 
 		body, err := readAllAndClose(ctx, resp.Body)
 		if err != nil {
-			log.Warn().Err(err).Msg("reading document body")
+			log.Warn("reading document body", "err", err)
 			continue
 		}
 
@@ -107,7 +105,7 @@ func (c *Client) MustGetDocument(ctx context.Context, url string) (*goquery.Docu
 
 		document, err := goquery.NewDocumentFromReader(bytes.NewReader(body))
 		if err != nil {
-			log.Warn().Err(err).Msg("parsing document")
+			log.Warn("parsing document", "err", err)
 			continue
 		}
 
@@ -137,21 +135,21 @@ func retryAfterDelay(resp *http.Response, fallback time.Duration) time.Duration 
 
 func (c *Client) RelPath(ctx context.Context, protocolName, name string) string {
 
-	log := zerolog.Ctx(ctx).With().Logger()
+	log := logx.From(ctx)
 
 	if c.Cache == nil {
-		log.Debug().Msg("no cache configured, skipping lookup")
+		log.Debug("no cache configured, skipping lookup")
 		return ""
 	}
 
 	if c.Indexer == nil {
-		log.Debug().Msg("no indexer configured, skipping lookup")
+		log.Debug("no indexer configured, skipping lookup")
 		return filepath.Join(WindowsProtocols, protocolName, name)
 	}
 
 	index, ok := c.Indexer.Get(protocolName)
 	if !ok {
-		log.Debug().Msg("protocol not indexed, skipping lookup")
+		log.Debug("protocol not indexed, skipping lookup")
 		return ""
 	}
 
@@ -166,49 +164,49 @@ func (c *Client) RelPath(ctx context.Context, protocolName, name string) string 
 // or unmarshaling the data.
 func (c *Client) Lookup(ctx context.Context, protocolName, name string, val Cacher) (bool, error) {
 
-	log := zerolog.Ctx(ctx).With().Str("lookup", name).Logger()
-	ctx = log.WithContext(ctx)
+	log := logx.From(ctx).With("lookup", name)
+	ctx = logx.With(ctx, log)
 
 	rel := c.RelPath(ctx, protocolName, name)
 	if rel == "" {
 		return false, nil
 	}
 
-	log = log.With().Str("path", rel).Logger()
-	ctx = log.WithContext(ctx)
+	log = log.With("path", rel)
+	ctx = logx.With(ctx, log)
 
 	r, err := c.Cache.Read(rel)
 	if err != nil {
 		if os.IsNotExist(err) {
-			log.Debug().Msg("cache miss")
+			log.Debug("cache miss")
 			return false, nil
 		}
 		return false, err
 	}
 
-	log.Debug().Msg("cache hit, unmarshaling")
+	log.Debug("cache hit, unmarshaling")
 
 	if err := val.Unmarshal(ctx, r); err != nil {
 		return false, fmt.Errorf("unmarshaling cached data: %w", err)
 	}
 
-	log.Debug().Msg("unmarshaled cached data successfully")
+	log.Debug("unmarshaled cached data successfully")
 
 	return true, nil
 }
 
 func (c *Client) Flush(ctx context.Context, protocolName, name string, val Cacher) error {
 
-	log := zerolog.Ctx(ctx).With().Str("flush", name).Logger()
-	ctx = log.WithContext(ctx)
+	log := logx.From(ctx).With("flush", name)
+	ctx = logx.With(ctx, log)
 
 	rel := c.RelPath(ctx, protocolName, name)
 	if rel == "" {
 		return nil
 	}
 
-	log = log.With().Str("path", rel).Logger()
-	ctx = log.WithContext(ctx)
+	log = log.With("path", rel)
+	ctx = logx.With(ctx, log)
 
 	r, err := val.Marshal(ctx)
 	if err != nil {
@@ -219,18 +217,15 @@ func (c *Client) Flush(ctx context.Context, protocolName, name string, val Cache
 		return fmt.Errorf("writing to cache: %w", err)
 	}
 
-	log.Debug().Msg("flushed value to cache successfully")
+	log.Debug("flushed value to cache successfully")
 	return nil
 }
 
 func (c *Client) GetProtocolIndex(ctx context.Context, protocolName string) (Index, error) {
 
-	log := zerolog.Ctx(ctx).With().
-		Str("component", "openspecs").
-		Str("protocol", protocolName).
-		Logger()
+	log := logx.From(ctx).With("component", "openspecs", "protocol", protocolName)
 
-	ctx = log.WithContext(ctx)
+	ctx = logx.With(ctx, log)
 
 	if c.Indexer == nil {
 		return nil, fmt.Errorf("no indexer configured")
@@ -249,19 +244,15 @@ const indexFile = "index.json"
 // GetProtocolIndex retrieves the index of a specific protocol from the Microsoft Open Specifications.
 func (c *Client) GetProtocolIndexByID(ctx context.Context, protocolName, indexUUID string) (Index, error) {
 
-	log := zerolog.Ctx(ctx).With().
-		Str("component", "openspecs").
-		Str("protocol", protocolName).
-		Str("index_uuid", indexUUID).
-		Logger()
+	log := logx.From(ctx).With("component", "openspecs", "protocol", protocolName, "index_uuid", indexUUID)
 
-	ctx = log.WithContext(ctx)
+	ctx = logx.With(ctx, log)
 
 	index := make(Index)
 
 	found, err := c.Lookup(ctx, protocolName, indexFile, &index)
 	if err != nil {
-		log.Warn().Err(err).Msg("looking up index in cache")
+		log.Warn("looking up index in cache", "err", err)
 	}
 
 	if found {
@@ -304,7 +295,7 @@ func (c *Client) GetProtocolIndexByID(ctx context.Context, protocolName, indexUU
 	})
 
 	if err := c.Flush(ctx, protocolName, indexFile, &index); err != nil {
-		log.Warn().Err(err).Msg("flushing index to cache")
+		log.Warn("flushing index to cache", "err", err)
 	}
 
 	if c.Indexer != nil {
@@ -325,14 +316,9 @@ func (c *Client) GetProtocolIndexByID(ctx context.Context, protocolName, indexUU
 // page UUID from the Microsoft Open Specifications.
 func (c *Client) GetProtocolDocumentationPage(ctx context.Context, protocolName, pageName, pageUUID string) (*Page, error) {
 
-	log := zerolog.Ctx(ctx).With().
-		Str("component", "openspecs").
-		Str("protocol", protocolName).
-		Str("page_name", pageName).
-		Str("page_uuid", pageUUID).
-		Logger()
+	log := logx.From(ctx).With("component", "openspecs", "protocol", protocolName, "page_name", pageName, "page_uuid", pageUUID)
 
-	ctx = log.WithContext(ctx)
+	ctx = logx.With(ctx, log)
 
 	if strings.Contains(pageUUID, "/") {
 		// if the pageUUID contains a slash, it means that the protocol name is actually part of the page UUID,
@@ -340,12 +326,9 @@ func (c *Client) GetProtocolDocumentationPage(ctx context.Context, protocolName,
 		last := strings.LastIndex(pageUUID, "/")
 		protocolName, pageUUID = pageUUID[:last], pageUUID[last+1:]
 
-		log.Debug().Msg("adjusted protocol name and page UUID based on page UUID containing a slash")
+		log.Debug("adjusted protocol name and page UUID based on page UUID containing a slash")
 
-		log = log.With().
-			Str("protocol_name", protocolName).
-			Str("page_uuid", pageUUID).
-			Logger()
+		log = log.With("protocol_name", protocolName, "page_uuid", pageUUID)
 
 	}
 
@@ -356,7 +339,7 @@ func (c *Client) GetProtocolDocumentationPage(ctx context.Context, protocolName,
 
 	found, err := c.Lookup(ctx, protocolName, pageUUID, page)
 	if err != nil {
-		log.Warn().Err(err).Msg("looking up page in cache")
+		log.Warn("looking up page in cache", "err", err)
 	}
 
 	if found {
@@ -369,11 +352,11 @@ func (c *Client) GetProtocolDocumentationPage(ctx context.Context, protocolName,
 	}
 
 	if _, err := page.FromDocument(ctx, document); err != nil {
-		log.Warn().Err(err).Msg("parsing page")
+		log.Warn("parsing page", "err", err)
 	}
 
 	if err := c.Flush(ctx, protocolName, pageUUID, page); err != nil {
-		log.Warn().Err(err).Msg("flushing page to cache")
+		log.Warn("flushing page to cache", "err", err)
 	}
 
 	return page, nil
@@ -418,7 +401,7 @@ const msPrefix = "ms-"
 func readAllAndClose(ctx context.Context, body io.ReadCloser) ([]byte, error) {
 	defer func() {
 		if err := body.Close(); err != nil {
-			zerolog.Ctx(ctx).Warn().Err(err).Msg("closing response body")
+			logx.From(ctx).Warn("closing response body", "err", err)
 		}
 	}()
 	return io.ReadAll(body)

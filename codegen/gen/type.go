@@ -510,7 +510,7 @@ func (p *TypeGenerator) GenSubType(ctx context.Context, field *midl.Field) {
 }
 
 func (p *TypeGenerator) GenInterface(ctx context.Context) {
-	tt := *midl.LookupType("MInterfacePointer")
+	tt := *p.Session.LookupType("MInterfacePointer")
 	tt.Attrs = tt.Attrs.Merge(p.OrigType.Attrs)
 	p.NewTypeGenerator(ctx, &tt).GenStruct(ctx)
 }

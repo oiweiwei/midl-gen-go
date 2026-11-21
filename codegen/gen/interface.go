@@ -393,7 +393,7 @@ func (p *Generator) GenInterfaceID(ctx context.Context, iff *midl.Interface) {
 	p.P()
 	p.P("var", "(")
 	if iff.IsObject() {
-		_ = p.GoPackageName(ctx, NewScopes(midl.LookupType("IID").Scopes()))
+		_ = p.GoPackageName(ctx, NewScopes(p.Session.LookupType("IID").Scopes()))
 		p.P("//", iff.Name, "interface", "identifier", iff.Attrs.UUID)
 		p.P(GoName(ctx, iff.Name)+"IID", "=", "&dcom.IID", UUIDToGUID(iff.Attrs.UUID))
 	}
