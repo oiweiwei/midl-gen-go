@@ -440,3 +440,18 @@ func (p *TypeGenerator) GenUnionArmMarshalNDR(ctx *emit.Env, arm *midl.UnionCase
 	p.P("return nil")
 	p.P("}")
 }
+
+func (p *TypeGenerator) GenCUnion(ctx *emit.Env) {
+
+	p.Structure(p.GoTypeName, func() {
+		for _, cases := range p.Union().Body {
+			for _, field := range cases.Arms {
+				p.GenStructField(ctx, field)
+			}
+		}
+	})
+
+	for _, cases := range p.Union().Body {
+		p.GenSubTypes(ctx, cases.Arms)
+	}
+}
