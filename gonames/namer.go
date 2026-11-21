@@ -27,9 +27,11 @@ func Unescape(n string) string { return strings.TrimPrefix(n, "%") }
 // Namer applies a set of rules to IDL identifiers. It is immutable and safe for
 // concurrent use. A nil *Namer applies the built-in rules.
 type Namer struct {
-	cfg    *Config
-	prefix map[string]struct{}
-	word   map[string]struct{}
+	cfg     *Config
+	prefix  map[string]struct{}
+	word    map[string]struct{}
+	acronym map[string]string // lower case -> spelling.
+	maxJoin int               // the most lexems an acronym is made of.
 }
 
 // NewNamer returns the namer for the rules; nil rules are no rules.
@@ -37,12 +39,15 @@ func NewNamer(cfg *Config) *Namer {
 	if cfg == nil {
 		cfg = &Config{}
 	}
-	nr := &Namer{cfg: cfg, prefix: map[string]struct{}{}, word: map[string]struct{}{}}
+	nr := &Namer{cfg: cfg, prefix: map[string]struct{}{}, word: map[string]struct{}{}, acronym: map[string]string{}}
 	for _, p := range cfg.Trim.Prefixes {
 		nr.prefix[p] = struct{}{}
 	}
 	for _, w := range cfg.Trim.Words {
 		nr.word[w] = struct{}{}
+	}
+	for _, a := range cfg.Acronyms {
+		nr.acronym[strings.ToLower(a)] = a
 	}
 	return nr
 }
@@ -227,12 +232,7 @@ func (nr *Namer) words(lexems []string) (words []string, moved string) {
 			continue
 		}
 
-		if abbr, ok := nr.cfg.Abbr[lower]; ok {
-			words = append(words, abbr)
-			continue
-		}
-
-		words = append(words, Title(lower))
+		words = append(words, nr.spell(lower))
 	}
 
 	return words, moved
@@ -280,13 +280,19 @@ func (nr *Namer) lastResort(words, lexems []string) []string {
 		return words
 	}
 
-	last := strings.ToLower(lexems[len(lexems)-1])
+	return append(words, nr.spell(strings.ToLower(lexems[len(lexems)-1])))
+}
 
-	if abbr, ok := nr.cfg.Abbr[last]; ok {
-		return append(words, abbr)
+// spell returns the spelling of a lower case word in a name: the abbreviation
+// of the word, the acronym, or the word capitalized.
+func (nr *Namer) spell(lower string) string {
+	if abbr, ok := nr.cfg.Abbr[lower]; ok {
+		return abbr
 	}
-
-	return append(words, Title(last))
+	if acronym, ok := nr.acronym[lower]; ok {
+		return acronym
+	}
+	return Title(lower)
 }
 
 // dropContextHandle removes the words "Context Handle" from a name of more than

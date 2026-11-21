@@ -87,6 +87,26 @@ func TestRules(t *testing.T) {
 	}
 }
 
+func TestAcronyms(t *testing.T) {
+	for _, tc := range []struct {
+		name, yaml, in, want string
+	}{
+		{"spelling", "acronyms: [ACL, DWORD]", "AclEntry", "ACLEntry"},
+		{"mixed case spelling", "acronyms: [IPv6, IKEv1]", "ipv6_addr", "IPv6Addr"},
+		// lexems are never joined: the words of a name stay what the lexer found.
+		{"not joined", "acronyms: [DWORD]", "DWordValue", "DWordValue"},
+		{"a trimmed prefix is not swallowed by an acronym", "acronyms: [PIN]\ntrim: {prefix: [p]}", "pIn", "In"},
+		{"words stay apart for snake case", "acronyms: [NT, OWF, NTOWF]", "NtOwfPassword", "NTOWFPassword"},
+		{"abbr wins over acronyms", "abbr: {acl: Access}\nacronyms: [ACL]", "AclEntry", "AccessEntry"},
+		{"a plain word is not an acronym", "acronyms: [ACL]", "Acls", "Acls"},
+		{"join is case insensitive", "acronyms: [DWORD]", "DWORDValue", "DWORDValue"},
+	} {
+		if got := GoName(namer(t, tc.yaml), tc.in); got != tc.want {
+			t.Errorf("%s: GoName(%q) = %q, want %q", tc.name, tc.in, got, tc.want)
+		}
+	}
+}
+
 func TestReservedFields(t *testing.T) {
 	for _, in := range []string{"Reserved", "Reserved1", "Unused", "dummy", "WordReserved"} {
 		if got := GoName(nil, in); got != "_" {
@@ -99,6 +119,9 @@ func TestReservedFields(t *testing.T) {
 }
 
 func TestMergeNames(t *testing.T) {
+	if got := GoSnakeCase(namer(t, "acronyms: [NT, OWF, NTOWF]"), "NtOwfPassword"); got != "nt_owf_password" {
+		t.Errorf("snake case keeps the words apart, got %s", got)
+	}
 	if got := GoMergeNames(nil, "Foo", "Bar"); got != "FooBar" {
 		t.Errorf("got %s", got)
 	}
@@ -110,6 +133,9 @@ func TestMerge(t *testing.T) {
 	m := a.Merge(b)
 	if m.Abbr["x"] != "X" || m.Abbr["y"] != "YY" {
 		t.Errorf("maps: later entries replace earlier ones: %v", m.Abbr)
+	}
+	if am := (&Config{Acronyms: []string{"A"}}).Merge(&Config{Acronyms: []string{"B"}}); !reflect.DeepEqual(am.Acronyms, []string{"A", "B"}) {
+		t.Errorf("acronyms are concatenated: %v", am.Acronyms)
 	}
 	if !reflect.DeepEqual(m.Trim.Words, []string{"a", "b"}) {
 		t.Errorf("lists are concatenated: %v", m.Trim.Words)

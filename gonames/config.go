@@ -21,6 +21,14 @@ type Config struct {
 	Rotate map[string]string `yaml:"rotate"`
 	// Abbr maps a lower case word to the exact spelling used in the Go name.
 	Abbr map[string]string `yaml:"abbr"`
+	// Acronyms are spellings of words that are written as they are listed
+	// (ACL, DWORD, IPv6): a word that equals one ignoring case becomes that
+	// spelling. It is the short form of an abbr entry whose value is its own key
+	// in another case; Abbr entries take precedence. Lexems are not joined:
+	// joining I and Pv6 into IPv6 would also change what a rule such as a
+	// trimmed prefix sees (pIn must stay In, not PIN) and the words of a snake
+	// case name (nt_owf stays two words).
+	Acronyms []string `yaml:"acronyms"`
 	// Split maps a lexem to the words it consists of.
 	Split map[string][]string `yaml:"split"`
 	// LookBehind maps a previous lexem and the current one to the words that
@@ -80,6 +88,7 @@ func (c *Config) Merge(other *Config) *Config {
 				m[k2] = append([]string(nil), v2...)
 			}
 		}
+		out.Acronyms = append(out.Acronyms, src.Acronyms...)
 		out.Trim.Words = append(out.Trim.Words, src.Trim.Words...)
 		out.Trim.Prefixes = append(out.Trim.Prefixes, src.Trim.Prefixes...)
 		out.Trim.PrefixAll = append(out.Trim.PrefixAll, src.Trim.PrefixAll...)

@@ -135,6 +135,26 @@ trim:
 
 The words are compared in lower case, so write them in lower case.
 
+### `acronyms` - words that are written in a fixed spelling
+
+A list of spellings. A word that equals one ignoring case becomes that spelling:
+
+```yaml
+acronyms:
+  - ACL        # token "acl"  -> "ACL"
+  - DWORD
+  - IKEv1      # token "ikev1" -> "IKEv1"
+```
+
+It is the short form of an `abbr` entry whose value is its own key in another case
+(`acl: ACL`); `abbr` entries take precedence. Use `abbr` when the word is replaced by a
+different word (`buf: Buffer`).
+
+Lexems are never joined automatically. Joining `I` and `Pv6` into `IPv6` would also change
+what the other rules see (a trimmed prefix `p` in `pIn` would be swallowed into the
+acronym `PIN`) and the words of the snake case name (`nt_owf_password` would become
+`ntowf_password`, a different JSON name). Use `lookBehind` for a join you want.
+
 ### `abbr` - expand or canonicalize a lowercased token
 
 The key is lowercase; the value is the exact string used in the Go name.
