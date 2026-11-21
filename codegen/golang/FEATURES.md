@@ -50,7 +50,10 @@ checked when the generator is created.
    }
    ```
 
-   * Write with `p.W()` (the typed `goprint.Writer`) for new code, not `p.P(...)`.
+   * Write structure with the typed helpers, never with braces in a string: `p.Method`, `p.Function`,
+     `p.Block`, `p.If`, `p.IfElse`, `p.For`, `p.Switch`, `p.Structure`, `p.Interface`, `p.Composite`
+     (or `p.W()`, the `goprint.Writer`, for `Cond` chains and declarations). `p.P(...)` writes one line
+     of tokens (a statement, a field, a case label) and is for leaves only.
    * Name things with `emit.GoName`, `emit.GoMemberName`, `p.OpName`, `p.MethodName`: never build
      Go names by hand, so that the gonames rules and overrides apply (`midl-gen-go symbols`
      shows the result).

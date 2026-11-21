@@ -15,7 +15,7 @@ func (p *TypeGenerator) GenStructUnmarshalNDR(ctx *emit.Env) {
 		trailingField--
 	}
 
-	p.Block(goprint.Tokens("func", "(o *"+p.GoTypeName+")", "UnmarshalNDR(ctx context.Context, w ndr.Reader) error"), func() {
+	p.Method("o *"+p.GoTypeName, "UnmarshalNDR(ctx context.Context, w ndr.Reader) error", func() {
 		// size checks.
 		p.GenStructUnmarshalNDRSizeCheck(ctx)
 		// write size information.
@@ -204,10 +204,10 @@ func (p *TypeGenerator) GenFieldUnmarshalNDR(ctx *emit.Env, field *midl.Field, s
 		fN := "_ptr_" + field.Name
 
 		// render deferred unmarshalling function.
-		p.P(fN, ":=", "ndr.UnmarshalNDRFunc", "(", "func(ctx context.Context, w ndr.Reader) error {")
-		p.GenFieldUnmarshalNDR(ctx, field, scopes.Next(), index...)
-		p.P("return nil")
-		p.P("})")
+		p.Composite(goprint.Tokens(fN, ":= ndr.UnmarshalNDRFunc ( func(ctx context.Context, w ndr.Reader) error"), func() {
+			p.GenFieldUnmarshalNDR(ctx, field, scopes.Next(), index...)
+			p.P("return nil")
+		}, ")")
 
 		// render setter function.
 		sN := "_s" + "_" + field.Name
@@ -348,7 +348,7 @@ func (p *TypeGenerator) GenFieldUnmarshalNDR(ctx *emit.Env, field *midl.Field, s
 		}
 
 		if scopes.Dim().NoSizeLimit {
-			p.Block(goprint.Tokens("for", idx+" := 0;", "w.Len() > 0;", idx+"++"), func() {
+			p.For(goprint.Tokens(idx+" := 0;", "w.Len() > 0;", idx+"++"), func() {
 				p.P(idx, ":=", idx)
 				p.P(name, "=", p.B("append", name, p.GoTypeZeroValue(ctx, p.Layer(), field, scopes.Next())))
 				p.GenFieldUnmarshalNDR(ctx, field, scopes.Next(), append(index, idx)...)
@@ -440,10 +440,10 @@ func (p *TypeGenerator) GenFieldUnmarshalNDR(ctx *emit.Env, field *midl.Field, s
 		if len(field.Attrs.Layout) > 0 {
 			for _, field := range field.Attrs.Layout {
 				fN := "_layout_" + field.Name
-				p.P(fN, ":=", "ndr.UnmarshalNDRFunc", "(", "func(ctx context.Context, w ndr.Reader) error {")
-				p.GenFieldUnmarshalNDR(ctx, field, desc.Of(field), index...)
-				p.P("return nil")
-				p.P("})")
+				p.Composite(goprint.Tokens(fN, ":= ndr.UnmarshalNDRFunc ( func(ctx context.Context, w ndr.Reader) error"), func() {
+					p.GenFieldUnmarshalNDR(ctx, field, desc.Of(field), index...)
+					p.P("return nil")
+				}, ")")
 				p.If(goprint.Tokens(p.Len(name), "> 0"), func() {
 					p.CheckErr(p.B(p.B("w.WithBytes", name)+".Unmarshal", "ctx", fN))
 				})

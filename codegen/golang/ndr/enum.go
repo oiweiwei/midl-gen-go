@@ -4,7 +4,6 @@ import (
 	"strconv"
 
 	"github.com/oiweiwei/midl-gen-go/codegen/golang/emit"
-	"github.com/oiweiwei/midl-gen-go/codegen/goprint"
 )
 
 func (p *TypeGenerator) GenEnum(ctx *emit.Env) {
@@ -35,8 +34,8 @@ func (p *TypeGenerator) GenEnum(ctx *emit.Env) {
 	}
 	p.P(")")
 	p.P()
-	p.Block(goprint.Tokens("func", "(o "+p.GoTypeName+")", "String() string"), func() {
-		p.Block("switch o", func() {
+	p.Method("o "+p.GoTypeName, "String() string", func() {
+		p.Switch("o", func() {
 			for _, enum := range p.Enum().Elems {
 				n := emit.GoMergeNames(ctx, p.GoTypeName, emit.GoMemberNameNoReserved(ctx, enum.Value))
 				p.P("case", n, ":")

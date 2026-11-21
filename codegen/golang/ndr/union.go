@@ -45,11 +45,11 @@ func (p *TypeGenerator) GenUnion(ctx *emit.Env) {
 	p.GenerateUnionGetValue(ctx)
 
 	p.P()
-	p.P("type", "is_"+p.GoTypeName, "interface", "{")
-	p.P("ndr.Marshaler")
-	p.P("ndr.Unmarshaler")
-	p.P("is_"+p.GoTypeName, "()")
-	p.P("}")
+	p.Block(goprint.Tokens("type", "is_"+p.GoTypeName, "interface"), func() {
+		p.P("ndr.Marshaler")
+		p.P("ndr.Unmarshaler")
+		p.P("is_"+p.GoTypeName, "()")
+	})
 
 	if !p.Union().IsEncapsulated() {
 		p.GenerateNDRSwitchValue(ctx)
@@ -68,12 +68,12 @@ func (p *TypeGenerator) GenerateUnionGetValue(ctx *emit.Env) {
 
 	p.P()
 
-	p.Block(goprint.Tokens("func", "(o *"+p.GoTypeName+")", "GetValue() any"), func() {
+	p.Method("o *"+p.GoTypeName, "GetValue() any", func() {
 		p.If("o == nil", func() {
 			p.P("return", "nil")
 		})
 
-		p.Block("switch value := (interface{})(o.Value).(type)", func() {
+		p.Switch("value := (interface{})(o.Value).(type)", func() {
 			for _, cases := range p.Union().Body {
 				if len(cases.Arms) == 0 || p.GoFieldName(ctx, cases.Arms[0]) == "_" {
 					continue
@@ -109,11 +109,11 @@ func (p *TypeGenerator) GenerateNDRSwitchValue(ctx *emit.Env) {
 	switchType := p.SwitchType(ctx, p.Cursor)
 
 	p.P()
-	p.Block(goprint.Tokens("func", "(o *"+p.GoTypeName+")", "NDRSwitchValue(sw "+switchType+")", switchType), func() {
+	p.Method("o *"+p.GoTypeName, goprint.Tokens("NDRSwitchValue(sw "+switchType+")", switchType), func() {
 		p.If("o == nil", func() {
 			p.P("return", p.B(switchType, p.SwitchTypeZeroValue(ctx, switchType)))
 		})
-		p.Block("switch (interface{})(o.Value).(type)", func() {
+		p.Switch("(interface{})(o.Value).(type)", func() {
 			for _, cases := range p.Union().Body {
 				if len(cases.Labels) == 0 {
 					continue
@@ -121,7 +121,7 @@ func (p *TypeGenerator) GenerateNDRSwitchValue(ctx *emit.Env) {
 				// determine for-sure.
 				p.P("case", "*"+p.UnionArmName(ctx, cases), ":")
 				if len(cases.Labels) > 1 {
-					p.Block("switch sw", func() {
+					p.Switch("sw", func() {
 						var labels []string
 						for _, label := range cases.Labels {
 							labels = append(labels, p.B(switchType, label))
@@ -181,117 +181,118 @@ func (p *TypeGenerator) GenUnionMarshalNDR(ctx *emit.Env) {
 
 	sw := p.Union().Switch
 
-	if sw != nil {
-		p.P("func", "(o *"+p.GoTypeName+")", "MarshalNDR(ctx context.Context, w ndr.Writer)", "error", "{")
-	} else {
-		p.P("func", "(o *"+p.GoTypeName+")", "MarshalUnionNDR(ctx context.Context, w ndr.Writer, sw "+switchType+")", "error", "{")
+	header := goprint.Tokens("func", "(o *"+p.GoTypeName+")", "MarshalNDR(ctx context.Context, w ndr.Writer)", "error")
+	if sw == nil {
+		header = goprint.Tokens("func", "(o *"+p.GoTypeName+")", "MarshalUnionNDR(ctx context.Context, w ndr.Writer, sw "+switchType+")", "error")
 	}
 
-	// XXX: perform more strict type checking.
-	// p.P("_switch, ok := sw.(" + switchType + ")")
-	// p.If("!ok", func() {
-	//	p.P("return", `fmt.Errorf("incompatible switch type %%T, expected `+switchType+`", sw)`)
-	// })
+	p.Block(header, func() {
 
-	swVar := "sw"
-	if sw != nil {
-		swVar = p.O(emit.GoMemberName(ctx, sw.Name))
-	}
+		// XXX: perform more strict type checking.
+		// p.P("_switch, ok := sw.(" + switchType + ")")
+		// p.If("!ok", func() {
+		//	p.P("return", `fmt.Errorf("incompatible switch type %%T, expected `+switchType+`", sw)`)
+		// })
 
-	p.GenDoUnionAlignemntMarshalNDR(ctx, ndr.Alignment(p.Cursor))
-
-	if sw != nil {
-		if p.IsEnumSwitch(ctx, p.Cursor) {
-			p.CheckErr(p.B("w.WriteEnum", p.B(switchType, swVar)))
-		} else {
-			p.CheckErr(p.B("w.WriteData", p.B(switchType, swVar)))
+		swVar := "sw"
+		if sw != nil {
+			swVar = p.O(emit.GoMemberName(ctx, sw.Name))
 		}
-	} else {
-		if p.IsEnumSwitch(ctx, p.Cursor) {
-			p.CheckErr(p.B("w.WriteSwitch", p.B("ndr.Enum", p.B(switchType, swVar))))
-		} else {
-			p.CheckErr(p.B("w.WriteSwitch", p.B(switchType, swVar)))
-		}
-	}
 
-	if emit.MSUnion(ctx) && sw == nil {
-		p.P("//", "ms_union")
-		p.GenDoAlignmentMarshalNDR(ctx, ndr.Alignment(p.Cursor))
-	} else {
 		p.GenDoUnionAlignemntMarshalNDR(ctx, ndr.Alignment(p.Cursor))
-	}
 
-	p.Block(goprint.Tokens("switch", swVar), func() {
-		var defaultCase *midl.UnionCase
-		for _, cases := range p.Union().Body {
-			if cases.IsDefault {
-				defaultCase = cases
-				continue
-			}
-			labels := []string{}
-			for _, label := range cases.Labels {
-				labels = append(labels, p.B(switchType, label))
-			}
-			p.P("case", strings.Join(labels, ",\n"), ":")
-			if len(cases.Arms) == 0 {
-				continue
-			}
-
-			armName := p.UnionArmName(ctx, cases)
-
-			if p.IsArmPointerToPrimitiveType(ctx, cases) {
-				// special case, take care of the nil value for the union arm containing
-				// primitive type.
-				p.GenUnionArmPrimitiveTypeMarshalNDR(ctx, cases, armName)
-			} else if len(cases.Arms) > 0 {
-				p.P("_o, _ := o.Value.(*" + armName + ")")
-				p.IfElse("_o != nil", func() {
-					p.CheckErr(p.B("_o.MarshalNDR", "ctx", "w"))
-				}, func() {
-					p.CheckErr(p.B("("+p.Amp(armName+"{}")+")"+".MarshalNDR", "ctx", "w"))
-				})
+		if sw != nil {
+			if p.IsEnumSwitch(ctx, p.Cursor) {
+				p.CheckErr(p.B("w.WriteEnum", p.B(switchType, swVar)))
 			} else {
-				p.P("//", "no-op")
+				p.CheckErr(p.B("w.WriteData", p.B(switchType, swVar)))
+			}
+		} else {
+			if p.IsEnumSwitch(ctx, p.Cursor) {
+				p.CheckErr(p.B("w.WriteSwitch", p.B("ndr.Enum", p.B(switchType, swVar))))
+			} else {
+				p.CheckErr(p.B("w.WriteSwitch", p.B(switchType, swVar)))
 			}
 		}
 
-		p.P("default", ":")
-		if defaultCase == nil {
-			p.P("return", `fmt.Errorf("unsupported switch case value %v", `+swVar+`)`)
-		} else if len(defaultCase.Arms) > 0 {
-			armName := p.UnionArmName(ctx, defaultCase)
-			if p.IsArmPointerToPrimitiveType(ctx, defaultCase) {
-				// special case, take care of the nil value for the union arm containing
-				// primitive type.
-				p.GenUnionArmPrimitiveTypeMarshalNDR(ctx, defaultCase, armName)
-			} else if len(defaultCase.Arms) > 0 {
-				p.P("_o, _ := o.Value.(*" + armName + ")")
-				p.IfElse("_o != nil", func() {
-					p.CheckErr(p.B("_o.MarshalNDR", "ctx", "w"))
-				}, func() {
-					if p.IsArmPointerToPrimitiveType(ctx, defaultCase) {
-						p.GenZeroPointerFieldMarshalNDR(ctx, nil, nil)
-					} else {
+		if emit.MSUnion(ctx) && sw == nil {
+			p.P("//", "ms_union")
+			p.GenDoAlignmentMarshalNDR(ctx, ndr.Alignment(p.Cursor))
+		} else {
+			p.GenDoUnionAlignemntMarshalNDR(ctx, ndr.Alignment(p.Cursor))
+		}
+
+		p.Switch(swVar, func() {
+			var defaultCase *midl.UnionCase
+			for _, cases := range p.Union().Body {
+				if cases.IsDefault {
+					defaultCase = cases
+					continue
+				}
+				labels := []string{}
+				for _, label := range cases.Labels {
+					labels = append(labels, p.B(switchType, label))
+				}
+				p.P("case", strings.Join(labels, ",\n"), ":")
+				if len(cases.Arms) == 0 {
+					continue
+				}
+
+				armName := p.UnionArmName(ctx, cases)
+
+				if p.IsArmPointerToPrimitiveType(ctx, cases) {
+					// special case, take care of the nil value for the union arm containing
+					// primitive type.
+					p.GenUnionArmPrimitiveTypeMarshalNDR(ctx, cases, armName)
+				} else if len(cases.Arms) > 0 {
+					p.P("_o, _ := o.Value.(*" + armName + ")")
+					p.IfElse("_o != nil", func() {
+						p.CheckErr(p.B("_o.MarshalNDR", "ctx", "w"))
+					}, func() {
 						p.CheckErr(p.B("("+p.Amp(armName+"{}")+")"+".MarshalNDR", "ctx", "w"))
-					}
-				})
-			} else {
-				p.P("//", "no-op")
+					})
+				} else {
+					p.P("//", "no-op")
+				}
 			}
-		}
+
+			p.P("default", ":")
+			if defaultCase == nil {
+				p.P("return", `fmt.Errorf("unsupported switch case value %v", `+swVar+`)`)
+			} else if len(defaultCase.Arms) > 0 {
+				armName := p.UnionArmName(ctx, defaultCase)
+				if p.IsArmPointerToPrimitiveType(ctx, defaultCase) {
+					// special case, take care of the nil value for the union arm containing
+					// primitive type.
+					p.GenUnionArmPrimitiveTypeMarshalNDR(ctx, defaultCase, armName)
+				} else if len(defaultCase.Arms) > 0 {
+					p.P("_o, _ := o.Value.(*" + armName + ")")
+					p.IfElse("_o != nil", func() {
+						p.CheckErr(p.B("_o.MarshalNDR", "ctx", "w"))
+					}, func() {
+						if p.IsArmPointerToPrimitiveType(ctx, defaultCase) {
+							p.GenZeroPointerFieldMarshalNDR(ctx, nil, nil)
+						} else {
+							p.CheckErr(p.B("("+p.Amp(armName+"{}")+")"+".MarshalNDR", "ctx", "w"))
+						}
+					})
+				} else {
+					p.P("//", "no-op")
+				}
+			}
+		})
+		p.P("return nil")
 	})
-	p.P("return nil")
-	p.P("}")
 
 }
 
 func (p *TypeGenerator) GenUnionArmPrimitiveTypeMarshalNDR(ctx *emit.Env, cases *midl.UnionCase, armName string) {
 	p.P("_o, _ := o.Value.(*" + armName + ")")
 	p.IfElse("_o != nil", func() {
-		p.P("_ptr_o", ":=", "ndr.MarshalNDRFunc", "(", "func(ctx context.Context, w ndr.Writer) error {")
-		p.CheckErr(p.B("_o.MarshalNDR", "ctx", "w"))
-		p.P("return nil")
-		p.P("})")
+		p.Composite("_ptr_o := ndr.MarshalNDRFunc ( func(ctx context.Context, w ndr.Writer) error", func() {
+			p.CheckErr(p.B("_o.MarshalNDR", "ctx", "w"))
+			p.P("return nil")
+		}, ")")
 		p.CheckErr(p.B("w.WritePointer", p.Amp("_o"), "_ptr_o"))
 	}, func() {
 		p.GenZeroPointerFieldMarshalNDR(ctx, nil, nil)
@@ -424,22 +425,22 @@ func (p *TypeGenerator) IsEmbeddedArmStruct(ctx *emit.Env, cases *midl.UnionCase
 func (p *TypeGenerator) GenUnionArmMarshalNDR(ctx *emit.Env, arm *midl.UnionCase, caseName string) {
 
 	p.P()
-	p.P("func", "(o *"+caseName+")", "MarshalNDR(ctx context.Context, w ndr.Writer)", "error", "{")
+	p.Method("o *"+caseName, "MarshalNDR(ctx context.Context, w ndr.Writer) error", func() {
 
-	if p.IsEmbeddedArmStruct(ctx, arm) {
-		p.GenDoAlignmentMarshalNDR(ctx, ndr.Alignment(desc.Of(arm.Arms[0])))
-	}
-
-	for _, field := range p.ArmFields(ctx, arm) {
-		scopes := desc.Of(field)
-		if p.IsArmPointerToPrimitiveType(ctx, arm) {
-			scopes = scopes.Next()
+		if p.IsEmbeddedArmStruct(ctx, arm) {
+			p.GenDoAlignmentMarshalNDR(ctx, ndr.Alignment(desc.Of(arm.Arms[0])))
 		}
-		p.GenFieldMarshalNDR(ctx, field, scopes)
-	}
 
-	p.P("return nil")
-	p.P("}")
+		for _, field := range p.ArmFields(ctx, arm) {
+			scopes := desc.Of(field)
+			if p.IsArmPointerToPrimitiveType(ctx, arm) {
+				scopes = scopes.Next()
+			}
+			p.GenFieldMarshalNDR(ctx, field, scopes)
+		}
+
+		p.P("return nil")
+	})
 }
 
 func (p *TypeGenerator) GenCUnion(ctx *emit.Env) {

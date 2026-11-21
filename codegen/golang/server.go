@@ -90,7 +90,7 @@ func (p *Generator) GenServerInterface(ctx *emit.Env, iff *midl.Interface) {
 
 	p.P()
 	p.P("//", iff.Name, "server interface.")
-	p.Block(goprint.Tokens("type", n, "interface"), func() {
+	p.Interface(n, func() {
 		if iff.IsObject() && iff.Base != nil {
 			ctx := p.WithInterfaceBaseNamer(ctx, iff)
 			p.P()

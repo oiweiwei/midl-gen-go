@@ -31,7 +31,7 @@ func (p *Generator) GenClient(ctx *emit.Env, iff *midl.Interface) {
 
 	if iff.IsObject() && iff.Base != nil {
 		ctx := p.WithInterfaceBaseNamer(ctx, iff)
-		p.Block(goprint.Tokens("func", "(o *"+dn+")", p.B(emit.GoName(ctx, iff.BaseName)), p.GoInterfaceTypeName(ctx, iff.Base, func(n string) string { return n + "Client" })), func() {
+		p.Method("o *"+dn, goprint.Tokens(p.B(emit.GoName(ctx, iff.BaseName)), p.GoInterfaceTypeName(ctx, iff.Base, func(n string) string { return n + "Client" })), func() {
 			p.P("return", p.O(emit.GoName(ctx, iff.BaseName)+"Client"))
 		})
 	}
@@ -43,65 +43,63 @@ func (p *Generator) GenClient(ctx *emit.Env, iff *midl.Interface) {
 		}
 
 		p.P()
-		p.P("func", "(o *"+dn+")",
-			p.B(p.MethodName(ctx, op),
-				"ctx context.Context", "in *"+p.OpName(ctx, op, emit.InParam), "opts ...dcerpc.CallOption",
-			),
-			p.B("",
-				"*"+p.OpName(ctx, op, emit.OutParam), "error",
-			), "{")
-		p.P("op", ":=", p.B("in."+p.XXX()+"ToOp", "ctx", "nil"))
-		if iff.IsObject() {
-			p.If("_, ok := dcom.HasIPID(opts); !ok", func() {
-				p.IfElse("o.ipid != nil", func() {
-					p.P("opts = append(opts, dcom.WithIPID(o.ipid))")
-				}, func() {
-					p.P("return", "nil, fmt.Errorf(\"%s: ipid is missing\", op.OpName())")
+		p.Method("o *"+dn, goprint.Tokens(p.B(p.MethodName(ctx, op),
+			"ctx context.Context", "in *"+p.OpName(ctx, op, emit.InParam), "opts ...dcerpc.CallOption",
+		), p.B("",
+			"*"+p.OpName(ctx, op, emit.OutParam), "error",
+		)), func() {
+			p.P("op", ":=", p.B("in."+p.XXX()+"ToOp", "ctx", "nil"))
+			if iff.IsObject() {
+				p.If("_, ok := dcom.HasIPID(opts); !ok", func() {
+					p.IfElse("o.ipid != nil", func() {
+						p.P("opts = append(opts, dcom.WithIPID(o.ipid))")
+					}, func() {
+						p.P("return", "nil, fmt.Errorf(\"%s: ipid is missing\", op.OpName())")
+					})
 				})
+			}
+			p.If(goprint.Tokens("err :=", p.B("o.cc.Invoke", "ctx", "op", "opts..."), "; err != nil"), func() {
+				p.P("return", "nil, err")
 			})
-		}
-		p.If(goprint.Tokens("err :=", p.B("o.cc.Invoke", "ctx", "op", "opts..."), "; err != nil"), func() {
-			p.P("return", "nil, err")
+			p.P("out", ":=", p.Amp(p.OpName(ctx, op, emit.OutParam)+"{}"))
+			p.P(p.B("out."+p.XXX()+"FromOp", "ctx", "op"))
+
+			if !op.Type.Is(midl.TypeVoid) {
+
+				param := p.OperationReturnValue(ctx, op)
+
+				field := &midl.Field{
+					Name:  param.Name,
+					Type:  param.Type,
+					Attrs: param.Attrs.FieldAttr,
+				}
+
+				cmp := "!="
+
+				if field.Type.IsSigned() {
+					cmp = "<"
+				}
+
+				p.If(goprint.Tokens("op."+emit.GoParamName(ctx.WithOwner(op.Name), param), cmp, p.GoTypeZeroValue(ctx, nil, field, desc.Of(field))), func() {
+					p.P("return", "out", ",", p.B("fmt.Errorf", `"%s: %w"`, "op.OpName()", p.B("o.cc.Error", "ctx", "op."+emit.GoParamName(ctx.WithOwner(op.Name), param))))
+				})
+			}
+
+			p.P("return", "out, nil")
 		})
-		p.P("out", ":=", p.Amp(p.OpName(ctx, op, emit.OutParam)+"{}"))
-		p.P(p.B("out."+p.XXX()+"FromOp", "ctx", "op"))
-
-		if !op.Type.Is(midl.TypeVoid) {
-
-			param := p.OperationReturnValue(ctx, op)
-
-			field := &midl.Field{
-				Name:  param.Name,
-				Type:  param.Type,
-				Attrs: param.Attrs.FieldAttr,
-			}
-
-			cmp := "!="
-
-			if field.Type.IsSigned() {
-				cmp = "<"
-			}
-
-			p.If(goprint.Tokens("op."+emit.GoParamName(ctx.WithOwner(op.Name), param), cmp, p.GoTypeZeroValue(ctx, nil, field, desc.Of(field))), func() {
-				p.P("return", "out", ",", p.B("fmt.Errorf", `"%s: %w"`, "op.OpName()", p.B("o.cc.Error", "ctx", "op."+emit.GoParamName(ctx.WithOwner(op.Name), param))))
-			})
-		}
-
-		p.P("return", "out, nil")
-		p.P("}")
 	}
 
 	p.P()
-	p.Block(goprint.Tokens("func", "(o *"+dn+")", "AlterContext(ctx context.Context, opts ...dcerpc.Option) error"), func() {
+	p.Method("o *"+dn, "AlterContext(ctx context.Context, opts ...dcerpc.Option) error", func() {
 		p.P("return o.cc.AlterContext(ctx, opts...)")
 	})
 	p.P()
-	p.Block(goprint.Tokens("func", "(o *"+dn+")", "Conn() dcerpc.Conn"), func() {
+	p.Method("o *"+dn, "Conn() dcerpc.Conn", func() {
 		p.P("return o.cc")
 	})
 	if iff.IsObject() {
 		p.P()
-		p.Block(goprint.Tokens("func", "(o *"+dn+")", "IPID(ctx context.Context, ipid *dcom.IPID)", n), func() {
+		p.Method("o *"+dn, goprint.Tokens("IPID(ctx context.Context, ipid *dcom.IPID)", n), func() {
 			p.If("ipid == nil", func() {
 				p.P("ipid = &dcom.IPID{}")
 			})
@@ -117,7 +115,7 @@ func (p *Generator) GenClient(ctx *emit.Env, iff *midl.Interface) {
 	}
 
 	p.P()
-	p.Block(goprint.Tokens("func", p.B("New"+n, "ctx context.Context", "cc dcerpc.Conn", "opts ...dcerpc.Option"), p.B("", n, "error")), func() {
+	p.Function(goprint.Tokens(p.B("New"+n, "ctx context.Context", "cc dcerpc.Conn", "opts ...dcerpc.Option"), p.B("", n, "error")), func() {
 
 		if iff.IsObject() {
 
@@ -171,7 +169,7 @@ func (p *Generator) GenClientInterface(ctx *emit.Env, iff *midl.Interface) {
 	n := emit.GoName(ctx, iff.Name) + "Client"
 	p.P()
 	p.P("//", iff.Name, "interface.")
-	p.Block(goprint.Tokens("type", n, "interface"), func() {
+	p.Interface(n, func() {
 		if iff.IsObject() && iff.Base != nil {
 			ctx := p.WithInterfaceBaseNamer(ctx, iff)
 			// p.P()
@@ -259,7 +257,7 @@ func (p *Generator) GenClientSet(ctx *emit.Env, f *midl.File) {
 	})
 
 	p.P("//", f.GoPkg, "client set.")
-	p.Block(goprint.Tokens("type", n, "interface"), func() {
+	p.Interface(n, func() {
 		if !f.PkgIs("dcom") {
 			p.P()
 			p.P("//", "DCOM common interfaces")
@@ -307,9 +305,9 @@ func (p *Generator) GenClientSet(ctx *emit.Env, f *midl.File) {
 			ctx := p.WithInterfaceNamer(ctx, iff)
 			if iff.Body.Operations != nil && iff.Base != nil {
 				p.P()
-				p.P("func", "(o *"+dn+")", emit.GoName(ctx, iff.Name), "()", p.GoInterfaceTypeName(ctx, iff, hook), "{")
-				p.P("return", p.O("dcomClient"+"."+emit.GoName(ctx, iff.Name)), "()")
-				p.P("}")
+				p.Method("o *"+dn, goprint.Tokens(emit.GoName(ctx, iff.Name), "()", p.GoInterfaceTypeName(ctx, iff, hook)), func() {
+					p.P("return", p.O("dcomClient"+"."+emit.GoName(ctx, iff.Name)), "()")
+				})
 			}
 		}
 	}
@@ -317,9 +315,9 @@ func (p *Generator) GenClientSet(ctx *emit.Env, f *midl.File) {
 	for _, iff := range f.Interfaces {
 		if iff.Body.Operations != nil && iff.Base != nil {
 			p.P()
-			p.P("func", "(o *"+dn+")", emit.GoName(ctx, iff.Name), "()", p.GoInterfaceTypeName(ctx, iff, hook), "{")
-			p.P("return", p.O(emit.GoNamePrivate(ctx, iff.Name)))
-			p.P("}")
+			p.Method("o *"+dn, goprint.Tokens(emit.GoName(ctx, iff.Name), "()", p.GoInterfaceTypeName(ctx, iff, hook)), func() {
+				p.P("return", p.O(emit.GoNamePrivate(ctx, iff.Name)))
+			})
 		}
 	}
 
@@ -387,15 +385,15 @@ func (p *Generator) GenClientSet(ctx *emit.Env, f *midl.File) {
 	})
 
 	p.P()
-	p.Block(goprint.Tokens("func", "(o *"+dn+")", "AlterContext(ctx context.Context, opts ...dcerpc.Option) error"), func() {
+	p.Method("o *"+dn, "AlterContext(ctx context.Context, opts ...dcerpc.Option) error", func() {
 		p.P("return o.cc.AlterContext(ctx, opts...)")
 	})
 	p.P()
-	p.Block(goprint.Tokens("func", "(o *"+dn+")", "Conn() dcerpc.Conn"), func() {
+	p.Method("o *"+dn, "Conn() dcerpc.Conn", func() {
 		p.P("return o.cc")
 	})
 	p.P()
-	p.Block(goprint.Tokens("func", "(o *"+dn+")", "IPID(ctx context.Context, ipid *dcom.IPID)", n), func() {
+	p.Method("o *"+dn, goprint.Tokens("IPID(ctx context.Context, ipid *dcom.IPID)", n), func() {
 		p.If("ipid == nil", func() {
 			p.P("ipid = &dcom.IPID{}")
 		})

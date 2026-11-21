@@ -17,26 +17,26 @@ func (p *TypeGenerator) GenStructNDRSizeInfo(ctx *emit.Env) {
 	}
 
 	p.P()
-	p.P("func", "(o *"+p.GoTypeName+")", "NDRSizeInfo() []uint64 {")
+	p.Method("o *"+p.GoTypeName, "NDRSizeInfo() []uint64", func() {
 
-	last := p.Struct().LastField()
-	if scopes := desc.Of(last); !scopes.Is(midl.TypeArray) {
-		p.P("return", p.O(p.GoFieldName(ctx, last))+".NDRSizeInfo()")
-	} else {
+		last := p.Struct().LastField()
+		if scopes := desc.Of(last); !scopes.Is(midl.TypeArray) {
+			p.P("return", p.O(p.GoFieldName(ctx, last))+".NDRSizeInfo()")
+		} else {
 
-		var dims []string
+			var dims []string
 
-		for i := 0; scopes.IsNotFixedArray(); scopes, i = scopes.Next(), i+1 {
-			dims = append(dims, p.GenArraySizeVar(ctx, last, i, scopes, "Size", scopes.Dim().Size().Is()))
+			for i := 0; scopes.IsNotFixedArray(); scopes, i = scopes.Next(), i+1 {
+				dims = append(dims, p.GenArraySizeVar(ctx, last, i, scopes, "Size", scopes.Dim().Size().Is()))
+			}
+			p.Block("return []uint64", func() {
+				for _, dim := range dims {
+					p.P(dim, ",")
+				}
+			})
 		}
-		p.P("return []uint64{")
-		for _, dim := range dims {
-			p.P(dim, ",")
-		}
-		p.P("}")
-	}
 
-	p.P("}")
+	})
 }
 
 func (p *TypeGenerator) GenStructMarshalNDRSizePreamble(ctx *emit.Env, field *midl.Field) {
@@ -60,7 +60,7 @@ func (p *TypeGenerator) GenStructMarshalNDR(ctx *emit.Env) {
 		trailingField--
 	}
 
-	p.Block(goprint.Tokens("func", "(o *"+p.GoTypeName+")", "MarshalNDR(ctx context.Context, w ndr.Writer) error"), func() {
+	p.Method("o *"+p.GoTypeName, "MarshalNDR(ctx context.Context, w ndr.Writer) error", func() {
 		// prepare payload.
 		p.CheckErr("o." + p.XXX() + "PreparePayload(ctx)")
 		// write size information.
@@ -215,10 +215,10 @@ func (p *TypeGenerator) GenFieldMarshalNDR(ctx *emit.Env, field *midl.Field, sco
 		if nullChk != "" {
 			p.IfElse(goprint.Tokens(nullChk), func() {
 				fN := "_ptr_" + field.Name
-				p.P(fN, ":=", "ndr.MarshalNDRFunc", "(", "func(ctx context.Context, w ndr.Writer) error {")
-				p.GenFieldMarshalNDR(ctx, field, scopes.Next(), index...)
-				p.P("return nil")
-				p.P("})")
+				p.Composite(goprint.Tokens(fN, ":= ndr.MarshalNDRFunc ( func(ctx context.Context, w ndr.Writer) error"), func() {
+					p.GenFieldMarshalNDR(ctx, field, scopes.Next(), index...)
+					p.P("return nil")
+				}, ")")
 				p.CheckErr(p.B("w.WritePointer", p.Amp(name), fN))
 			}, func() {
 				p.GenZeroPointerFieldMarshalNDR(ctx, field, scopes, index...)
@@ -233,10 +233,10 @@ func (p *TypeGenerator) GenFieldMarshalNDR(ctx *emit.Env, field *midl.Field, sco
 
 			p.IfElse(goprint.Tokens(name, "!=", p.GoTypeZeroValue(ctx, p.Layer(), field, scopes), sizeChk), func() {
 				fN := "_ptr_" + field.Name
-				p.P(fN, ":=", "ndr.MarshalNDRFunc", "(", "func(ctx context.Context, w ndr.Writer) error {")
-				p.GenFieldMarshalNDR(ctx, field, scopes.Next(), index...)
-				p.P("return nil")
-				p.P("})")
+				p.Composite(goprint.Tokens(fN, ":= ndr.MarshalNDRFunc ( func(ctx context.Context, w ndr.Writer) error"), func() {
+					p.GenFieldMarshalNDR(ctx, field, scopes.Next(), index...)
+					p.P("return nil")
+				}, ")")
 				p.CheckErr(p.B("w.WritePointer", p.Amp(name), fN))
 			}, func() {
 				p.GenZeroPointerFieldMarshalNDR(ctx, field, scopes, index...)

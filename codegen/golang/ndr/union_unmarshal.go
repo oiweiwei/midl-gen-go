@@ -18,80 +18,81 @@ func (p *TypeGenerator) GenUnionUnmarshalNDR(ctx *emit.Env) {
 
 	sw := p.Union().Switch
 
-	if sw != nil {
-		p.P("func", "(o *"+p.GoTypeName+")", "UnmarshalNDR(ctx context.Context, w ndr.Reader)", "error", "{")
-	} else {
-		p.P("func", "(o *"+p.GoTypeName+")", "UnmarshalUnionNDR(ctx context.Context, w ndr.Reader, sw "+switchType+")", "error", "{")
+	header := goprint.Tokens("func", "(o *"+p.GoTypeName+")", "UnmarshalNDR(ctx context.Context, w ndr.Reader)", "error")
+	if sw == nil {
+		header = goprint.Tokens("func", "(o *"+p.GoTypeName+")", "UnmarshalUnionNDR(ctx context.Context, w ndr.Reader, sw "+switchType+")", "error")
 	}
 
-	swVar := "sw"
-	if sw != nil {
-		swVar = p.O(emit.GoMemberName(ctx, sw.Name))
-	}
+	p.Block(header, func() {
 
-	p.GenDoUnionAlignemntUnmarshalNDR(ctx, ndr.Alignment(p.Cursor))
-
-	if sw != nil {
-		if p.IsEnumSwitch(ctx, p.Cursor) {
-			p.CheckErr(p.B("w.ReadEnum", p.B(p.BPtr(switchType), p.Amp(swVar))))
-		} else {
-			p.CheckErr(p.B("w.ReadData", p.B(p.BPtr(switchType), p.Amp(swVar))))
+		swVar := "sw"
+		if sw != nil {
+			swVar = p.O(emit.GoMemberName(ctx, sw.Name))
 		}
-	} else {
-		if p.IsEnumSwitch(ctx, p.Cursor) {
-			p.CheckErr(p.B("w.ReadSwitch", p.B("ndr.Enum", p.B(p.BPtr(switchType), p.Amp(swVar)))))
-		} else {
-			p.CheckErr(p.B("w.ReadSwitch", p.B(p.BPtr(switchType), p.Amp(swVar))))
-		}
-	}
 
-	if emit.MSUnion(ctx) && sw == nil {
-		p.P("//", "ms_union")
-		p.GenDoAlignmentUnmarshalNDR(ctx, ndr.Alignment(p.Cursor))
-	} else {
 		p.GenDoUnionAlignemntUnmarshalNDR(ctx, ndr.Alignment(p.Cursor))
-	}
 
-	p.Block(goprint.Tokens("switch", swVar), func() {
-		var defaultCase *midl.UnionCase
-		for _, cases := range p.Union().Body {
-			if cases.IsDefault {
-				defaultCase = cases
-				continue
-			}
-			labels := []string{}
-			for _, label := range cases.Labels {
-				labels = append(labels, p.B(switchType, label))
-			}
-			p.P("case", strings.Join(labels, ",\n"), ":")
-			armName := p.UnionArmName(ctx, cases)
-			if p.IsArmPointerToPrimitiveType(ctx, cases) {
-				p.GenUnionArmPrimitiveTypeUnmarshalNDR(ctx, cases, armName)
+		if sw != nil {
+			if p.IsEnumSwitch(ctx, p.Cursor) {
+				p.CheckErr(p.B("w.ReadEnum", p.B(p.BPtr(switchType), p.Amp(swVar))))
 			} else {
-				p.P("o.Value", "=", p.Amp(armName)+"{}")
-				if len(cases.Arms) > 0 {
-					p.CheckErr(p.B("o.Value.UnmarshalNDR", "ctx", "w"))
-				}
+				p.CheckErr(p.B("w.ReadData", p.B(p.BPtr(switchType), p.Amp(swVar))))
+			}
+		} else {
+			if p.IsEnumSwitch(ctx, p.Cursor) {
+				p.CheckErr(p.B("w.ReadSwitch", p.B("ndr.Enum", p.B(p.BPtr(switchType), p.Amp(swVar)))))
+			} else {
+				p.CheckErr(p.B("w.ReadSwitch", p.B(p.BPtr(switchType), p.Amp(swVar))))
 			}
 		}
 
-		p.P("default", ":")
-		if defaultCase == nil {
-			p.P("return", `fmt.Errorf("unsupported switch case value %v", `+swVar+`)`)
-		} else if len(defaultCase.Arms) > 0 {
-			armName := p.UnionArmName(ctx, defaultCase)
-			if p.IsArmPointerToPrimitiveType(ctx, defaultCase) {
-				p.GenUnionArmPrimitiveTypeUnmarshalNDR(ctx, defaultCase, armName)
-			} else {
-				p.P("o.Value", "=", p.Amp(armName)+"{}")
-				if len(defaultCase.Arms) > 0 {
-					p.CheckErr(p.B("o.Value.UnmarshalNDR", "ctx", "w"))
+		if emit.MSUnion(ctx) && sw == nil {
+			p.P("//", "ms_union")
+			p.GenDoAlignmentUnmarshalNDR(ctx, ndr.Alignment(p.Cursor))
+		} else {
+			p.GenDoUnionAlignemntUnmarshalNDR(ctx, ndr.Alignment(p.Cursor))
+		}
+
+		p.Switch(swVar, func() {
+			var defaultCase *midl.UnionCase
+			for _, cases := range p.Union().Body {
+				if cases.IsDefault {
+					defaultCase = cases
+					continue
+				}
+				labels := []string{}
+				for _, label := range cases.Labels {
+					labels = append(labels, p.B(switchType, label))
+				}
+				p.P("case", strings.Join(labels, ",\n"), ":")
+				armName := p.UnionArmName(ctx, cases)
+				if p.IsArmPointerToPrimitiveType(ctx, cases) {
+					p.GenUnionArmPrimitiveTypeUnmarshalNDR(ctx, cases, armName)
+				} else {
+					p.P("o.Value", "=", p.Amp(armName)+"{}")
+					if len(cases.Arms) > 0 {
+						p.CheckErr(p.B("o.Value.UnmarshalNDR", "ctx", "w"))
+					}
 				}
 			}
-		}
+
+			p.P("default", ":")
+			if defaultCase == nil {
+				p.P("return", `fmt.Errorf("unsupported switch case value %v", `+swVar+`)`)
+			} else if len(defaultCase.Arms) > 0 {
+				armName := p.UnionArmName(ctx, defaultCase)
+				if p.IsArmPointerToPrimitiveType(ctx, defaultCase) {
+					p.GenUnionArmPrimitiveTypeUnmarshalNDR(ctx, defaultCase, armName)
+				} else {
+					p.P("o.Value", "=", p.Amp(armName)+"{}")
+					if len(defaultCase.Arms) > 0 {
+						p.CheckErr(p.B("o.Value.UnmarshalNDR", "ctx", "w"))
+					}
+				}
+			}
+		})
+		p.P("return", "nil")
 	})
-	p.P("return", "nil")
-	p.P("}")
 
 }
 
@@ -99,11 +100,11 @@ func (p *TypeGenerator) GenUnionArmPrimitiveTypeUnmarshalNDR(ctx *emit.Env, case
 	// Null pointers skip the deferred callback, including when reusing a union.
 	p.P("o.Value", "=", "nil")
 	// render deferred unmarshalling function.
-	p.P("_ptr_o", ":=", "ndr.UnmarshalNDRFunc", "(", "func(ctx context.Context, w ndr.Reader) error {")
-	p.P("o.Value", "=", p.Amp(armName)+"{}")
-	p.CheckErr(p.B("o.Value.UnmarshalNDR", "ctx", "w"))
-	p.P("return nil")
-	p.P("})")
+	p.Composite("_ptr_o := ndr.UnmarshalNDRFunc ( func(ctx context.Context, w ndr.Reader) error", func() {
+		p.P("o.Value", "=", p.Amp(armName)+"{}")
+		p.CheckErr(p.B("o.Value.UnmarshalNDR", "ctx", "w"))
+		p.P("return nil")
+	}, ")")
 	p.Block("_s_o := func(ptr any)", func() {
 		p.Switch("ptr := ptr.(type)", func() {
 			p.P("case", "**"+armName, ":")
@@ -121,20 +122,20 @@ func (p *TypeGenerator) GenUnionArmPrimitiveTypeUnmarshalNDR(ctx *emit.Env, case
 
 func (p *TypeGenerator) GenUnionArmUnmarshalNDR(ctx *emit.Env, arm *midl.UnionCase, caseName string) {
 
-	p.P("func", "(o *"+caseName+")", "UnmarshalNDR(ctx context.Context, w ndr.Reader)", "error", "{")
+	p.Method("o *"+caseName, "UnmarshalNDR(ctx context.Context, w ndr.Reader) error", func() {
 
-	if p.IsEmbeddedArmStruct(ctx, arm) {
-		p.GenDoAlignmentUnmarshalNDR(ctx, ndr.Alignment(desc.Of(arm.Arms[0])))
-	}
-
-	for _, field := range p.ArmFields(ctx, arm) {
-		scopes := desc.Of(field)
-		if p.IsArmPointerToPrimitiveType(ctx, arm) {
-			scopes = scopes.Next()
+		if p.IsEmbeddedArmStruct(ctx, arm) {
+			p.GenDoAlignmentUnmarshalNDR(ctx, ndr.Alignment(desc.Of(arm.Arms[0])))
 		}
-		p.GenFieldUnmarshalNDR(ctx, field, scopes)
-	}
 
-	p.P("return nil")
-	p.P("}")
+		for _, field := range p.ArmFields(ctx, arm) {
+			scopes := desc.Of(field)
+			if p.IsArmPointerToPrimitiveType(ctx, arm) {
+				scopes = scopes.Next()
+			}
+			p.GenFieldUnmarshalNDR(ctx, field, scopes)
+		}
+
+		p.P("return nil")
+	})
 }

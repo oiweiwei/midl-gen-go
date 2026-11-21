@@ -121,14 +121,14 @@ ranged_loop:
 func (p *TypeGenerator) GenStructPreparePayload(ctx *emit.Env) {
 
 	p.P("")
-	p.P("func", "(o *"+p.GoTypeName+")", p.XXX()+"PreparePayload(ctx context.Context)", "error", "{")
+	p.Method("o *"+p.GoTypeName, goprint.Tokens(p.XXX()+"PreparePayload(ctx context.Context)", "error"), func() {
 
-	p.GenStructPreparePayloadBeforeHook(ctx)
-	p.GenStructPreparePayloadFields(ctx, p.Struct().Fields)
-	p.GenStructPreparePayloadAfterHook(ctx)
+		p.GenStructPreparePayloadBeforeHook(ctx)
+		p.GenStructPreparePayloadFields(ctx, p.Struct().Fields)
+		p.GenStructPreparePayloadAfterHook(ctx)
 
-	p.P("return", "nil")
-	p.P("}")
+		p.P("return", "nil")
+	})
 }
 
 func (p *TypeGenerator) GenStructPreparePayloadSizeExpr(ctx *emit.Env, field *midl.Field, scopes *desc.Cursor, sz midl.Expr) {

@@ -70,14 +70,14 @@ func (p *Emitter) GenOperationMarshalNDR(ctx *emit.Env, op *midl.Operation, dir 
 	pp := p.NewTypeGenerator(ctx, strct)
 
 	p.P()
-	p.Block(goprint.Tokens("func", "(o *"+opN+")", p.XXX()+"Prepare"+pN+"Payload", "(ctx context.Context) error"), func() {
+	p.Method("o *"+opN, goprint.Tokens(p.XXX()+"Prepare"+pN+"Payload", "(ctx context.Context) error"), func() {
 		pp.GenStructPreparePayloadFields(ctx, strct.Elem.Struct.Fields)
 		p.PrepareOperationPayloadHook(ctx, dir)
 		p.P("return nil")
 	})
 
 	p.P()
-	p.Block(goprint.Tokens("func", "(o *"+opN+")", fN, "(ctx context.Context, w ndr.Writer) error"), func() {
+	p.Method("o *"+opN, goprint.Tokens(fN, "(ctx context.Context, w ndr.Writer) error"), func() {
 
 		p.CheckErr("o." + p.XXX() + "Prepare" + pN + "Payload(ctx)")
 
@@ -130,7 +130,7 @@ func (p *Emitter) GenOperationUnmarshalNDR(ctx *emit.Env, op *midl.Operation, di
 	}
 
 	p.P()
-	p.Block(goprint.Tokens("func", "(o *"+p.OpName(ctx, op, emit.AnyParam)+")", fn, "(ctx context.Context, w ndr.Reader) error"), func() {
+	p.Method("o *"+p.OpName(ctx, op, emit.AnyParam), goprint.Tokens(fn, "(ctx context.Context, w ndr.Reader) error"), func() {
 
 		strct := &midl.Type{
 			Kind: midl.TypeAttribute,
@@ -159,12 +159,12 @@ func (p *Emitter) GenOperationUnmarshalNDR(ctx *emit.Env, op *midl.Operation, di
 			}
 
 			p.P("//", field.Name, pp.GenParamComment(ctx, param), pp.GenStructFieldComment(ctx, field, "ref"))
-			p.P("{")
-			pp.GenFieldUnmarshalNDR(ctx, field, scopes)
-			if ndr.IsDeferrable(scopes) {
-				p.CheckErr(p.B("w.ReadDeferred"))
-			}
-			p.P("}")
+			p.Block("", func() {
+				pp.GenFieldUnmarshalNDR(ctx, field, scopes)
+				if ndr.IsDeferrable(scopes) {
+					p.CheckErr(p.B("w.ReadDeferred"))
+				}
+			})
 
 		}
 
@@ -296,11 +296,11 @@ func (p *Emitter) GenOperationStruct(ctx *emit.Env, op *midl.Operation, dir int)
 
 	dirN := emit.ParamName(dir)
 
-	p.Block(goprint.Tokens("func", "(o *"+p.OpName(ctx, op, dir)+")", "MarshalNDR (ctx context.Context, w ndr.Writer) error"), func() {
+	p.Method("o *"+p.OpName(ctx, op, dir), "MarshalNDR (ctx context.Context, w ndr.Writer) error", func() {
 		p.P("return", "o."+p.XXX()+"ToOp(ctx, nil).MarshalNDR"+dirN+"(ctx, w)")
 	})
 
-	p.Block(goprint.Tokens("func", "(o *"+p.OpName(ctx, op, dir)+")", "UnmarshalNDR (ctx context.Context, r ndr.Reader) error"), func() {
+	p.Method("o *"+p.OpName(ctx, op, dir), "UnmarshalNDR (ctx context.Context, r ndr.Reader) error", func() {
 		p.P("_o", ":=", p.Amp(p.OpName(ctx, op, emit.AnyParam))+"{}")
 		p.CheckErr("_o.UnmarshalNDR" + dirN + "(ctx, r)")
 		p.P("o." + p.XXX() + "FromOp(ctx, _o)")
@@ -368,7 +368,7 @@ func (p *Emitter) GenMakeResponse(ctx *emit.Env, op *midl.Operation, dir int) {
 	implicit := p.GetOutputParamImplicitDependents(ctx, op, emit.OutParam)
 	p.P()
 	p.P("//", "Make"+p.OpName(ctx, op, dir), "build a response structure from the given request structure.")
-	p.Block(goprint.Tokens("func", "(o *"+p.OpName(ctx, op, dir)+")", "MakeResponse()", "*"+p.OpName(ctx, op, emit.OutParam)), func() {
+	p.Method("o *"+p.OpName(ctx, op, dir), goprint.Tokens("MakeResponse()", "*"+p.OpName(ctx, op, emit.OutParam)), func() {
 		if len(implicit) == 0 {
 			p.P("return", "&"+p.OpName(ctx, op, emit.OutParam)+"{}")
 			return
@@ -405,88 +405,88 @@ func (p *Emitter) GenOpName(ctx *emit.Env, op *midl.Operation, dir int) {
 func (p *Emitter) GenOperationToOp(ctx *emit.Env, op *midl.Operation, dir int, mask bool) {
 
 	p.P()
-	p.P("func", "(o *"+p.OpName(ctx, op, dir)+")", p.XXX()+"ToOp(ctx context.Context, op *"+p.OpName(ctx, op, emit.AnyParam), ")", "*"+p.OpName(ctx, op, emit.AnyParam), "{")
-	p.If("op == nil", func() {
-		p.P("op", "=", "&"+p.OpName(ctx, op, emit.AnyParam)+"{}")
-	})
-	p.If("o == nil", func() {
-		p.P("return", "op")
-	})
+	p.Method("o *"+p.OpName(ctx, op, dir), goprint.Tokens(p.XXX()+"ToOp(ctx context.Context, op *"+p.OpName(ctx, op, emit.AnyParam), ")", "*"+p.OpName(ctx, op, emit.AnyParam)), func() {
+		p.If("op == nil", func() {
+			p.P("op", "=", "&"+p.OpName(ctx, op, emit.AnyParam)+"{}")
+		})
+		p.If("o == nil", func() {
+			p.P("return", "op")
+		})
 
-	if implicit := p.GetOutputParamImplicitDependents(ctx, op, dir); len(implicit) > 0 {
-		p.P("//", "XXX:", "implicit input dependencies for output parameters")
-		for _, param := range implicit {
+		if implicit := p.GetOutputParamImplicitDependents(ctx, op, dir); len(implicit) > 0 {
+			p.P("//", "XXX:", "implicit input dependencies for output parameters")
+			for _, param := range implicit {
+				n := emit.GoParamName(ctx, param)
+				if n == "_" {
+					continue
+				}
+				f := &midl.Field{
+					Name:  param.Name,
+					Type:  param.Type,
+					Attrs: param.Attrs.FieldAttr,
+				}
+
+				// if op.(n) is zero value, you can set it.
+				p.If(goprint.Tokens("op."+n, "==", p.GoTypeZeroValue(ctx, f.Type.Attrs, f, desc.Of(f))), func() {
+					p.P("op."+n, "=", p.O(n))
+				})
+			}
+			p.P()
+		}
+
+		for _, param := range p.OperationParams(ctx, op) {
+			if !p.IsDir(ctx, param.Attrs.Direction, dir) || param.IsHandle() {
+				continue
+			}
 			n := emit.GoParamName(ctx, param)
 			if n == "_" {
 				continue
 			}
-			f := &midl.Field{
-				Name:  param.Name,
-				Type:  param.Type,
-				Attrs: param.Attrs.FieldAttr,
-			}
+			p.P("op."+n, "=", p.O(n))
 
-			// if op.(n) is zero value, you can set it.
-			p.If(goprint.Tokens("op."+n, "==", p.GoTypeZeroValue(ctx, f.Type.Attrs, f, desc.Of(f))), func() {
-				p.P("op."+n, "=", p.O(n))
-			})
 		}
-		p.P()
-	}
 
-	for _, param := range p.OperationParams(ctx, op) {
-		if !p.IsDir(ctx, param.Attrs.Direction, dir) || param.IsHandle() {
-			continue
+		if mask {
+			p.P("op."+p.NullMask(), "=", p.O(p.NullMask()))
 		}
-		n := emit.GoParamName(ctx, param)
-		if n == "_" {
-			continue
-		}
-		p.P("op."+n, "=", p.O(n))
 
-	}
-
-	if mask {
-		p.P("op."+p.NullMask(), "=", p.O(p.NullMask()))
-	}
-
-	p.P("return", "op")
-	p.P("}")
+		p.P("return", "op")
+	})
 }
 
 func (p *Emitter) GenOperationFromOp(ctx *emit.Env, op *midl.Operation, dir int, mask bool) {
 	p.P()
-	p.P("func", "(o *"+p.OpName(ctx, op, dir)+")", p.XXX()+"FromOp(ctx context.Context, op *"+p.OpName(ctx, op, emit.AnyParam), ")", "{")
-	p.If("o == nil", func() {
-		p.P("return")
-	})
-	if implicit := p.GetOutputParamImplicitDependents(ctx, op, dir); len(implicit) > 0 {
-		p.P("//", "XXX:", "implicit input dependencies for output parameters")
-		for _, param := range implicit {
+	p.Method("o *"+p.OpName(ctx, op, dir), goprint.Tokens(p.XXX()+"FromOp(ctx context.Context, op *"+p.OpName(ctx, op, emit.AnyParam), ")"), func() {
+		p.If("o == nil", func() {
+			p.P("return")
+		})
+		if implicit := p.GetOutputParamImplicitDependents(ctx, op, dir); len(implicit) > 0 {
+			p.P("//", "XXX:", "implicit input dependencies for output parameters")
+			for _, param := range implicit {
+				n := emit.GoParamName(ctx, param)
+				if n == "_" {
+					continue
+				}
+				p.P(p.O(n), "=", "op."+n)
+			}
+			p.P()
+		}
+
+		for _, param := range p.OperationParams(ctx, op) {
+			if !p.IsDir(ctx, param.Attrs.Direction, dir) || param.IsHandle() {
+				continue
+			}
 			n := emit.GoParamName(ctx, param)
 			if n == "_" {
 				continue
 			}
 			p.P(p.O(n), "=", "op."+n)
 		}
-		p.P()
-	}
 
-	for _, param := range p.OperationParams(ctx, op) {
-		if !p.IsDir(ctx, param.Attrs.Direction, dir) || param.IsHandle() {
-			continue
+		if mask {
+			mask := p.NullMask(p.MethodName(ctx, op))
+			p.P(p.O(p.NullMask()), "=", p.B(mask, "op."+p.NullMask()), "&", mask+p.DirName(ctx, dir)+"All")
 		}
-		n := emit.GoParamName(ctx, param)
-		if n == "_" {
-			continue
-		}
-		p.P(p.O(n), "=", "op."+n)
-	}
 
-	if mask {
-		mask := p.NullMask(p.MethodName(ctx, op))
-		p.P(p.O(p.NullMask()), "=", p.B(mask, "op."+p.NullMask()), "&", mask+p.DirName(ctx, dir)+"All")
-	}
-
-	p.P("}")
+	})
 }

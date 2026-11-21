@@ -62,8 +62,21 @@ func (p *Emitter) For(clause string, body func()) { p.W().For(clause, body) }
 // Switch writes "switch tag { body }"; the body writes the case lines.
 func (p *Emitter) Switch(tag string, body func()) { p.W().Switch(tag, body) }
 
+// Method writes the declaration of a method: "func (recv) decl { body }", where recv
+// is the receiver as written ("o *T") and decl the name, parameters and results
+// ("MarshalNDR(ctx context.Context, w ndr.Writer) error").
+func (p *Emitter) Method(recv, decl string, body func()) {
+	p.Block("func ("+recv+") "+decl, body)
+}
+
+// Function writes the declaration of a function: "func decl { body }".
+func (p *Emitter) Function(decl string, body func()) { p.Block("func "+decl, body) }
+
 // Structure writes the declaration of a struct type; the body writes the fields.
 func (p *Emitter) Structure(name string, body func()) { p.Block("type "+name+" struct", body) }
+
+// Interface writes the declaration of an interface type; the body writes the methods.
+func (p *Emitter) Interface(name string, body func()) { p.Block("type "+name+" interface", body) }
 
 // Composite writes "header {", the body and "}" followed by the tail, for a
 // composite literal that is part of a larger statement.
