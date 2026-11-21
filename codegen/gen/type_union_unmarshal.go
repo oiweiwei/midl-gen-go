@@ -113,7 +113,7 @@ func (p *TypeGenerator) GenUnionArmPrimitiveTypeUnmarshalNDR(ctx context.Context
 			p.P(p.B("w.SetErr", `fmt.Errorf("invalid pointer type %T for field o.Value", ptr)`))
 		})
 	})
-	p.CheckErr(p.B("w.ReadPointer", p.Amp("o.Value"), "_s_o", "_ptr_o"))
+	p.CheckErr(p.GenReadPointer(ctx, NewScopes(cases.Arms[0].Scopes()), p.Amp("o.Value"), "_s_o", "", "_ptr_o"))
 }
 
 func (p *TypeGenerator) GenUnionArmUnmarshalNDR(ctx context.Context, arm *midl.UnionCase, caseName string) {

@@ -52,6 +52,11 @@ func Mask(ctx context.Context) string {
 	return mask
 }
 
+// HasNullMaskBit reports whether the field has a null-mask bit; must match GenNullMask ([ref] pointers have none).
+func HasNullMaskBit(ctx context.Context, field *midl.Field) bool {
+	return Mask(ctx) != "" && IsIgnoredPointer(ctx, field) && GoFieldName(ctx, field) != "_"
+}
+
 type fieldCtx struct{}
 
 func WithField(ctx context.Context, field *midl.Field) context.Context {

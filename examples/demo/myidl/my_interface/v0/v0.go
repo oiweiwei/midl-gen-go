@@ -301,7 +301,7 @@ func (o *xxx_TestCallOperation) UnmarshalNDRRequest(ctx context.Context, w ndr.R
 			}
 		}
 		_m_dword_pointer := func() { o.NullMask |= TestCallNullMaskDwordPointer }
-		if err := w.ReadPointerWithHook(&o.DwordPointer, ndr.PointerHook{_s_dword_pointer, _m_dword_pointer}, _ptr_dword_pointer); err != nil {
+		if err := w.ReadPointerWithHook(&o.DwordPointer, ndr.PointerHook{OnSet: _s_dword_pointer, OnNull: _m_dword_pointer}, _ptr_dword_pointer); err != nil {
 			return err
 		}
 		if err := w.ReadDeferred(); err != nil {
@@ -715,7 +715,7 @@ func (o *xxx_TestCall2Operation) UnmarshalNDRRequest(ctx context.Context, w ndr.
 			}
 		}
 		_m_dword_pointer := func() { o.NullMask |= TestCall2NullMaskDwordPointer }
-		if err := w.ReadPointerWithHook(&o.DwordPointer, ndr.PointerHook{_s_dword_pointer, _m_dword_pointer}, _ptr_dword_pointer); err != nil {
+		if err := w.ReadPointerWithHook(&o.DwordPointer, ndr.PointerHook{OnSet: _s_dword_pointer, OnNull: _m_dword_pointer}, _ptr_dword_pointer); err != nil {
 			return err
 		}
 		if err := w.ReadDeferred(); err != nil {

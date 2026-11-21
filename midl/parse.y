@@ -1092,9 +1092,15 @@ excep_name              : IDENT
 
 interface_body          : import interface_component1
                             {
-                                $$ = InterfaceBody{Imports: $1, Export: $2.Export, Operations: $2.Operations}
-                                for i, o := range $$.Operations {
-                                    o.OpNum = i
+                                $$ = InterfaceBody{Imports: $1, Export: $2.Export}
+                                for _, o := range $2.Operations {
+                                    if o.Attrs != nil && o.Attrs.Callback {
+                                        o.OpNum = len($$.Callbacks)
+                                        $$.Callbacks = append($$.Callbacks, o)
+                                        continue
+                                    }
+                                    o.OpNum = len($$.Operations)
+                                    $$.Operations = append($$.Operations, o)
                                 }
                             }
                         ;

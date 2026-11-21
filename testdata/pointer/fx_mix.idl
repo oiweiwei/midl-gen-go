@@ -1,0 +1,12 @@
+[uuid(11111111-0000-0000-0000-000000000004), version(1.0), pointer_default(ptr)]
+interface fx_mix
+{
+    typedef [ptr] long *MPL;
+    typedef MPL MPLC;
+    typedef [unique] long *MPU;
+    typedef struct { long *emb; [unique] long *uni; [ref] long *rf; MPLC chain; MPU tu; long *arr[2]; long **pp; } M;
+    typedef [switch_type(long)] union { [case(1)] long *ua; [case(2)] [unique] long *ub; [case(3)] M *uc; [default] ; } U;
+    typedef struct { long sw; [switch_is(sw)] U u; } UW;
+
+    long m1([in] handle_t h, [in] M *m, [in] UW *w, [in, out] MPLC c, [in] MPLC *pc, [in, ref] long *r);
+}
