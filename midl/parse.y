@@ -9,6 +9,7 @@ import (
     "math/big"
     "strings"
 
+    "github.com/oiweiwei/midl-gen-go/midl/expr"
     "github.com/oiweiwei/midl-gen-go/midl/uuid"
 )
 
@@ -812,7 +813,7 @@ attribute               : FIRST_IS '(' attr_var_list ')'
                             }
                         | GOEXT_DEFAULT_NULL '(' attr_var ')'
                             {
-                                if $3.Empty() {
+                                if $3.IsEmpty() {
                                     $$ = pAttrType{GOEXT_DEFAULT_NULL, pAttr{DefaultNull: []Expr{}}}
                                 } else {
                                     $$ = pAttrType{GOEXT_DEFAULT_NULL, pAttr{DefaultNull: []Expr{$3}}}
@@ -963,12 +964,12 @@ attribute               : FIRST_IS '(' attr_var_list ')'
                             }
                         | ID '(' integer_const_exp ')'
                             {
-                                val, ok := $3.Eval(RPClex.(ExprStore))
-                                if !ok {
-                                    RPClex.Error("cannot eval ID expression")
+                                val, err := $3.Eval(RPClex.(expr.Env))
+                                if err != nil {
+                                    RPClex.Error("cannot eval ID expression: " + err.Error())
                                     return 0
                                 }
-                                if _, ok = val.BigInt(); !ok {
+                                if _, ok := val.Int(); !ok {
                                     RPClex.Error("cannot eval ID expression")
                                     return 0
                                 }
@@ -988,9 +989,9 @@ attribute               : FIRST_IS '(' attr_var_list ')'
                             }
                         | DEFAULT_VALUE '(' const_exp ')'
                             {
-                                exp, ok := $3.Eval(RPClex.(ExprStore))
-                                if !ok {
-                                    RPClex.Error("cannot evaluate default value")
+                                exp, err := $3.Eval(RPClex.(expr.Env))
+                                if err != nil {
+                                    RPClex.Error("cannot evaluate default value: " + err.Error())
                                     return 0
                                 }
                                 $$ = pAttrType{DEFAULT_VALUE, pAttr{DefaultValue: exp}}
@@ -1209,7 +1210,7 @@ import_name             : string_literal
 
 const_declarator        : CONST const_type_spec IDENT '=' const_exp
                             {
-                                exp, err := $5.Coerce($2)
+                                exp, err := Coerce($5, $2)
                                 if err != nil {
                                     RPClex.Error(err.Error())
                                     return 0
@@ -1220,15 +1221,13 @@ const_declarator        : CONST const_type_spec IDENT '=' const_exp
 // ???: this is quite weird trying to preprocess the data from pragmas.
 pragma_declarator       : PRAGMA_DEFINE IDENT const_exp
                             {
-                                switch v := $3.Value.(type) {
-                                case *big.Int:
+                                if _, ok := $3.Int(); ok {
                                     $$ = []*Export{&Export{Name: $2, Const: &Const{Type: TypeInt64, Name: $2, Value: $3}}}
-                                case string:
-                                    if $3.CanEval() {
-                                        $$ = []*Export{&Export{Name: $2, Const: &Const{Type: TypeString, Name: $2, Value: $3}}}
-                                        break
-                                    }
-                                    ref := &Type{Kind: TypeRef, Name: v}
+                                } else if _, ok := $3.Str(); ok {
+                                    $$ = []*Export{&Export{Name: $2, Const: &Const{Type: TypeString, Name: $2, Value: $3}}}
+                                } else if name, ok := $3.IdentName(); ok {
+                                    // the define refers to a type that is not a known constant.
+                                    ref := &Type{Kind: TypeRef, Name: name}
                                     decl := &Type{Kind: TypeAttribute, Attrs: &TypeAttr{Alias: $2}}
                                     typ, ok := lookupType(RPClex, ref.Name)
                                     if !ok {
@@ -1241,8 +1240,8 @@ pragma_declarator       : PRAGMA_DEFINE IDENT const_exp
                                     $$ = []*Export{&Export{Name: $2, Type: decl}}
 
                                     // FIXME: dnsp.idl PRAGMA Types.
-                                    // $$ = []*Export{&Export{Name: $2, Type: &Type{Kind: TypeRef, Name: v}}}
-                                default:
+                                    // $$ = []*Export{&Export{Name: $2, Type: &Type{Kind: TypeRef, Name: name}}}
+                                } else {
                                     RPClex.Error("invalid #define statement")
                                     return 0
                                 }
@@ -1326,23 +1325,23 @@ const_exp               : integer_const_exp
                             }
                         | string_literal
                             {
-                                $$ = NewValue($1)
+                                $$ = expr.String($1)
                             }
                         | CHARACTER_LITERAL
                             {
-                                $$ = NewValue($1)
+                                $$ = expr.Char($1)
                             }
                         | NULL
                             {
-                                $$ = NewValue(nil)
+                                $$ = expr.Null()
                             }
                         | TRUE
                             {
-                                $$ = NewValue(true)
+                                $$ = expr.Bool(true)
                             }
                         | FALSE
                             {
-                                $$ = NewValue(false)
+                                $$ = expr.Bool(false)
                             }
                         ;
 
@@ -1358,9 +1357,9 @@ conditional_exp         : logical_or_exp
                             }
                         | logical_or_exp '?' integer_const_exp ':' conditional_exp
                             {
-                                exp, ok := $1.Ter($3, $5)
-                                if !ok {
-                                    RPClex.Error("cannot evaluate ternary expression")
+                                exp, err := expr.Ternary($1, $3, $5)
+                                if err != nil {
+                                    RPClex.Error("cannot evaluate ternary expression: " + err.Error())
                                     return 0
                                 }
                                 $$ = exp
@@ -1373,9 +1372,9 @@ logical_or_exp          : logical_and_exp
                             }
                         | logical_or_exp LOGICAL_OR logical_and_exp
                             {
-                                exp, ok := $1.LogicalOr($3)
-                                if !ok {
-                                    RPClex.Error("cannot evaluate l-or expression")
+                                exp, err := expr.Binary(expr.OpLogicalOr, $1, $3)
+                                if err != nil {
+                                    RPClex.Error("cannot evaluate l-or expression: " + err.Error())
                                     return 0
                                 }
                                 $$ = exp
@@ -1388,9 +1387,9 @@ logical_and_exp         : inclusive_or_exp
                             }
                         | logical_and_exp LOGICAL_AND inclusive_or_exp
                             {
-                                exp, ok := $1.LogicalAnd($3)
-                                if !ok {
-                                    RPClex.Error("cannot evaluate l-and expression")
+                                exp, err := expr.Binary(expr.OpLogicalAnd, $1, $3)
+                                if err != nil {
+                                    RPClex.Error("cannot evaluate l-and expression: " + err.Error())
                                     return 0
                                 }
                                 $$ = exp
@@ -1403,9 +1402,9 @@ inclusive_or_exp        : exclusive_or_exp
                             }
                         | inclusive_or_exp OR exclusive_or_exp
                             {
-                                exp, ok := $1.Or($3)
-                                if !ok {
-                                    RPClex.Error("cannot evaluate or expression")
+                                exp, err := expr.Binary(expr.OpOr, $1, $3)
+                                if err != nil {
+                                    RPClex.Error("cannot evaluate or expression: " + err.Error())
                                     return 0
                                 }
                                 $$ = exp
@@ -1418,9 +1417,9 @@ exclusive_or_exp        : and_exp
                             }
                         | exclusive_or_exp XOR and_exp
                             {
-                                exp, ok := $1.Xor($3)
-                                if !ok {
-                                    RPClex.Error("cannot evaluate xor expression")
+                                exp, err := expr.Binary(expr.OpXor, $1, $3)
+                                if err != nil {
+                                    RPClex.Error("cannot evaluate xor expression: " + err.Error())
                                     return 0
                                 }
                                 $$ = exp
@@ -1433,9 +1432,9 @@ and_exp                 : equality_exp
                             }
                         | and_exp AND equality_exp
                             {
-                                exp, ok := $1.And($3)
-                                if !ok {
-                                    RPClex.Error("cannot evaluate and expression")
+                                exp, err := expr.Binary(expr.OpAnd, $1, $3)
+                                if err != nil {
+                                    RPClex.Error("cannot evaluate and expression: " + err.Error())
                                     return 0
                                 }
                                 $$ = exp
@@ -1448,18 +1447,18 @@ equality_exp            : relational_exp
                             }
                         | equality_exp EQ relational_exp
                             {
-                                exp, ok := $1.Eq($3)
-                                if !ok {
-                                    RPClex.Error("cannot evaluate eq expression")
+                                exp, err := expr.Binary(expr.OpEq, $1, $3)
+                                if err != nil {
+                                    RPClex.Error("cannot evaluate eq expression: " + err.Error())
                                     return 0
                                 }
                                 $$ = exp
                             }
                         | equality_exp NE relational_exp
                             {
-                                exp, ok := $1.Ne($3)
-                                if !ok {
-                                    RPClex.Error("cannot evaluate ne expression")
+                                exp, err := expr.Binary(expr.OpNe, $1, $3)
+                                if err != nil {
+                                    RPClex.Error("cannot evaluate ne expression: " + err.Error())
                                     return 0
                                 }
                                 $$ = exp
@@ -1472,36 +1471,36 @@ relational_exp          : shift_exp
                             }
                         | relational_exp LT shift_exp
                             {
-                                exp, ok := $1.Lt($3)
-                                if !ok {
-                                    RPClex.Error("cannot evaluate lt expression")
+                                exp, err := expr.Binary(expr.OpLt, $1, $3)
+                                if err != nil {
+                                    RPClex.Error("cannot evaluate lt expression: " + err.Error())
                                     return 0
                                 }
                                 $$ = exp
                             }
                         | relational_exp GT shift_exp
                             {
-                                exp, ok := $1.Gt($3)
-                                if !ok {
-                                    RPClex.Error("cannot evaluate gt expression")
+                                exp, err := expr.Binary(expr.OpGt, $1, $3)
+                                if err != nil {
+                                    RPClex.Error("cannot evaluate gt expression: " + err.Error())
                                     return 0
                                 }
                                 $$ = exp
                             }
                         | relational_exp LE shift_exp
                             {
-                                exp, ok := $1.Le($3)
-                                if !ok {
-                                    RPClex.Error("cannot evaluate le expression")
+                                exp, err := expr.Binary(expr.OpLe, $1, $3)
+                                if err != nil {
+                                    RPClex.Error("cannot evaluate le expression: " + err.Error())
                                     return 0
                                 }
                                 $$ = exp
                             }
                         | relational_exp GE shift_exp
                             {
-                                exp, ok := $1.Ge($3)
-                                if !ok {
-                                    RPClex.Error("cannot evaluate ge expression")
+                                exp, err := expr.Binary(expr.OpGe, $1, $3)
+                                if err != nil {
+                                    RPClex.Error("cannot evaluate ge expression: " + err.Error())
                                     return 0
                                 }
                                 $$ = exp
@@ -1514,18 +1513,18 @@ shift_exp               : additive_exp
                             }
                         | shift_exp LSH additive_exp
                             {
-                                exp, ok := $1.Lsh($3)
-                                if !ok {
-                                    RPClex.Error("cannot evaluate lsh expression")
+                                exp, err := expr.Binary(expr.OpShl, $1, $3)
+                                if err != nil {
+                                    RPClex.Error("cannot evaluate lsh expression: " + err.Error())
                                     return 0
                                 }
                                 $$ = exp
                             }
                         | shift_exp RSH additive_exp
                             {
-                                exp, ok := $1.Rsh($3)
-                                if !ok {
-                                    RPClex.Error("cannot evaluate rsh expression")
+                                exp, err := expr.Binary(expr.OpShr, $1, $3)
+                                if err != nil {
+                                    RPClex.Error("cannot evaluate rsh expression: " + err.Error())
                                     return 0
                                 }
                                 $$ = exp
@@ -1538,18 +1537,18 @@ additive_exp            : multiplicative_exp
                             }
                         | additive_exp '-' multiplicative_exp
                             {
-                                exp, ok := $1.Sub($3)
-                                if !ok {
-                                    RPClex.Error("cannot evaluate sub expression")
+                                exp, err := expr.Binary(expr.OpSub, $1, $3)
+                                if err != nil {
+                                    RPClex.Error("cannot evaluate sub expression: " + err.Error())
                                     return 0
                                 }
                                 $$ = exp
                             }
                         | additive_exp '+' multiplicative_exp
                             {
-                                exp, ok := $1.Add($3)
-                                if !ok {
-                                    RPClex.Error("cannot evaluate add expression")
+                                exp, err := expr.Binary(expr.OpAdd, $1, $3)
+                                if err != nil {
+                                    RPClex.Error("cannot evaluate add expression: " + err.Error())
                                     return 0
                                 }
                                 $$ = exp
@@ -1562,27 +1561,27 @@ multiplicative_exp      : unary_exp
                             }
                         | multiplicative_exp '*' unary_exp
                             {
-                                exp, ok := $1.Mul($3)
-                                if !ok {
-                                    RPClex.Error("cannot evaluate mul expression")
+                                exp, err := expr.Binary(expr.OpMul, $1, $3)
+                                if err != nil {
+                                    RPClex.Error("cannot evaluate mul expression: " + err.Error())
                                     return 0
                                 }
                                 $$ = exp
                             }
                         | multiplicative_exp '/' unary_exp
                             {
-                                exp, ok := $1.Div($3)
-                                if !ok {
-                                    RPClex.Error("cannot evaluate div expression")
+                                exp, err := expr.Binary(expr.OpDiv, $1, $3)
+                                if err != nil {
+                                    RPClex.Error("cannot evaluate div expression: " + err.Error())
                                     return 0
                                 }
                                 $$ = exp
                             }
                         | multiplicative_exp '%' unary_exp
                             {
-                                exp, ok := $1.Rem($3)
-                                if !ok {
-                                    RPClex.Error("cannot evaluate rem expression")
+                                exp, err := expr.Binary(expr.OpRem, $1, $3)
+                                if err != nil {
+                                    RPClex.Error("cannot evaluate rem expression: " + err.Error())
                                     return 0
                                 }
                                 $$ = exp
@@ -1595,36 +1594,36 @@ unary_exp               : primary_exp
                             }
                         | '+' primary_exp %prec UPLUS
                             {
-                                exp, ok := $2.Positive()
-                                if !ok {
-                                    RPClex.Error("cannot evaluate u'+' expression")
+                                exp, err := expr.Unary(expr.OpPlus, $2)
+                                if err != nil {
+                                    RPClex.Error("cannot evaluate u'+' expression: " + err.Error())
                                     return 0
                                 }
                                 $$ = exp
                             }
                         | '-' primary_exp %prec UMINUS
                             {
-                                exp, ok := $2.Negative()
-                                if !ok {
-                                    RPClex.Error("cannot evaluate u'-' expression")
+                                exp, err := expr.Unary(expr.OpNeg, $2)
+                                if err != nil {
+                                    RPClex.Error("cannot evaluate u'-' expression: " + err.Error())
                                     return 0
                                 }
                                 $$ = exp
                             }
                         | '~' primary_exp %prec UNEG
                             {
-                                exp, ok := $2.Neg()
-                                if !ok {
-                                    RPClex.Error("cannot evaluate u'~' expression")
+                                exp, err := expr.Unary(expr.OpBitNot, $2)
+                                if err != nil {
+                                    RPClex.Error("cannot evaluate u'~' expression: " + err.Error())
                                     return 0
                                 }
                                 $$ = exp
                             }
                         | '!' primary_exp %prec UNOT
                             {
-                                exp, ok := $2.Not()
-                                if !ok {
-                                    RPClex.Error("cannot evaluate u'!' expression")
+                                exp, err := expr.Unary(expr.OpNot, $2)
+                                if err != nil {
+                                    RPClex.Error("cannot evaluate u'!' expression: " + err.Error())
                                     return 0
                                 }
                                 $$ = exp
@@ -1633,7 +1632,7 @@ unary_exp               : primary_exp
 
 primary_exp             : INT_LITERAL
                             {
-                                $$ = NewValue($1)
+                                $$ = expr.Int($1)
                             }
                         | SIZEOF '(' type_spec ')'
                             {
@@ -1642,21 +1641,21 @@ primary_exp             : INT_LITERAL
                                     RPClex.Error(fmt.Sprintf("cannot determine size of type: %s (%s)", $3.Name, $3.Kind))
                                     return 0
                                 }
-                                $$ = NewValue(big.NewInt(int64(sz)))
+                                $$ = expr.Int64(int64(sz))
                             }
                         | IDENT
                             {
                                 if c, ok := lookupConst(RPClex, $1); !ok {
-                                    $$ = NewIdent($1)
+                                    $$ = expr.Ident($1)
                                 } else {
                                     $$ = c.Value
                                 }
                             }
                         | '*' IDENT
                             {
-                                exp, ok := NewIdent($2).Ptr()
-                                if !ok {
-                                    RPClex.Error("cannot evaluate ptr expression")
+                                exp, err := expr.Unary(expr.OpDeref, expr.Ident($2))
+                                if err != nil {
+                                    RPClex.Error("cannot evaluate ptr expression: " + err.Error())
                                     return 0
                                 }
                                 $$ = exp
@@ -2451,20 +2450,20 @@ enumeration_type        : ENUM '{' enumeration1 comma '}'
                                 $$ = &Type{Kind: TypeEnum, Enum: &Enum{Elems: make([]*Element, 0, len($3))}}
                                 for idx, i := 0, 0; i < len($3); i, idx = i+1, idx+1 {
                                     tag, exp := $3[i].Tag, $3[i].ID
-                                    if !exp.Empty() {
-                                        val, ok := exp.Eval(RPClex.(ExprStore))
-                                        if !ok {
-                                            RPClex.Error("cannot evaluate tag-id expression")
+                                    if !exp.IsEmpty() {
+                                        val, err := exp.Eval(RPClex.(expr.Env))
+                                        if err != nil {
+                                            RPClex.Error("cannot evaluate tag-id expression: " + err.Error())
                                             return 0
                                         }
-                                        bi, ok := val.BigInt()
+                                        bi, ok := val.Int()
                                         if !ok {
                                             RPClex.Error("enum: not an integer type")
                                             return 0
                                         }
                                         idx, exp = int(bi.Uint64()), val
                                     } else {
-                                        exp = NewValue(big.NewInt(int64(idx)))
+                                        exp = expr.Int64(int64(idx))
                                     }
                                     if uint32(uint16(idx)) != uint32(idx) {
                                         $$.Enum.Is32 = true
@@ -2491,20 +2490,20 @@ tagged_enumeration      : ENUM tag '{' enumeration1 comma '}'
                                 $$ = &Type{Kind: TypeEnum, Tag: $2, Enum: &Enum{Elems: make([]*Element, 0, len($4))}}
                                 for idx, i := 0, 0; i < len($4); i, idx = i+1, idx+1 {
                                     tag, exp := $4[i].Tag, $4[i].ID
-                                    if !exp.Empty() {
-                                        val, ok := exp.Eval(RPClex.(ExprStore))
-                                        if !ok {
-                                            RPClex.Error("cannot evaluate tag-id expression")
+                                    if !exp.IsEmpty() {
+                                        val, err := exp.Eval(RPClex.(expr.Env))
+                                        if err != nil {
+                                            RPClex.Error("cannot evaluate tag-id expression: " + err.Error())
                                             return 0
                                         }
-                                        bi, ok := val.BigInt()
+                                        bi, ok := val.Int()
                                         if !ok {
                                             RPClex.Error("enum: not an integer type")
                                             return 0
                                         }
                                         idx, exp = int(bi.Uint64()), val
                                     } else {
-                                        exp = NewValue(big.NewInt(int64(idx)))
+                                        exp = expr.Int64(int64(idx))
                                     }
                                     if uint32(uint16(idx)) != uint32(idx) {
                                         $$.Enum.Is32 = true
@@ -2605,11 +2604,11 @@ array_bound             : '*'
                             }
                         | integer_const_exp
                             {
-                                if !$1.CanEval() {
+                                if !$1.IsConst() {
                                     RPClex.Error("cannot evaluate integer bound")
                                     return 0
                                 }
-                                val, ok := $1.BigInt()
+                                val, ok := $1.Int()
                                 if !ok {
                                     RPClex.Error("cannot use non-integer as a bound declarator")
                                     return 0
@@ -2668,16 +2667,16 @@ range_attribute         : RANGE range_declarator
 
 range_declarator        : '(' integer_const_exp ',' integer_const_exp ')'
                             {
-                                if !CanEval($2, $4) {
+                                if !$2.IsConst() || !$4.IsConst() {
                                     RPClex.Error("cannot evaluate range declaration")
                                     return 0
                                 }
-                                min, ok := $2.BigInt()
+                                min, ok := $2.Int()
                                 if !ok {
                                     RPClex.Error("invalid min value for range declarator")
                                     return 0
                                 }
-                                max, ok := $4.BigInt()
+                                max, ok := $4.Int()
                                 if !ok {
                                     RPClex.Error("invalid max value for range declarator")
                                     return 0

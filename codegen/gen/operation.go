@@ -281,7 +281,7 @@ func (p *Generator) OperationParams(ctx context.Context, op *midl.Operation) []*
 func (p *Generator) GetExprIdents(ctx context.Context, expr ...midl.Expr) []string {
 	ret := make([]string, 0, len(expr))
 	for _, expr := range expr {
-		val, ok := expr.Ident().Value.(string)
+		val, ok := expr.FirstIdent()
 		if ok {
 			ret = append(ret, val)
 		}

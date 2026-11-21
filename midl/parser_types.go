@@ -32,7 +32,7 @@ type pTypedef struct {
 
 func SetSwitchType(fields []*Field) {
 	for _, f := range fields {
-		if f.Attrs.SwitchIs.Empty() {
+		if f.Attrs.SwitchIs.IsEmpty() {
 			continue
 		}
 		if f.Attrs.SwitchType != nil {
@@ -44,8 +44,13 @@ func SetSwitchType(fields []*Field) {
 			continue
 		}
 
+		switchField, ok := f.Attrs.SwitchIs.FirstIdent()
+		if !ok {
+			continue
+		}
+
 		for _, ff := range fields {
-			if f.Attrs.SwitchIs.Ident().String() == ff.Name {
+			if switchField == ff.Name {
 				f.Attrs.SwitchType = ff.Type
 			}
 		}
@@ -418,7 +423,7 @@ func (a pAttr) MapAttr() map[int]interface{} {
 	if a.Format.PreserveNull {
 		ret[FORMAT_PRESERVE_NULL] = a.Format.PreserveNull
 	}
-	if !a.SwitchIs.Empty() {
+	if !a.SwitchIs.IsEmpty() {
 		ret[SWITCH_IS] = a.SwitchIs
 	}
 	if a.Ignore {
@@ -487,7 +492,7 @@ func (a pAttr) MapAttr() map[int]interface{} {
 	if a.Callback {
 		ret[CALLBACK] = a.Callback
 	}
-	if !a.IIDIs.Empty() {
+	if !a.IIDIs.IsEmpty() {
 		ret[IID_IS] = a.IIDIs
 	}
 	if a.Retval {
@@ -514,7 +519,7 @@ func (a pAttr) MapAttr() map[int]interface{} {
 	if a.PropPutRef {
 		ret[PROPPUTREF] = a.PropPutRef
 	}
-	if !a.ID.Empty() {
+	if !a.ID.IsEmpty() {
 		ret[ID] = a.ID
 	}
 	if a.Hidden {
@@ -526,7 +531,7 @@ func (a pAttr) MapAttr() map[int]interface{} {
 	if a.Restricted {
 		ret[RESTRICTED] = a.Restricted
 	}
-	if !a.DefaultValue.Empty() {
+	if !a.DefaultValue.IsEmpty() {
 		ret[DEFAULT_VALUE] = a.DefaultValue
 	}
 	if a.ODL {
@@ -630,7 +635,7 @@ func (a pAttr) Merge(ma pAttr) pAttr {
 	if ma.Format.PreserveNull {
 		a.Format.PreserveNull = ma.Format.PreserveNull
 	}
-	if !ma.SwitchIs.Empty() {
+	if !ma.SwitchIs.IsEmpty() {
 		a.SwitchIs = ma.SwitchIs
 	}
 	if ma.Ignore {
@@ -699,7 +704,7 @@ func (a pAttr) Merge(ma pAttr) pAttr {
 	if ma.Callback {
 		a.Callback = ma.Callback
 	}
-	if !ma.IIDIs.Empty() {
+	if !ma.IIDIs.IsEmpty() {
 		a.IIDIs = ma.IIDIs
 	}
 	if ma.Retval {
@@ -726,7 +731,7 @@ func (a pAttr) Merge(ma pAttr) pAttr {
 	if ma.PropPutRef {
 		a.PropPutRef = ma.PropPutRef
 	}
-	if !ma.ID.Empty() {
+	if !ma.ID.IsEmpty() {
 		a.ID = ma.ID
 	}
 	if ma.Hidden {
@@ -738,7 +743,7 @@ func (a pAttr) Merge(ma pAttr) pAttr {
 	if ma.Restricted {
 		a.Restricted = ma.Restricted
 	}
-	if !ma.DefaultValue.Empty() {
+	if !ma.DefaultValue.IsEmpty() {
 		a.DefaultValue = ma.DefaultValue
 	}
 	if ma.ODL {

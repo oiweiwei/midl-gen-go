@@ -231,7 +231,7 @@ func (i *Scopes) IsConformant() bool {
 func (i *Scopes) IsVarying() bool {
 	for scopes := i; scopes != nil; scopes = scopes.Next() {
 		if scopes.Is(midl.TypeArray) {
-			if dim := scopes.Dim(); (dim.IsString && dim.IsNullTerminated) || !dim.LengthIs.Empty() || !dim.FirstIs.Empty() || !dim.LastIs.Empty() {
+			if dim := scopes.Dim(); (dim.IsString && dim.IsNullTerminated) || !dim.LengthIs.IsEmpty() || !dim.FirstIs.IsEmpty() || !dim.LastIs.IsEmpty() {
 				return true
 			}
 		} else {

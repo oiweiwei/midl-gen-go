@@ -15,6 +15,7 @@ import (
 	"math/big"
 	"strings"
 
+	"github.com/oiweiwei/midl-gen-go/midl/expr"
 	"github.com/oiweiwei/midl-gen-go/midl/uuid"
 )
 
@@ -22,7 +23,7 @@ var (
 	_ = fmt.Sprintf("")
 )
 
-//line midl/parse.y:21
+//line midl/parse.y:22
 type RPCSymType struct {
 	yys                   int
 	File                  File
@@ -401,7 +402,7 @@ const RPCEofCode = 1
 const RPCErrCode = 2
 const RPCInitialStackSize = 16
 
-//line midl/parse.y:2877
+//line midl/parse.y:2876
 
 //line yacctab:1
 var RPCExca = [...]int16{
@@ -1261,14 +1262,14 @@ RPCdefault:
 
 	case 2:
 		RPCDollar = RPCS[RPCpt-1 : RPCpt+1]
-//line midl/parse.y:380
+//line midl/parse.y:381
 		{
 			f := RPCDollar[1].File
 			setResult(RPClex, &f)
 		}
 	case 3:
 		RPCDollar = RPCS[RPCpt-1 : RPCpt+1]
-//line midl/parse.y:387
+//line midl/parse.y:388
 		{
 			RPCVAL.File = RPCDollar[1].File
 
@@ -1286,7 +1287,7 @@ RPCdefault:
 		}
 	case 4:
 		RPCDollar = RPCS[RPCpt-2 : RPCpt+1]
-//line midl/parse.y:403
+//line midl/parse.y:404
 		{
 			if len(RPCDollar[2].File.Imports) > 0 {
 				RPCVAL.File.Imports = append(RPCVAL.File.Imports, RPCDollar[2].File.Imports...)
@@ -1329,13 +1330,13 @@ RPCdefault:
 		}
 	case 5:
 		RPCDollar = RPCS[RPCpt-1 : RPCpt+1]
-//line midl/parse.y:446
+//line midl/parse.y:447
 		{
 			RPCVAL.File = File{Imports: RPCDollar[1].Strings}
 		}
 	case 6:
 		RPCDollar = RPCS[RPCpt-1 : RPCpt+1]
-//line midl/parse.y:450
+//line midl/parse.y:451
 		{
 			RPCVAL.File = File{Export: make(map[string]*Export)}
 			if len(RPCDollar[1].Export) > 0 {
@@ -1347,7 +1348,7 @@ RPCdefault:
 		}
 	case 7:
 		RPCDollar = RPCS[RPCpt-2 : RPCpt+1]
-//line midl/parse.y:460
+//line midl/parse.y:461
 		{
 			RPCVAL.File = File{}
 			iff := RPCDollar[1].Interface
@@ -1381,165 +1382,165 @@ RPCdefault:
 		}
 	case 8:
 		RPCDollar = RPCS[RPCpt-2 : RPCpt+1]
-//line midl/parse.y:492
+//line midl/parse.y:493
 		{
 			cc := RPCDollar[1].ComClass
 			RPCVAL.File = File{ComClasses: []*ComClass{&cc}}
 		}
 	case 9:
 		RPCDollar = RPCS[RPCpt-2 : RPCpt+1]
-//line midl/parse.y:497
+//line midl/parse.y:498
 		{
 			di := RPCDollar[1].DispatchInterface
 			RPCVAL.File = File{DispatchInterfaces: []*DispatchInterface{&di}}
 		}
 	case 10:
 		RPCDollar = RPCS[RPCpt-2 : RPCpt+1]
-//line midl/parse.y:502
+//line midl/parse.y:503
 		{
 			cc := RPCDollar[1].ImportLib
 			RPCVAL.File = File{ImportLibs: []*ImportLib{&cc}}
 		}
 	case 11:
 		RPCDollar = RPCS[RPCpt-2 : RPCpt+1]
-//line midl/parse.y:507
+//line midl/parse.y:508
 		{
 			lib := RPCDollar[1].Library
 			RPCVAL.File = File{Libraries: []*Library{&lib}}
 		}
 	case 12:
 		RPCDollar = RPCS[RPCpt-2 : RPCpt+1]
-//line midl/parse.y:512
+//line midl/parse.y:513
 		{
 			cc := RPCDollar[1].Module
 			RPCVAL.File = File{Modules: []*Module{&cc}}
 		}
 	case 15:
 		RPCDollar = RPCS[RPCpt-4 : RPCpt+1]
-//line midl/parse.y:523
+//line midl/parse.y:524
 		{
 			cc := RPCDollar[3].File
 			RPCVAL.Library = Library{Attrs: RPCDollar[1].Library.Attrs, Name: RPCDollar[1].Library.Name, Body: &cc}
 		}
 	case 16:
 		RPCDollar = RPCS[RPCpt-3 : RPCpt+1]
-//line midl/parse.y:530
+//line midl/parse.y:531
 		{
 			RPCVAL.Library = Library{Attrs: RPCDollar[1].Attr.Library(), Name: RPCDollar[3].Ident}
 		}
 	case 17:
 		RPCDollar = RPCS[RPCpt-1 : RPCpt+1]
-//line midl/parse.y:536
+//line midl/parse.y:537
 		{
 			RPCVAL.File = RPCDollar[1].File
 		}
 	case 18:
 		RPCDollar = RPCS[RPCpt-4 : RPCpt+1]
-//line midl/parse.y:542
+//line midl/parse.y:543
 		{
 			RPCVAL.ImportLib = ImportLib{Name: RPCDollar[3].String}
 		}
 	case 19:
 		RPCDollar = RPCS[RPCpt-4 : RPCpt+1]
-//line midl/parse.y:548
+//line midl/parse.y:549
 		{
 			RPCVAL.Module = Module{Name: RPCDollar[1].Module.Name, Attrs: RPCDollar[1].Module.Attrs, Members: RPCDollar[3].ModuleMembers}
 		}
 	case 20:
 		RPCDollar = RPCS[RPCpt-3 : RPCpt+1]
-//line midl/parse.y:554
+//line midl/parse.y:555
 		{
 			RPCVAL.Module = Module{Name: RPCDollar[3].Ident, Attrs: RPCDollar[1].Attr.Module()}
 		}
 	case 21:
 		RPCDollar = RPCS[RPCpt-2 : RPCpt+1]
-//line midl/parse.y:560
+//line midl/parse.y:561
 		{
 			cc := RPCDollar[1].ModuleMember
 			RPCVAL.ModuleMembers = []*ModuleMember{&cc}
 		}
 	case 22:
 		RPCDollar = RPCS[RPCpt-3 : RPCpt+1]
-//line midl/parse.y:565
+//line midl/parse.y:566
 		{
 			cc := RPCDollar[2].ModuleMember
 			RPCVAL.ModuleMembers = append(RPCVAL.ModuleMembers, &cc)
 		}
 	case 23:
 		RPCDollar = RPCS[RPCpt-1 : RPCpt+1]
-//line midl/parse.y:572
+//line midl/parse.y:573
 		{
 			RPCVAL.ModuleMember = ModuleMember{Const: RPCDollar[1].Const}
 		}
 	case 24:
 		RPCDollar = RPCS[RPCpt-1 : RPCpt+1]
-//line midl/parse.y:576
+//line midl/parse.y:577
 		{
 			RPCVAL.ModuleMember = ModuleMember{Func: RPCDollar[1].Operation}
 		}
 	case 25:
 		RPCDollar = RPCS[RPCpt-4 : RPCpt+1]
-//line midl/parse.y:582
+//line midl/parse.y:583
 		{
 			RPCVAL.ComClass = ComClass{Name: RPCDollar[1].ComClass.Name, Attrs: RPCDollar[1].ComClass.Attrs, Interfaces: RPCDollar[3].ComInterfaces}
 		}
 	case 26:
 		RPCDollar = RPCS[RPCpt-3 : RPCpt+1]
-//line midl/parse.y:588
+//line midl/parse.y:589
 		{
 			RPCVAL.ComClass = ComClass{Attrs: RPCDollar[1].Attr.ComClass(), Name: RPCDollar[3].Ident}
 		}
 	case 27:
 		RPCDollar = RPCS[RPCpt-1 : RPCpt+1]
-//line midl/parse.y:594
+//line midl/parse.y:595
 		{
 			RPCVAL.ComInterfaces = []*ComInterface{RPCDollar[1].ComInterface}
 		}
 	case 28:
 		RPCDollar = RPCS[RPCpt-2 : RPCpt+1]
-//line midl/parse.y:598
+//line midl/parse.y:599
 		{
 			RPCVAL.ComInterfaces = append(RPCVAL.ComInterfaces, RPCDollar[2].ComInterface)
 		}
 	case 29:
 		RPCDollar = RPCS[RPCpt-4 : RPCpt+1]
-//line midl/parse.y:604
+//line midl/parse.y:605
 		{
 			RPCVAL.ComInterface = &ComInterface{Name: RPCDollar[3].Ident, Type: RPCDollar[2].Type, Attrs: RPCDollar[1].Attr.ComInterface()}
 		}
 	case 30:
 		RPCDollar = RPCS[RPCpt-1 : RPCpt+1]
-//line midl/parse.y:610
+//line midl/parse.y:611
 		{
 			RPCVAL.Type = &Type{Kind: TypeInterface}
 		}
 	case 31:
 		RPCDollar = RPCS[RPCpt-1 : RPCpt+1]
-//line midl/parse.y:614
+//line midl/parse.y:615
 		{
 			RPCVAL.Type = &Type{Kind: TypeDispInterface}
 		}
 	case 32:
 		RPCDollar = RPCS[RPCpt-1 : RPCpt+1]
-//line midl/parse.y:618
+//line midl/parse.y:619
 		{
 			RPCVAL.Type = &Type{Kind: TypeRef, Name: RPCDollar[1].Ident}
 		}
 	case 33:
 		RPCDollar = RPCS[RPCpt-0 : RPCpt+1]
-//line midl/parse.y:624
+//line midl/parse.y:625
 		{
 			RPCVAL.Attr = pAttr{}
 		}
 	case 34:
 		RPCDollar = RPCS[RPCpt-4 : RPCpt+1]
-//line midl/parse.y:628
+//line midl/parse.y:629
 		{
 			RPCVAL.Attr = RPCDollar[2].Attr
 		}
 	case 35:
 		RPCDollar = RPCS[RPCpt-1 : RPCpt+1]
-//line midl/parse.y:634
+//line midl/parse.y:635
 		{
 			switch RPCDollar[1].AttrType.Type {
 			case DEFAULT:
@@ -1550,7 +1551,7 @@ RPCdefault:
 		}
 	case 36:
 		RPCDollar = RPCS[RPCpt-3 : RPCpt+1]
-//line midl/parse.y:643
+//line midl/parse.y:644
 		{
 			switch RPCDollar[3].AttrType.Type {
 			case DEFAULT:
@@ -1561,19 +1562,19 @@ RPCdefault:
 		}
 	case 37:
 		RPCDollar = RPCS[RPCpt-1 : RPCpt+1]
-//line midl/parse.y:655
+//line midl/parse.y:656
 		{
 			RPCVAL.AttrType = pAttrType{DEFAULT, pAttr{}}
 		}
 	case 38:
 		RPCDollar = RPCS[RPCpt-1 : RPCpt+1]
-//line midl/parse.y:659
+//line midl/parse.y:660
 		{
 			RPCVAL.AttrType = pAttrType{SOURCE, pAttr{}}
 		}
 	case 39:
 		RPCDollar = RPCS[RPCpt-4 : RPCpt+1]
-//line midl/parse.y:665
+//line midl/parse.y:666
 		{
 			RPCVAL.DispatchInterface = DispatchInterface{Name: RPCDollar[1].DispatchInterface.Name, Attrs: RPCDollar[1].DispatchInterface.Attrs, Body: RPCDollar[3].DispatchInterfaceBody}
 			for i := range RPCDollar[3].DispatchInterfaceBody.Methods {
@@ -1582,19 +1583,19 @@ RPCdefault:
 		}
 	case 40:
 		RPCDollar = RPCS[RPCpt-3 : RPCpt+1]
-//line midl/parse.y:674
+//line midl/parse.y:675
 		{
 			RPCVAL.DispatchInterface = DispatchInterface{Attrs: RPCDollar[1].Attr.DispatchInterface(), Name: RPCDollar[3].Ident}
 		}
 	case 41:
 		RPCDollar = RPCS[RPCpt-1 : RPCpt+1]
-//line midl/parse.y:680
+//line midl/parse.y:681
 		{
 			RPCVAL.DispatchInterfaceBody = RPCDollar[1].DispatchInterfaceBody
 		}
 	case 42:
 		RPCDollar = RPCS[RPCpt-2 : RPCpt+1]
-//line midl/parse.y:684
+//line midl/parse.y:685
 		{
 			if len(RPCDollar[2].DispatchInterfaceBody.Properties) > 0 {
 				RPCVAL.DispatchInterfaceBody.Properties = append(RPCVAL.DispatchInterfaceBody.Properties, RPCDollar[2].DispatchInterfaceBody.Properties...)
@@ -1605,159 +1606,159 @@ RPCdefault:
 		}
 	case 43:
 		RPCDollar = RPCS[RPCpt-3 : RPCpt+1]
-//line midl/parse.y:695
+//line midl/parse.y:696
 		{
 			RPCVAL.DispatchInterfaceBody = DispatchInterfaceBody{Properties: RPCDollar[3].Fields}
 		}
 	case 44:
 		RPCDollar = RPCS[RPCpt-3 : RPCpt+1]
-//line midl/parse.y:699
+//line midl/parse.y:700
 		{
 			RPCVAL.DispatchInterfaceBody = DispatchInterfaceBody{Methods: RPCDollar[3].Operations}
 		}
 	case 45:
 		RPCDollar = RPCS[RPCpt-0 : RPCpt+1]
-//line midl/parse.y:705
+//line midl/parse.y:706
 		{
 			RPCVAL.Fields = nil
 		}
 	case 46:
 		RPCDollar = RPCS[RPCpt-1 : RPCpt+1]
-//line midl/parse.y:709
+//line midl/parse.y:710
 		{
 			RPCVAL.Fields = RPCDollar[1].Fields
 		}
 	case 47:
 		RPCDollar = RPCS[RPCpt-2 : RPCpt+1]
-//line midl/parse.y:715
+//line midl/parse.y:716
 		{
 			RPCVAL.Operations = []*Operation{RPCDollar[1].Operation}
 		}
 	case 48:
 		RPCDollar = RPCS[RPCpt-3 : RPCpt+1]
-//line midl/parse.y:719
+//line midl/parse.y:720
 		{
 			RPCVAL.Operations = append(RPCVAL.Operations, RPCDollar[2].Operation)
 		}
 	case 49:
 		RPCDollar = RPCS[RPCpt-4 : RPCpt+1]
-//line midl/parse.y:725
+//line midl/parse.y:726
 		{
 			RPCVAL.Interface = Interface{Name: RPCDollar[1].Interface.Name, Attrs: RPCDollar[1].Interface.Attrs, Body: RPCDollar[3].InterfaceBody, BaseName: RPCDollar[1].Interface.BaseName}
 		}
 	case 50:
 		RPCDollar = RPCS[RPCpt-1 : RPCpt+1]
-//line midl/parse.y:729
+//line midl/parse.y:730
 		{
 			RPCVAL.Interface = Interface{Name: RPCDollar[1].Interface.Name, Attrs: RPCDollar[1].Interface.Attrs, BaseName: RPCDollar[1].Interface.BaseName, ForwardDeclarator: true}
 		}
 	case 51:
 		RPCDollar = RPCS[RPCpt-3 : RPCpt+1]
-//line midl/parse.y:733
+//line midl/parse.y:734
 		{
 			RPCVAL.Interface = Interface{Name: RPCDollar[1].Interface.Name, Attrs: RPCDollar[1].Interface.Attrs, BaseName: RPCDollar[1].Interface.BaseName}
 		}
 	case 52:
 		RPCDollar = RPCS[RPCpt-4 : RPCpt+1]
-//line midl/parse.y:739
+//line midl/parse.y:740
 		{
 			RPCVAL.Interface = Interface{Attrs: RPCDollar[1].Attr.Interface(), Name: RPCDollar[3].Ident, BaseName: RPCDollar[4].Ident}
 		}
 	case 53:
 		RPCDollar = RPCS[RPCpt-0 : RPCpt+1]
-//line midl/parse.y:745
+//line midl/parse.y:746
 		{
 			RPCVAL.Ident = ""
 		}
 	case 54:
 		RPCDollar = RPCS[RPCpt-2 : RPCpt+1]
-//line midl/parse.y:749
+//line midl/parse.y:750
 		{
 			RPCVAL.Ident = RPCDollar[2].Ident
 		}
 	case 55:
 		RPCDollar = RPCS[RPCpt-0 : RPCpt+1]
-//line midl/parse.y:755
+//line midl/parse.y:756
 		{
 			RPCVAL.Attr = pAttr{}
 		}
 	case 56:
 		RPCDollar = RPCS[RPCpt-1 : RPCpt+1]
-//line midl/parse.y:759
+//line midl/parse.y:760
 		{
 			RPCVAL.Attr = RPCDollar[1].Attr
 		}
 	case 57:
 		RPCDollar = RPCS[RPCpt-4 : RPCpt+1]
-//line midl/parse.y:765
+//line midl/parse.y:766
 		{
 			RPCVAL.Attr = RPCDollar[2].Attr
 		}
 	case 58:
 		RPCDollar = RPCS[RPCpt-5 : RPCpt+1]
-//line midl/parse.y:769
+//line midl/parse.y:770
 		{
 			RPCVAL.Attr = RPCVAL.Attr.Merge(RPCDollar[3].Attr)
 		}
 	case 59:
 		RPCDollar = RPCS[RPCpt-1 : RPCpt+1]
-//line midl/parse.y:775
+//line midl/parse.y:776
 		{
 			RPCVAL.Attr = RPCVAL.Attr.Set(RPCDollar[1].AttrType)
 		}
 	case 60:
 		RPCDollar = RPCS[RPCpt-3 : RPCpt+1]
-//line midl/parse.y:779
+//line midl/parse.y:780
 		{
 			RPCVAL.Attr = RPCVAL.Attr.Set(RPCDollar[3].AttrType)
 		}
 	case 61:
 		RPCDollar = RPCS[RPCpt-4 : RPCpt+1]
-//line midl/parse.y:786
+//line midl/parse.y:787
 		{
 			RPCVAL.AttrType = pAttrType{FIRST_IS, pAttr{FirstIs: RPCDollar[3].Exprs}}
 		}
 	case 62:
 		RPCDollar = RPCS[RPCpt-4 : RPCpt+1]
-//line midl/parse.y:790
+//line midl/parse.y:791
 		{
 			RPCVAL.AttrType = pAttrType{LAST_IS, pAttr{LastIs: RPCDollar[3].Exprs}}
 		}
 	case 63:
 		RPCDollar = RPCS[RPCpt-4 : RPCpt+1]
-//line midl/parse.y:794
+//line midl/parse.y:795
 		{
 			RPCVAL.AttrType = pAttrType{LENGTH_IS, pAttr{LengthIs: RPCDollar[3].Exprs}}
 		}
 	case 64:
 		RPCDollar = RPCS[RPCpt-4 : RPCpt+1]
-//line midl/parse.y:798
+//line midl/parse.y:799
 		{
 			RPCVAL.AttrType = pAttrType{MIN_IS, pAttr{MinIs: RPCDollar[3].Exprs}}
 		}
 	case 65:
 		RPCDollar = RPCS[RPCpt-4 : RPCpt+1]
-//line midl/parse.y:802
+//line midl/parse.y:803
 		{
 			RPCVAL.AttrType = pAttrType{MAX_IS, pAttr{MaxIs: RPCDollar[3].Exprs}}
 		}
 	case 66:
 		RPCDollar = RPCS[RPCpt-4 : RPCpt+1]
-//line midl/parse.y:806
+//line midl/parse.y:807
 		{
 			RPCVAL.AttrType = pAttrType{SIZE_IS, pAttr{SizeIs: RPCDollar[3].Exprs}}
 		}
 	case 67:
 		RPCDollar = RPCS[RPCpt-1 : RPCpt+1]
-//line midl/parse.y:810
+//line midl/parse.y:811
 		{
 			RPCVAL.AttrType = pAttrType{RPCDollar[1].Token, pAttr{}}
 		}
 	case 68:
 		RPCDollar = RPCS[RPCpt-4 : RPCpt+1]
-//line midl/parse.y:814
+//line midl/parse.y:815
 		{
-			if RPCDollar[3].Expr.Empty() {
+			if RPCDollar[3].Expr.IsEmpty() {
 				RPCVAL.AttrType = pAttrType{GOEXT_DEFAULT_NULL, pAttr{DefaultNull: []Expr{}}}
 			} else {
 				RPCVAL.AttrType = pAttrType{GOEXT_DEFAULT_NULL, pAttr{DefaultNull: []Expr{RPCDollar[3].Expr}}}
@@ -1765,109 +1766,109 @@ RPCdefault:
 		}
 	case 69:
 		RPCDollar = RPCS[RPCpt-1 : RPCpt+1]
-//line midl/parse.y:822
+//line midl/parse.y:823
 		{
 			RPCVAL.AttrType = pAttrType{RPCDollar[1].Token, pAttr{}}
 		}
 	case 70:
 		RPCDollar = RPCS[RPCpt-4 : RPCpt+1]
-//line midl/parse.y:826
+//line midl/parse.y:827
 		{
 			RPCVAL.AttrType = pAttrType{RPCDollar[3].Token, pAttr{}}
 		}
 	case 71:
 		RPCDollar = RPCS[RPCpt-1 : RPCpt+1]
-//line midl/parse.y:830
+//line midl/parse.y:831
 		{
 			RPCVAL.AttrType = RPCDollar[1].AttrType
 		}
 	case 72:
 		RPCDollar = RPCS[RPCpt-1 : RPCpt+1]
-//line midl/parse.y:834
+//line midl/parse.y:835
 		{
 			RPCVAL.AttrType = pAttrType{IGNORE, pAttr{}}
 		}
 	case 73:
 		RPCDollar = RPCS[RPCpt-1 : RPCpt+1]
-//line midl/parse.y:838
+//line midl/parse.y:839
 		{
 			RPCVAL.AttrType = RPCDollar[1].AttrType
 		}
 	case 74:
 		RPCDollar = RPCS[RPCpt-4 : RPCpt+1]
-//line midl/parse.y:842
+//line midl/parse.y:843
 		{
 			RPCVAL.AttrType = pAttrType{TRANSMIT_AS, pAttr{TransmitAs: RPCDollar[3].Type}}
 		}
 	case 75:
 		RPCDollar = RPCS[RPCpt-1 : RPCpt+1]
-//line midl/parse.y:846
+//line midl/parse.y:847
 		{
 			RPCVAL.AttrType = pAttrType{SWITCH_TYPE, pAttr{SwitchType: RPCDollar[1].Type}}
 		}
 	case 76:
 		RPCDollar = RPCS[RPCpt-1 : RPCpt+1]
-//line midl/parse.y:850
+//line midl/parse.y:851
 		{
 			RPCVAL.AttrType = pAttrType{HANDLE, pAttr{}}
 		}
 	case 77:
 		RPCDollar = RPCS[RPCpt-1 : RPCpt+1]
-//line midl/parse.y:854
+//line midl/parse.y:855
 		{
 			RPCVAL.AttrType = pAttrType{IDEMPOTENT, pAttr{}}
 		}
 	case 78:
 		RPCDollar = RPCS[RPCpt-1 : RPCpt+1]
-//line midl/parse.y:858
+//line midl/parse.y:859
 		{
 			RPCVAL.AttrType = pAttrType{BROADCAST, pAttr{}}
 		}
 	case 79:
 		RPCDollar = RPCS[RPCpt-1 : RPCpt+1]
-//line midl/parse.y:862
+//line midl/parse.y:863
 		{
 			RPCVAL.AttrType = pAttrType{MAYBE, pAttr{}}
 		}
 	case 80:
 		RPCDollar = RPCS[RPCpt-1 : RPCpt+1]
-//line midl/parse.y:866
+//line midl/parse.y:867
 		{
 			RPCVAL.AttrType = pAttrType{REFLECT_DELETIONS, pAttr{}}
 		}
 	case 81:
 		RPCDollar = RPCS[RPCpt-1 : RPCpt+1]
-//line midl/parse.y:870
+//line midl/parse.y:871
 		{
 			RPCVAL.AttrType = pAttrType{UUID, pAttr{UUID: RPCDollar[1].UUID}}
 		}
 	case 82:
 		RPCDollar = RPCS[RPCpt-4 : RPCpt+1]
-//line midl/parse.y:874
+//line midl/parse.y:875
 		{
 			RPCVAL.AttrType = pAttrType{VERSION, pAttr{Version: RPCDollar[3].Version}}
 		}
 	case 83:
 		RPCDollar = RPCS[RPCpt-4 : RPCpt+1]
-//line midl/parse.y:878
+//line midl/parse.y:879
 		{
 			RPCVAL.AttrType = pAttrType{ENDPOINT, pAttr{Endpoints: RPCDollar[3].Strings}}
 		}
 	case 84:
 		RPCDollar = RPCS[RPCpt-4 : RPCpt+1]
-//line midl/parse.y:882
+//line midl/parse.y:883
 		{
 			RPCVAL.AttrType = pAttrType{EXCEPTIONS, pAttr{Exceptions: RPCDollar[3].Strings}}
 		}
 	case 85:
 		RPCDollar = RPCS[RPCpt-1 : RPCpt+1]
-//line midl/parse.y:886
+//line midl/parse.y:887
 		{
 			RPCVAL.AttrType = pAttrType{LOCAL, pAttr{}}
 		}
 	case 86:
 		RPCDollar = RPCS[RPCpt-4 : RPCpt+1]
-//line midl/parse.y:890
+//line midl/parse.y:891
 		{
 			switch RPCDollar[3].Token {
 			case POINTER_PTR:
@@ -1880,110 +1881,110 @@ RPCdefault:
 		}
 	case 87:
 		RPCDollar = RPCS[RPCpt-1 : RPCpt+1]
-//line midl/parse.y:901
+//line midl/parse.y:902
 		{
 			RPCVAL.AttrType = pAttrType{V1_ENUM, pAttr{}}
 		}
 	case 88:
 		RPCDollar = RPCS[RPCpt-1 : RPCpt+1]
-//line midl/parse.y:905
+//line midl/parse.y:906
 		{
 			RPCVAL.AttrType = pAttrType{MS_UNION, pAttr{}}
 		}
 	case 89:
 		RPCDollar = RPCS[RPCpt-1 : RPCpt+1]
-//line midl/parse.y:909
+//line midl/parse.y:910
 		{
 			RPCVAL.AttrType = RPCDollar[1].AttrType
 		}
 	case 90:
 		RPCDollar = RPCS[RPCpt-1 : RPCpt+1]
-//line midl/parse.y:913
+//line midl/parse.y:914
 		{
 			RPCVAL.AttrType = pAttrType{DISABLE_CONSISTENCY_CHECK, pAttr{}}
 		}
 	case 91:
 		RPCDollar = RPCS[RPCpt-1 : RPCpt+1]
-//line midl/parse.y:917
+//line midl/parse.y:918
 		{
 			RPCVAL.AttrType = pAttrType{OBJECT, pAttr{}}
 		}
 	case 92:
 		RPCDollar = RPCS[RPCpt-1 : RPCpt+1]
-//line midl/parse.y:921
+//line midl/parse.y:922
 		{
 			RPCVAL.AttrType = pAttrType{CALLBACK, pAttr{}}
 		}
 	case 93:
 		RPCDollar = RPCS[RPCpt-1 : RPCpt+1]
-//line midl/parse.y:925
+//line midl/parse.y:926
 		{
 			RPCVAL.AttrType = pAttrType{RETVAL, pAttr{}}
 		}
 	case 94:
 		RPCDollar = RPCS[RPCpt-4 : RPCpt+1]
-//line midl/parse.y:929
+//line midl/parse.y:930
 		{
 			RPCVAL.AttrType = pAttrType{IID_IS, pAttr{IIDIs: RPCDollar[3].Expr}}
 		}
 	case 95:
 		RPCDollar = RPCS[RPCpt-4 : RPCpt+1]
-//line midl/parse.y:933
+//line midl/parse.y:934
 		{
 			RPCVAL.AttrType = pAttrType{HELP_STRING, pAttr{HelpString: RPCDollar[3].String}}
 		}
 	case 96:
 		RPCDollar = RPCS[RPCpt-4 : RPCpt+1]
-//line midl/parse.y:937
+//line midl/parse.y:938
 		{
 			RPCVAL.AttrType = pAttrType{HELP_CONTEXT, pAttr{HelpContext: RPCDollar[3].String}}
 		}
 	case 97:
 		RPCDollar = RPCS[RPCpt-4 : RPCpt+1]
-//line midl/parse.y:941
+//line midl/parse.y:942
 		{
 			RPCVAL.AttrType = pAttrType{DLLNAME, pAttr{DLLName: RPCDollar[3].String}}
 		}
 	case 98:
 		RPCDollar = RPCS[RPCpt-4 : RPCpt+1]
-//line midl/parse.y:945
+//line midl/parse.y:946
 		{
 			RPCVAL.AttrType = pAttrType{DOC_STRING, pAttr{DocString: RPCDollar[3].String}}
 		}
 	case 99:
 		RPCDollar = RPCS[RPCpt-1 : RPCpt+1]
-//line midl/parse.y:949
+//line midl/parse.y:950
 		{
 			RPCVAL.AttrType = pAttrType{DUAL, pAttr{}}
 		}
 	case 100:
 		RPCDollar = RPCS[RPCpt-1 : RPCpt+1]
-//line midl/parse.y:953
+//line midl/parse.y:954
 		{
 			RPCVAL.AttrType = pAttrType{PROPGET, pAttr{}}
 		}
 	case 101:
 		RPCDollar = RPCS[RPCpt-1 : RPCpt+1]
-//line midl/parse.y:957
+//line midl/parse.y:958
 		{
 			RPCVAL.AttrType = pAttrType{PROPPUT, pAttr{}}
 		}
 	case 102:
 		RPCDollar = RPCS[RPCpt-1 : RPCpt+1]
-//line midl/parse.y:961
+//line midl/parse.y:962
 		{
 			RPCVAL.AttrType = pAttrType{PROPPUTREF, pAttr{}}
 		}
 	case 103:
 		RPCDollar = RPCS[RPCpt-4 : RPCpt+1]
-//line midl/parse.y:965
+//line midl/parse.y:966
 		{
-			val, ok := RPCDollar[3].Expr.Eval(RPClex.(ExprStore))
-			if !ok {
-				RPClex.Error("cannot eval ID expression")
+			val, err := RPCDollar[3].Expr.Eval(RPClex.(expr.Env))
+			if err != nil {
+				RPClex.Error("cannot eval ID expression: " + err.Error())
 				return 0
 			}
-			if _, ok = val.BigInt(); !ok {
+			if _, ok := val.Int(); !ok {
 				RPClex.Error("cannot eval ID expression")
 				return 0
 			}
@@ -1991,96 +1992,96 @@ RPCdefault:
 		}
 	case 104:
 		RPCDollar = RPCS[RPCpt-1 : RPCpt+1]
-//line midl/parse.y:978
+//line midl/parse.y:979
 		{
 			RPCVAL.AttrType = pAttrType{HIDDEN, pAttr{}}
 		}
 	case 105:
 		RPCDollar = RPCS[RPCpt-1 : RPCpt+1]
-//line midl/parse.y:982
+//line midl/parse.y:983
 		{
 			RPCVAL.AttrType = pAttrType{NONEXTENSIBLE, pAttr{}}
 		}
 	case 106:
 		RPCDollar = RPCS[RPCpt-1 : RPCpt+1]
-//line midl/parse.y:986
+//line midl/parse.y:987
 		{
 			RPCVAL.AttrType = pAttrType{RESTRICTED, pAttr{}}
 		}
 	case 107:
 		RPCDollar = RPCS[RPCpt-4 : RPCpt+1]
-//line midl/parse.y:990
+//line midl/parse.y:991
 		{
-			exp, ok := RPCDollar[3].Expr.Eval(RPClex.(ExprStore))
-			if !ok {
-				RPClex.Error("cannot evaluate default value")
+			exp, err := RPCDollar[3].Expr.Eval(RPClex.(expr.Env))
+			if err != nil {
+				RPClex.Error("cannot evaluate default value: " + err.Error())
 				return 0
 			}
 			RPCVAL.AttrType = pAttrType{DEFAULT_VALUE, pAttr{DefaultValue: exp}}
 		}
 	case 108:
 		RPCDollar = RPCS[RPCpt-1 : RPCpt+1]
-//line midl/parse.y:999
+//line midl/parse.y:1000
 		{
 			RPCVAL.AttrType = pAttrType{ODL, pAttr{}}
 		}
 	case 109:
 		RPCDollar = RPCS[RPCpt-1 : RPCpt+1]
-//line midl/parse.y:1003
+//line midl/parse.y:1004
 		{
 			RPCVAL.AttrType = pAttrType{OLEAUTOMATION, pAttr{}}
 		}
 	case 110:
 		RPCDollar = RPCS[RPCpt-1 : RPCpt+1]
-//line midl/parse.y:1007
+//line midl/parse.y:1008
 		{
 			RPCVAL.AttrType = pAttrType{OPTIONAL, pAttr{}}
 		}
 	case 111:
 		RPCDollar = RPCS[RPCpt-1 : RPCpt+1]
-//line midl/parse.y:1011
+//line midl/parse.y:1012
 		{
 			RPCVAL.AttrType = pAttrType{APPOBJECT, pAttr{}}
 		}
 	case 112:
 		RPCDollar = RPCS[RPCpt-4 : RPCpt+1]
-//line midl/parse.y:1015
+//line midl/parse.y:1016
 		{
 			RPCVAL.AttrType = pAttrType{ANNOTATION, pAttr{Annotation: RPCDollar[3].String}}
 		}
 	case 113:
 		RPCDollar = RPCS[RPCpt-4 : RPCpt+1]
-//line midl/parse.y:1019
+//line midl/parse.y:1020
 		{
 			RPCVAL.AttrType = pAttrType{CALL_AS, pAttr{CallAs: RPCDollar[3].Ident}}
 		}
 	case 114:
 		RPCDollar = RPCS[RPCpt-4 : RPCpt+1]
-//line midl/parse.y:1023
+//line midl/parse.y:1024
 		{
 			RPCVAL.AttrType = pAttrType{WIRE_MARSHAL, pAttr{WireMarshal: RPCDollar[3].Ident}}
 		}
 	case 115:
 		RPCDollar = RPCS[RPCpt-1 : RPCpt+1]
-//line midl/parse.y:1027
+//line midl/parse.y:1028
 		{
 			RPCVAL.AttrType = pAttrType{PUBLIC, pAttr{}}
 		}
 	case 116:
 		RPCDollar = RPCS[RPCpt-4 : RPCpt+1]
-//line midl/parse.y:1031
+//line midl/parse.y:1032
 		{
 			RPCVAL.AttrType = pAttrType{SAFEARRAY, pAttr{Safearray: RPCDollar[3].Type}}
 		}
 	case 117:
 		RPCDollar = RPCS[RPCpt-4 : RPCpt+1]
-//line midl/parse.y:1035
+//line midl/parse.y:1036
 		{
 			RPCVAL.AttrType = pAttrType{PAD, pAttr{Pad: RPCDollar[3].Int.Uint64()}}
 		}
 	case 118:
 		RPCDollar = RPCS[RPCpt-4 : RPCpt+1]
-//line midl/parse.y:1039
+//line midl/parse.y:1040
 		{
 			for i := range RPCDollar[3].Fields {
 				RPCDollar[3].Fields[i].Attrs.IsLayout = true
@@ -2089,61 +2090,61 @@ RPCdefault:
 		}
 	case 119:
 		RPCDollar = RPCS[RPCpt-4 : RPCpt+1]
-//line midl/parse.y:1046
+//line midl/parse.y:1047
 		{
 			RPCVAL.AttrType = pAttrType{GOEXT_NO_SIZE_LIMIT, pAttr{NoSizeLimit: true}}
 		}
 	case 120:
 		RPCDollar = RPCS[RPCpt-1 : RPCpt+1]
-//line midl/parse.y:1052
+//line midl/parse.y:1053
 		{
 			RPCVAL.Version = &Version{Major: uint16(RPCDollar[1].Int.Uint64())}
 		}
 	case 121:
 		RPCDollar = RPCS[RPCpt-3 : RPCpt+1]
-//line midl/parse.y:1056
+//line midl/parse.y:1057
 		{
 			RPCVAL.Version = &Version{Major: uint16(RPCDollar[1].Int.Uint64()), Minor: uint16(RPCDollar[3].Int.Uint64())}
 		}
 	case 122:
 		RPCDollar = RPCS[RPCpt-1 : RPCpt+1]
-//line midl/parse.y:1062
+//line midl/parse.y:1063
 		{
 			RPCVAL.Strings = []string{RPCDollar[1].String}
 		}
 	case 123:
 		RPCDollar = RPCS[RPCpt-3 : RPCpt+1]
-//line midl/parse.y:1066
+//line midl/parse.y:1067
 		{
 			RPCVAL.Strings = append(RPCVAL.Strings, RPCDollar[3].String)
 		}
 	case 124:
 		RPCDollar = RPCS[RPCpt-1 : RPCpt+1]
-//line midl/parse.y:1072
+//line midl/parse.y:1073
 		{
 			RPCVAL.Strings = []string{RPCDollar[1].String}
 		}
 	case 125:
 		RPCDollar = RPCS[RPCpt-3 : RPCpt+1]
-//line midl/parse.y:1076
+//line midl/parse.y:1077
 		{
 			RPCVAL.Strings = append(RPCVAL.Strings, RPCDollar[3].String)
 		}
 	case 126:
 		RPCDollar = RPCS[RPCpt-1 : RPCpt+1]
-//line midl/parse.y:1082
+//line midl/parse.y:1083
 		{
 			RPCVAL.String = RPCDollar[1].String
 		}
 	case 127:
 		RPCDollar = RPCS[RPCpt-1 : RPCpt+1]
-//line midl/parse.y:1088
+//line midl/parse.y:1089
 		{
 			RPCVAL.String = RPCDollar[1].Ident
 		}
 	case 128:
 		RPCDollar = RPCS[RPCpt-2 : RPCpt+1]
-//line midl/parse.y:1094
+//line midl/parse.y:1095
 		{
 			RPCVAL.InterfaceBody = InterfaceBody{Imports: RPCDollar[1].Strings, Export: RPCDollar[2].InterfaceBody.Export}
 			for _, o := range RPCDollar[2].InterfaceBody.Operations {
@@ -2158,7 +2159,7 @@ RPCdefault:
 		}
 	case 129:
 		RPCDollar = RPCS[RPCpt-1 : RPCpt+1]
-//line midl/parse.y:1109
+//line midl/parse.y:1110
 		{
 			RPCVAL.InterfaceBody = RPCDollar[1].InterfaceBody
 			export := make([]*Export, len(RPCDollar[1].InterfaceBody.Export))
@@ -2171,7 +2172,7 @@ RPCdefault:
 		}
 	case 130:
 		RPCDollar = RPCS[RPCpt-2 : RPCpt+1]
-//line midl/parse.y:1120
+//line midl/parse.y:1121
 		{
 			if len(RPCDollar[2].InterfaceBody.Export) > 0 {
 				if RPCVAL.InterfaceBody.Export == nil {
@@ -2192,19 +2193,19 @@ RPCdefault:
 		}
 	case 131:
 		RPCDollar = RPCS[RPCpt-0 : RPCpt+1]
-//line midl/parse.y:1141
+//line midl/parse.y:1142
 		{
 			RPCVAL.Strings = []string{}
 		}
 	case 132:
 		RPCDollar = RPCS[RPCpt-2 : RPCpt+1]
-//line midl/parse.y:1145
+//line midl/parse.y:1146
 		{
 			RPCVAL.Strings = append(RPCDollar[1].Strings, RPCDollar[2].Strings...)
 		}
 	case 133:
 		RPCDollar = RPCS[RPCpt-3 : RPCpt+1]
-//line midl/parse.y:1151
+//line midl/parse.y:1152
 		{
 			RPCVAL.Strings = RPCDollar[2].Strings
 			// XXX: load import files.
@@ -2217,7 +2218,7 @@ RPCdefault:
 		}
 	case 134:
 		RPCDollar = RPCS[RPCpt-1 : RPCpt+1]
-//line midl/parse.y:1163
+//line midl/parse.y:1164
 		{
 			RPCVAL.InterfaceBody = InterfaceBody{Export: make(map[string]*Export)}
 			for _, e := range RPCDollar[1].Export {
@@ -2227,57 +2228,57 @@ RPCdefault:
 		}
 	case 135:
 		RPCDollar = RPCS[RPCpt-2 : RPCpt+1]
-//line midl/parse.y:1171
+//line midl/parse.y:1172
 		{
 			RPCVAL.InterfaceBody = InterfaceBody{Operations: []*Operation{RPCDollar[1].Operation}}
 		}
 	case 136:
 		RPCDollar = RPCS[RPCpt-2 : RPCpt+1]
-//line midl/parse.y:1177
+//line midl/parse.y:1178
 		{
 			RPCVAL.Export = RPCDollar[1].Typedef.pToExport_()
 		}
 	case 137:
 		RPCDollar = RPCS[RPCpt-2 : RPCpt+1]
-//line midl/parse.y:1181
+//line midl/parse.y:1182
 		{
 			RPCVAL.Export = []*Export{&Export{Name: RPCDollar[1].Const.Name, Const: RPCDollar[1].Const}}
 		}
 	case 138:
 		RPCDollar = RPCS[RPCpt-1 : RPCpt+1]
-//line midl/parse.y:1185
+//line midl/parse.y:1186
 		{
 			RPCVAL.Export = RPCDollar[1].Export
 		}
 	case 139:
 		RPCDollar = RPCS[RPCpt-2 : RPCpt+1]
-//line midl/parse.y:1189
+//line midl/parse.y:1190
 		{
 			RPCVAL.Export = []*Export{&Export{Name: RPCDollar[1].Type.TypeName(), Type: RPCDollar[1].Type}}
 		}
 	case 140:
 		RPCDollar = RPCS[RPCpt-1 : RPCpt+1]
-//line midl/parse.y:1195
+//line midl/parse.y:1196
 		{
 			RPCVAL.Strings = []string{RPCDollar[1].String}
 		}
 	case 141:
 		RPCDollar = RPCS[RPCpt-3 : RPCpt+1]
-//line midl/parse.y:1199
+//line midl/parse.y:1200
 		{
 			RPCVAL.Strings = append(RPCVAL.Strings, RPCDollar[3].String)
 		}
 	case 142:
 		RPCDollar = RPCS[RPCpt-1 : RPCpt+1]
-//line midl/parse.y:1205
+//line midl/parse.y:1206
 		{
 			RPCVAL.String = RPCDollar[1].String
 		}
 	case 143:
 		RPCDollar = RPCS[RPCpt-5 : RPCpt+1]
-//line midl/parse.y:1211
+//line midl/parse.y:1212
 		{
-			exp, err := RPCDollar[5].Expr.Coerce(RPCDollar[2].Kind)
+			exp, err := Coerce(RPCDollar[5].Expr, RPCDollar[2].Kind)
 			if err != nil {
 				RPClex.Error(err.Error())
 				return 0
@@ -2286,17 +2287,15 @@ RPCdefault:
 		}
 	case 144:
 		RPCDollar = RPCS[RPCpt-3 : RPCpt+1]
-//line midl/parse.y:1222
+//line midl/parse.y:1223
 		{
-			switch v := RPCDollar[3].Expr.Value.(type) {
-			case *big.Int:
+			if _, ok := RPCDollar[3].Expr.Int(); ok {
 				RPCVAL.Export = []*Export{&Export{Name: RPCDollar[2].Ident, Const: &Const{Type: TypeInt64, Name: RPCDollar[2].Ident, Value: RPCDollar[3].Expr}}}
-			case string:
-				if RPCDollar[3].Expr.CanEval() {
-					RPCVAL.Export = []*Export{&Export{Name: RPCDollar[2].Ident, Const: &Const{Type: TypeString, Name: RPCDollar[2].Ident, Value: RPCDollar[3].Expr}}}
-					break
-				}
-				ref := &Type{Kind: TypeRef, Name: v}
+			} else if _, ok := RPCDollar[3].Expr.Str(); ok {
+				RPCVAL.Export = []*Export{&Export{Name: RPCDollar[2].Ident, Const: &Const{Type: TypeString, Name: RPCDollar[2].Ident, Value: RPCDollar[3].Expr}}}
+			} else if name, ok := RPCDollar[3].Expr.IdentName(); ok {
+				// the define refers to a type that is not a known constant.
+				ref := &Type{Kind: TypeRef, Name: name}
 				decl := &Type{Kind: TypeAttribute, Attrs: &TypeAttr{Alias: RPCDollar[2].Ident}}
 				typ, ok := lookupType(RPClex, ref.Name)
 				if !ok {
@@ -2309,15 +2308,15 @@ RPCdefault:
 				RPCVAL.Export = []*Export{&Export{Name: RPCDollar[2].Ident, Type: decl}}
 
 				// FIXME: dnsp.idl PRAGMA Types.
-				// $$ = []*Export{&Export{Name: $2, Type: &Type{Kind: TypeRef, Name: v}}}
-			default:
+				// $$ = []*Export{&Export{Name: $2, Type: &Type{Kind: TypeRef, Name: name}}}
+			} else {
 				RPClex.Error("invalid #define statement")
 				return 0
 			}
 		}
 	case 145:
 		RPCDollar = RPCS[RPCpt-4 : RPCpt+1]
-//line midl/parse.y:1251
+//line midl/parse.y:1250
 		{
 			// MIDL emits cpp_quote(...) content verbatim into the generated C header and does
 			// NOT parse it as IDL. We only re-lex preprocessor directives (e.g. cpp_quote("#define
@@ -2330,13 +2329,13 @@ RPCdefault:
 		}
 	case 146:
 		RPCDollar = RPCS[RPCpt-1 : RPCpt+1]
-//line midl/parse.y:1264
+//line midl/parse.y:1263
 		{
 			RPCVAL.Kind = RPCDollar[1].Kind
 		}
 	case 147:
 		RPCDollar = RPCS[RPCpt-1 : RPCpt+1]
-//line midl/parse.y:1268
+//line midl/parse.y:1267
 		{
 			typ, ok := lookupType(RPClex, RPCDollar[1].Ident)
 			if !ok {
@@ -2372,448 +2371,448 @@ RPCdefault:
 		}
 	case 148:
 		RPCDollar = RPCS[RPCpt-1 : RPCpt+1]
-//line midl/parse.y:1302
+//line midl/parse.y:1301
 		{
 			RPCVAL.Kind = TypeChar
 		}
 	case 149:
 		RPCDollar = RPCS[RPCpt-2 : RPCpt+1]
-//line midl/parse.y:1306
+//line midl/parse.y:1305
 		{
 			RPCVAL.Kind = TypeUChar
 		}
 	case 150:
 		RPCDollar = RPCS[RPCpt-1 : RPCpt+1]
-//line midl/parse.y:1310
+//line midl/parse.y:1309
 		{
 			RPCVAL.Kind = TypeBoolean
 		}
 	case 151:
 		RPCDollar = RPCS[RPCpt-2 : RPCpt+1]
-//line midl/parse.y:1314
+//line midl/parse.y:1313
 		{
 			RPCVAL.Kind = TypeVoid
 		}
 	case 152:
 		RPCDollar = RPCS[RPCpt-2 : RPCpt+1]
-//line midl/parse.y:1318
+//line midl/parse.y:1317
 		{
 			RPCVAL.Kind = TypeString
 		}
 	case 153:
 		RPCDollar = RPCS[RPCpt-1 : RPCpt+1]
-//line midl/parse.y:1324
+//line midl/parse.y:1323
 		{
 			RPCVAL.Expr = RPCDollar[1].Expr
 		}
 	case 154:
 		RPCDollar = RPCS[RPCpt-1 : RPCpt+1]
-//line midl/parse.y:1328
+//line midl/parse.y:1327
 		{
-			RPCVAL.Expr = NewValue(RPCDollar[1].String)
+			RPCVAL.Expr = expr.String(RPCDollar[1].String)
 		}
 	case 155:
 		RPCDollar = RPCS[RPCpt-1 : RPCpt+1]
-//line midl/parse.y:1332
+//line midl/parse.y:1331
 		{
-			RPCVAL.Expr = NewValue(RPCDollar[1].Char)
+			RPCVAL.Expr = expr.Char(RPCDollar[1].Char)
 		}
 	case 156:
 		RPCDollar = RPCS[RPCpt-1 : RPCpt+1]
-//line midl/parse.y:1336
+//line midl/parse.y:1335
 		{
-			RPCVAL.Expr = NewValue(nil)
+			RPCVAL.Expr = expr.Null()
 		}
 	case 157:
 		RPCDollar = RPCS[RPCpt-1 : RPCpt+1]
-//line midl/parse.y:1340
+//line midl/parse.y:1339
 		{
-			RPCVAL.Expr = NewValue(true)
+			RPCVAL.Expr = expr.Bool(true)
 		}
 	case 158:
 		RPCDollar = RPCS[RPCpt-1 : RPCpt+1]
-//line midl/parse.y:1344
+//line midl/parse.y:1343
 		{
-			RPCVAL.Expr = NewValue(false)
+			RPCVAL.Expr = expr.Bool(false)
 		}
 	case 159:
 		RPCDollar = RPCS[RPCpt-1 : RPCpt+1]
-//line midl/parse.y:1350
+//line midl/parse.y:1349
 		{
 			RPCVAL.Expr = RPCDollar[1].Expr
 		}
 	case 160:
 		RPCDollar = RPCS[RPCpt-1 : RPCpt+1]
-//line midl/parse.y:1356
+//line midl/parse.y:1355
 		{
 			RPCVAL.Expr = RPCDollar[1].Expr
 		}
 	case 161:
 		RPCDollar = RPCS[RPCpt-5 : RPCpt+1]
-//line midl/parse.y:1360
+//line midl/parse.y:1359
 		{
-			exp, ok := RPCDollar[1].Expr.Ter(RPCDollar[3].Expr, RPCDollar[5].Expr)
-			if !ok {
-				RPClex.Error("cannot evaluate ternary expression")
+			exp, err := expr.Ternary(RPCDollar[1].Expr, RPCDollar[3].Expr, RPCDollar[5].Expr)
+			if err != nil {
+				RPClex.Error("cannot evaluate ternary expression: " + err.Error())
 				return 0
 			}
 			RPCVAL.Expr = exp
 		}
 	case 162:
 		RPCDollar = RPCS[RPCpt-1 : RPCpt+1]
-//line midl/parse.y:1371
+//line midl/parse.y:1370
 		{
 			RPCVAL.Expr = RPCDollar[1].Expr
 		}
 	case 163:
 		RPCDollar = RPCS[RPCpt-3 : RPCpt+1]
-//line midl/parse.y:1375
+//line midl/parse.y:1374
 		{
-			exp, ok := RPCDollar[1].Expr.LogicalOr(RPCDollar[3].Expr)
-			if !ok {
-				RPClex.Error("cannot evaluate l-or expression")
+			exp, err := expr.Binary(expr.OpLogicalOr, RPCDollar[1].Expr, RPCDollar[3].Expr)
+			if err != nil {
+				RPClex.Error("cannot evaluate l-or expression: " + err.Error())
 				return 0
 			}
 			RPCVAL.Expr = exp
 		}
 	case 164:
 		RPCDollar = RPCS[RPCpt-1 : RPCpt+1]
-//line midl/parse.y:1386
+//line midl/parse.y:1385
 		{
 			RPCVAL.Expr = RPCDollar[1].Expr
 		}
 	case 165:
 		RPCDollar = RPCS[RPCpt-3 : RPCpt+1]
-//line midl/parse.y:1390
+//line midl/parse.y:1389
 		{
-			exp, ok := RPCDollar[1].Expr.LogicalAnd(RPCDollar[3].Expr)
-			if !ok {
-				RPClex.Error("cannot evaluate l-and expression")
+			exp, err := expr.Binary(expr.OpLogicalAnd, RPCDollar[1].Expr, RPCDollar[3].Expr)
+			if err != nil {
+				RPClex.Error("cannot evaluate l-and expression: " + err.Error())
 				return 0
 			}
 			RPCVAL.Expr = exp
 		}
 	case 166:
 		RPCDollar = RPCS[RPCpt-1 : RPCpt+1]
-//line midl/parse.y:1401
+//line midl/parse.y:1400
 		{
 			RPCVAL.Expr = RPCDollar[1].Expr
 		}
 	case 167:
 		RPCDollar = RPCS[RPCpt-3 : RPCpt+1]
-//line midl/parse.y:1405
+//line midl/parse.y:1404
 		{
-			exp, ok := RPCDollar[1].Expr.Or(RPCDollar[3].Expr)
-			if !ok {
-				RPClex.Error("cannot evaluate or expression")
+			exp, err := expr.Binary(expr.OpOr, RPCDollar[1].Expr, RPCDollar[3].Expr)
+			if err != nil {
+				RPClex.Error("cannot evaluate or expression: " + err.Error())
 				return 0
 			}
 			RPCVAL.Expr = exp
 		}
 	case 168:
 		RPCDollar = RPCS[RPCpt-1 : RPCpt+1]
-//line midl/parse.y:1416
+//line midl/parse.y:1415
 		{
 			RPCVAL.Expr = RPCDollar[1].Expr
 		}
 	case 169:
 		RPCDollar = RPCS[RPCpt-3 : RPCpt+1]
-//line midl/parse.y:1420
+//line midl/parse.y:1419
 		{
-			exp, ok := RPCDollar[1].Expr.Xor(RPCDollar[3].Expr)
-			if !ok {
-				RPClex.Error("cannot evaluate xor expression")
+			exp, err := expr.Binary(expr.OpXor, RPCDollar[1].Expr, RPCDollar[3].Expr)
+			if err != nil {
+				RPClex.Error("cannot evaluate xor expression: " + err.Error())
 				return 0
 			}
 			RPCVAL.Expr = exp
 		}
 	case 170:
 		RPCDollar = RPCS[RPCpt-1 : RPCpt+1]
-//line midl/parse.y:1431
+//line midl/parse.y:1430
 		{
 			RPCVAL.Expr = RPCDollar[1].Expr
 		}
 	case 171:
 		RPCDollar = RPCS[RPCpt-3 : RPCpt+1]
-//line midl/parse.y:1435
+//line midl/parse.y:1434
 		{
-			exp, ok := RPCDollar[1].Expr.And(RPCDollar[3].Expr)
-			if !ok {
-				RPClex.Error("cannot evaluate and expression")
+			exp, err := expr.Binary(expr.OpAnd, RPCDollar[1].Expr, RPCDollar[3].Expr)
+			if err != nil {
+				RPClex.Error("cannot evaluate and expression: " + err.Error())
 				return 0
 			}
 			RPCVAL.Expr = exp
 		}
 	case 172:
 		RPCDollar = RPCS[RPCpt-1 : RPCpt+1]
-//line midl/parse.y:1446
+//line midl/parse.y:1445
 		{
 			RPCVAL.Expr = RPCDollar[1].Expr
 		}
 	case 173:
 		RPCDollar = RPCS[RPCpt-3 : RPCpt+1]
-//line midl/parse.y:1450
+//line midl/parse.y:1449
 		{
-			exp, ok := RPCDollar[1].Expr.Eq(RPCDollar[3].Expr)
-			if !ok {
-				RPClex.Error("cannot evaluate eq expression")
+			exp, err := expr.Binary(expr.OpEq, RPCDollar[1].Expr, RPCDollar[3].Expr)
+			if err != nil {
+				RPClex.Error("cannot evaluate eq expression: " + err.Error())
 				return 0
 			}
 			RPCVAL.Expr = exp
 		}
 	case 174:
 		RPCDollar = RPCS[RPCpt-3 : RPCpt+1]
-//line midl/parse.y:1459
+//line midl/parse.y:1458
 		{
-			exp, ok := RPCDollar[1].Expr.Ne(RPCDollar[3].Expr)
-			if !ok {
-				RPClex.Error("cannot evaluate ne expression")
+			exp, err := expr.Binary(expr.OpNe, RPCDollar[1].Expr, RPCDollar[3].Expr)
+			if err != nil {
+				RPClex.Error("cannot evaluate ne expression: " + err.Error())
 				return 0
 			}
 			RPCVAL.Expr = exp
 		}
 	case 175:
 		RPCDollar = RPCS[RPCpt-1 : RPCpt+1]
-//line midl/parse.y:1470
+//line midl/parse.y:1469
 		{
 			RPCVAL.Expr = RPCDollar[1].Expr
 		}
 	case 176:
 		RPCDollar = RPCS[RPCpt-3 : RPCpt+1]
-//line midl/parse.y:1474
+//line midl/parse.y:1473
 		{
-			exp, ok := RPCDollar[1].Expr.Lt(RPCDollar[3].Expr)
-			if !ok {
-				RPClex.Error("cannot evaluate lt expression")
+			exp, err := expr.Binary(expr.OpLt, RPCDollar[1].Expr, RPCDollar[3].Expr)
+			if err != nil {
+				RPClex.Error("cannot evaluate lt expression: " + err.Error())
 				return 0
 			}
 			RPCVAL.Expr = exp
 		}
 	case 177:
 		RPCDollar = RPCS[RPCpt-3 : RPCpt+1]
-//line midl/parse.y:1483
+//line midl/parse.y:1482
 		{
-			exp, ok := RPCDollar[1].Expr.Gt(RPCDollar[3].Expr)
-			if !ok {
-				RPClex.Error("cannot evaluate gt expression")
+			exp, err := expr.Binary(expr.OpGt, RPCDollar[1].Expr, RPCDollar[3].Expr)
+			if err != nil {
+				RPClex.Error("cannot evaluate gt expression: " + err.Error())
 				return 0
 			}
 			RPCVAL.Expr = exp
 		}
 	case 178:
 		RPCDollar = RPCS[RPCpt-3 : RPCpt+1]
-//line midl/parse.y:1492
+//line midl/parse.y:1491
 		{
-			exp, ok := RPCDollar[1].Expr.Le(RPCDollar[3].Expr)
-			if !ok {
-				RPClex.Error("cannot evaluate le expression")
+			exp, err := expr.Binary(expr.OpLe, RPCDollar[1].Expr, RPCDollar[3].Expr)
+			if err != nil {
+				RPClex.Error("cannot evaluate le expression: " + err.Error())
 				return 0
 			}
 			RPCVAL.Expr = exp
 		}
 	case 179:
 		RPCDollar = RPCS[RPCpt-3 : RPCpt+1]
-//line midl/parse.y:1501
+//line midl/parse.y:1500
 		{
-			exp, ok := RPCDollar[1].Expr.Ge(RPCDollar[3].Expr)
-			if !ok {
-				RPClex.Error("cannot evaluate ge expression")
+			exp, err := expr.Binary(expr.OpGe, RPCDollar[1].Expr, RPCDollar[3].Expr)
+			if err != nil {
+				RPClex.Error("cannot evaluate ge expression: " + err.Error())
 				return 0
 			}
 			RPCVAL.Expr = exp
 		}
 	case 180:
 		RPCDollar = RPCS[RPCpt-1 : RPCpt+1]
-//line midl/parse.y:1512
+//line midl/parse.y:1511
 		{
 			RPCVAL.Expr = RPCDollar[1].Expr
 		}
 	case 181:
 		RPCDollar = RPCS[RPCpt-3 : RPCpt+1]
-//line midl/parse.y:1516
+//line midl/parse.y:1515
 		{
-			exp, ok := RPCDollar[1].Expr.Lsh(RPCDollar[3].Expr)
-			if !ok {
-				RPClex.Error("cannot evaluate lsh expression")
+			exp, err := expr.Binary(expr.OpShl, RPCDollar[1].Expr, RPCDollar[3].Expr)
+			if err != nil {
+				RPClex.Error("cannot evaluate lsh expression: " + err.Error())
 				return 0
 			}
 			RPCVAL.Expr = exp
 		}
 	case 182:
 		RPCDollar = RPCS[RPCpt-3 : RPCpt+1]
-//line midl/parse.y:1525
+//line midl/parse.y:1524
 		{
-			exp, ok := RPCDollar[1].Expr.Rsh(RPCDollar[3].Expr)
-			if !ok {
-				RPClex.Error("cannot evaluate rsh expression")
+			exp, err := expr.Binary(expr.OpShr, RPCDollar[1].Expr, RPCDollar[3].Expr)
+			if err != nil {
+				RPClex.Error("cannot evaluate rsh expression: " + err.Error())
 				return 0
 			}
 			RPCVAL.Expr = exp
 		}
 	case 183:
 		RPCDollar = RPCS[RPCpt-1 : RPCpt+1]
-//line midl/parse.y:1536
+//line midl/parse.y:1535
 		{
 			RPCVAL.Expr = RPCDollar[1].Expr
 		}
 	case 184:
 		RPCDollar = RPCS[RPCpt-3 : RPCpt+1]
-//line midl/parse.y:1540
+//line midl/parse.y:1539
 		{
-			exp, ok := RPCDollar[1].Expr.Sub(RPCDollar[3].Expr)
-			if !ok {
-				RPClex.Error("cannot evaluate sub expression")
+			exp, err := expr.Binary(expr.OpSub, RPCDollar[1].Expr, RPCDollar[3].Expr)
+			if err != nil {
+				RPClex.Error("cannot evaluate sub expression: " + err.Error())
 				return 0
 			}
 			RPCVAL.Expr = exp
 		}
 	case 185:
 		RPCDollar = RPCS[RPCpt-3 : RPCpt+1]
-//line midl/parse.y:1549
+//line midl/parse.y:1548
 		{
-			exp, ok := RPCDollar[1].Expr.Add(RPCDollar[3].Expr)
-			if !ok {
-				RPClex.Error("cannot evaluate add expression")
+			exp, err := expr.Binary(expr.OpAdd, RPCDollar[1].Expr, RPCDollar[3].Expr)
+			if err != nil {
+				RPClex.Error("cannot evaluate add expression: " + err.Error())
 				return 0
 			}
 			RPCVAL.Expr = exp
 		}
 	case 186:
 		RPCDollar = RPCS[RPCpt-1 : RPCpt+1]
-//line midl/parse.y:1560
+//line midl/parse.y:1559
 		{
 			RPCVAL.Expr = RPCDollar[1].Expr
 		}
 	case 187:
 		RPCDollar = RPCS[RPCpt-3 : RPCpt+1]
-//line midl/parse.y:1564
+//line midl/parse.y:1563
 		{
-			exp, ok := RPCDollar[1].Expr.Mul(RPCDollar[3].Expr)
-			if !ok {
-				RPClex.Error("cannot evaluate mul expression")
+			exp, err := expr.Binary(expr.OpMul, RPCDollar[1].Expr, RPCDollar[3].Expr)
+			if err != nil {
+				RPClex.Error("cannot evaluate mul expression: " + err.Error())
 				return 0
 			}
 			RPCVAL.Expr = exp
 		}
 	case 188:
 		RPCDollar = RPCS[RPCpt-3 : RPCpt+1]
-//line midl/parse.y:1573
+//line midl/parse.y:1572
 		{
-			exp, ok := RPCDollar[1].Expr.Div(RPCDollar[3].Expr)
-			if !ok {
-				RPClex.Error("cannot evaluate div expression")
+			exp, err := expr.Binary(expr.OpDiv, RPCDollar[1].Expr, RPCDollar[3].Expr)
+			if err != nil {
+				RPClex.Error("cannot evaluate div expression: " + err.Error())
 				return 0
 			}
 			RPCVAL.Expr = exp
 		}
 	case 189:
 		RPCDollar = RPCS[RPCpt-3 : RPCpt+1]
-//line midl/parse.y:1582
+//line midl/parse.y:1581
 		{
-			exp, ok := RPCDollar[1].Expr.Rem(RPCDollar[3].Expr)
-			if !ok {
-				RPClex.Error("cannot evaluate rem expression")
+			exp, err := expr.Binary(expr.OpRem, RPCDollar[1].Expr, RPCDollar[3].Expr)
+			if err != nil {
+				RPClex.Error("cannot evaluate rem expression: " + err.Error())
 				return 0
 			}
 			RPCVAL.Expr = exp
 		}
 	case 190:
 		RPCDollar = RPCS[RPCpt-1 : RPCpt+1]
-//line midl/parse.y:1593
+//line midl/parse.y:1592
 		{
 			RPCVAL.Expr = RPCDollar[1].Expr
 		}
 	case 191:
 		RPCDollar = RPCS[RPCpt-2 : RPCpt+1]
-//line midl/parse.y:1597
+//line midl/parse.y:1596
 		{
-			exp, ok := RPCDollar[2].Expr.Positive()
-			if !ok {
-				RPClex.Error("cannot evaluate u'+' expression")
+			exp, err := expr.Unary(expr.OpPlus, RPCDollar[2].Expr)
+			if err != nil {
+				RPClex.Error("cannot evaluate u'+' expression: " + err.Error())
 				return 0
 			}
 			RPCVAL.Expr = exp
 		}
 	case 192:
 		RPCDollar = RPCS[RPCpt-2 : RPCpt+1]
-//line midl/parse.y:1606
+//line midl/parse.y:1605
 		{
-			exp, ok := RPCDollar[2].Expr.Negative()
-			if !ok {
-				RPClex.Error("cannot evaluate u'-' expression")
+			exp, err := expr.Unary(expr.OpNeg, RPCDollar[2].Expr)
+			if err != nil {
+				RPClex.Error("cannot evaluate u'-' expression: " + err.Error())
 				return 0
 			}
 			RPCVAL.Expr = exp
 		}
 	case 193:
 		RPCDollar = RPCS[RPCpt-2 : RPCpt+1]
-//line midl/parse.y:1615
+//line midl/parse.y:1614
 		{
-			exp, ok := RPCDollar[2].Expr.Neg()
-			if !ok {
-				RPClex.Error("cannot evaluate u'~' expression")
+			exp, err := expr.Unary(expr.OpBitNot, RPCDollar[2].Expr)
+			if err != nil {
+				RPClex.Error("cannot evaluate u'~' expression: " + err.Error())
 				return 0
 			}
 			RPCVAL.Expr = exp
 		}
 	case 194:
 		RPCDollar = RPCS[RPCpt-2 : RPCpt+1]
-//line midl/parse.y:1624
+//line midl/parse.y:1623
 		{
-			exp, ok := RPCDollar[2].Expr.Not()
-			if !ok {
-				RPClex.Error("cannot evaluate u'!' expression")
+			exp, err := expr.Unary(expr.OpNot, RPCDollar[2].Expr)
+			if err != nil {
+				RPClex.Error("cannot evaluate u'!' expression: " + err.Error())
 				return 0
 			}
 			RPCVAL.Expr = exp
 		}
 	case 195:
 		RPCDollar = RPCS[RPCpt-1 : RPCpt+1]
-//line midl/parse.y:1635
+//line midl/parse.y:1634
 		{
-			RPCVAL.Expr = NewValue(RPCDollar[1].Int)
+			RPCVAL.Expr = expr.Int(RPCDollar[1].Int)
 		}
 	case 196:
 		RPCDollar = RPCS[RPCpt-4 : RPCpt+1]
-//line midl/parse.y:1639
+//line midl/parse.y:1638
 		{
 			sz := TypeSize(RPClex.(TypeStore), RPCDollar[3].Type)
 			if sz == 0 {
 				RPClex.Error(fmt.Sprintf("cannot determine size of type: %s (%s)", RPCDollar[3].Type.Name, RPCDollar[3].Type.Kind))
 				return 0
 			}
-			RPCVAL.Expr = NewValue(big.NewInt(int64(sz)))
+			RPCVAL.Expr = expr.Int64(int64(sz))
 		}
 	case 197:
 		RPCDollar = RPCS[RPCpt-1 : RPCpt+1]
-//line midl/parse.y:1648
+//line midl/parse.y:1647
 		{
 			if c, ok := lookupConst(RPClex, RPCDollar[1].Ident); !ok {
-				RPCVAL.Expr = NewIdent(RPCDollar[1].Ident)
+				RPCVAL.Expr = expr.Ident(RPCDollar[1].Ident)
 			} else {
 				RPCVAL.Expr = c.Value
 			}
 		}
 	case 198:
 		RPCDollar = RPCS[RPCpt-2 : RPCpt+1]
-//line midl/parse.y:1656
+//line midl/parse.y:1655
 		{
-			exp, ok := NewIdent(RPCDollar[2].Ident).Ptr()
-			if !ok {
-				RPClex.Error("cannot evaluate ptr expression")
+			exp, err := expr.Unary(expr.OpDeref, expr.Ident(RPCDollar[2].Ident))
+			if err != nil {
+				RPClex.Error("cannot evaluate ptr expression: " + err.Error())
 				return 0
 			}
 			RPCVAL.Expr = exp
 		}
 	case 199:
 		RPCDollar = RPCS[RPCpt-3 : RPCpt+1]
-//line midl/parse.y:1665
+//line midl/parse.y:1664
 		{
 			RPCVAL.Expr = RPCDollar[2].Expr
 		}
 	case 200:
 		RPCDollar = RPCS[RPCpt-5 : RPCpt+1]
-//line midl/parse.y:1671
+//line midl/parse.y:1670
 		{
 			attrs := RPCDollar[1].Attr.Merge(RPCDollar[3].Attr).Type()
 			if attrs.Usage.ContextHandle {
@@ -2831,49 +2830,49 @@ RPCdefault:
 		}
 	case 201:
 		RPCDollar = RPCS[RPCpt-1 : RPCpt+1]
-//line midl/parse.y:1689
+//line midl/parse.y:1688
 		{
 			RPCVAL.Type = RPCDollar[1].Type
 		}
 	case 202:
 		RPCDollar = RPCS[RPCpt-2 : RPCpt+1]
-//line midl/parse.y:1693
+//line midl/parse.y:1692
 		{
 			RPCVAL.Type = RPCDollar[2].Type
 		}
 	case 203:
 		RPCDollar = RPCS[RPCpt-2 : RPCpt+1]
-//line midl/parse.y:1697
+//line midl/parse.y:1696
 		{
 			RPCVAL.Type = RPCDollar[1].Type
 		}
 	case 204:
 		RPCDollar = RPCS[RPCpt-1 : RPCpt+1]
-//line midl/parse.y:1701
+//line midl/parse.y:1700
 		{
 			RPCVAL.Type = RPCDollar[1].Type
 		}
 	case 205:
 		RPCDollar = RPCS[RPCpt-1 : RPCpt+1]
-//line midl/parse.y:1707
+//line midl/parse.y:1706
 		{
 			RPCVAL.Type = &Type{Kind: RPCDollar[1].Kind}
 		}
 	case 206:
 		RPCDollar = RPCS[RPCpt-1 : RPCpt+1]
-//line midl/parse.y:1711
+//line midl/parse.y:1710
 		{
 			RPCVAL.Type = RPCDollar[1].Type
 		}
 	case 207:
 		RPCDollar = RPCS[RPCpt-1 : RPCpt+1]
-//line midl/parse.y:1715
+//line midl/parse.y:1714
 		{
 			RPCVAL.Type = RPCDollar[1].Type
 		}
 	case 208:
 		RPCDollar = RPCS[RPCpt-1 : RPCpt+1]
-//line midl/parse.y:1721
+//line midl/parse.y:1720
 		{
 			ref := &Type{Kind: TypeRef, Name: RPCDollar[1].Ident}
 			typ, ok := lookupType(RPClex, ref.Name)
@@ -2886,25 +2885,25 @@ RPCdefault:
 		}
 	case 209:
 		RPCDollar = RPCS[RPCpt-1 : RPCpt+1]
-//line midl/parse.y:1735
+//line midl/parse.y:1734
 		{
 			RPCVAL.Declarators = pDeclarators{RPCDollar[1].Declarator}
 		}
 	case 210:
 		RPCDollar = RPCS[RPCpt-3 : RPCpt+1]
-//line midl/parse.y:1739
+//line midl/parse.y:1738
 		{
 			RPCVAL.Declarators = append(RPCVAL.Declarators, RPCDollar[3].Declarator)
 		}
 	case 211:
 		RPCDollar = RPCS[RPCpt-0 : RPCpt+1]
-//line midl/parse.y:1744
+//line midl/parse.y:1743
 		{
 			RPCVAL.Declarators = pDeclarators{&pDeclarator{Name: ""}}
 		}
 	case 212:
 		RPCDollar = RPCS[RPCpt-2 : RPCpt+1]
-//line midl/parse.y:1750
+//line midl/parse.y:1749
 		{
 			RPCVAL.Declarator = RPCDollar[2].Declarator
 			for i := 0; i < int(RPCDollar[1].Int64); i++ {
@@ -2913,37 +2912,37 @@ RPCdefault:
 		}
 	case 213:
 		RPCDollar = RPCS[RPCpt-1 : RPCpt+1]
-//line midl/parse.y:1759
+//line midl/parse.y:1758
 		{
 			RPCVAL.Declarator = &pDeclarator{Name: RPCDollar[1].String}
 		}
 	case 214:
 		RPCDollar = RPCS[RPCpt-3 : RPCpt+1]
-//line midl/parse.y:1763
+//line midl/parse.y:1762
 		{
 			RPCVAL.Declarator = RPCDollar[2].Declarator
 		}
 	case 215:
 		RPCDollar = RPCS[RPCpt-1 : RPCpt+1]
-//line midl/parse.y:1767
+//line midl/parse.y:1766
 		{
 			RPCVAL.Declarator = RPCDollar[1].Declarator
 		}
 	case 216:
 		RPCDollar = RPCS[RPCpt-1 : RPCpt+1]
-//line midl/parse.y:1771
+//line midl/parse.y:1770
 		{
 			RPCVAL.Declarator = RPCDollar[1].Declarator
 		}
 	case 217:
 		RPCDollar = RPCS[RPCpt-1 : RPCpt+1]
-//line midl/parse.y:1777
+//line midl/parse.y:1776
 		{
 			RPCVAL.String = RPCDollar[1].Ident
 		}
 	case 218:
 		RPCDollar = RPCS[RPCpt-1 : RPCpt+1]
-//line midl/parse.y:1781
+//line midl/parse.y:1780
 		{
 			ident, ok := tokName(RPClex, RPCrcvr.char)
 			if !ok {
@@ -2953,91 +2952,91 @@ RPCdefault:
 		}
 	case 219:
 		RPCDollar = RPCS[RPCpt-1 : RPCpt+1]
-//line midl/parse.y:1791
+//line midl/parse.y:1790
 		{
 			RPCVAL.Type = RPCDollar[1].Type
 		}
 	case 220:
 		RPCDollar = RPCS[RPCpt-1 : RPCpt+1]
-//line midl/parse.y:1795
+//line midl/parse.y:1794
 		{
 			RPCVAL.Type = RPCDollar[1].Type
 		}
 	case 221:
 		RPCDollar = RPCS[RPCpt-1 : RPCpt+1]
-//line midl/parse.y:1800
+//line midl/parse.y:1799
 		{
 			RPCVAL.Type = RPCDollar[1].Type
 		}
 	case 222:
 		RPCDollar = RPCS[RPCpt-1 : RPCpt+1]
-//line midl/parse.y:1814
+//line midl/parse.y:1813
 		{
 			RPCVAL.Kind = RPCDollar[1].Kind
 		}
 	case 223:
 		RPCDollar = RPCS[RPCpt-1 : RPCpt+1]
-//line midl/parse.y:1818
+//line midl/parse.y:1817
 		{
 			RPCVAL.Kind = RPCDollar[1].Kind
 		}
 	case 224:
 		RPCDollar = RPCS[RPCpt-1 : RPCpt+1]
-//line midl/parse.y:1822
+//line midl/parse.y:1821
 		{
 			RPCVAL.Kind = RPCDollar[1].Kind
 		}
 	case 225:
 		RPCDollar = RPCS[RPCpt-1 : RPCpt+1]
-//line midl/parse.y:1826
+//line midl/parse.y:1825
 		{
 			RPCVAL.Kind = RPCDollar[1].Kind
 		}
 	case 226:
 		RPCDollar = RPCS[RPCpt-1 : RPCpt+1]
-//line midl/parse.y:1830
+//line midl/parse.y:1829
 		{
 			RPCVAL.Kind = RPCDollar[1].Kind
 		}
 	case 227:
 		RPCDollar = RPCS[RPCpt-1 : RPCpt+1]
-//line midl/parse.y:1834
+//line midl/parse.y:1833
 		{
 			RPCVAL.Kind = RPCDollar[1].Kind
 		}
 	case 228:
 		RPCDollar = RPCS[RPCpt-1 : RPCpt+1]
-//line midl/parse.y:1838
+//line midl/parse.y:1837
 		{
 			RPCVAL.Kind = RPCDollar[1].Kind
 		}
 	case 229:
 		RPCDollar = RPCS[RPCpt-1 : RPCpt+1]
-//line midl/parse.y:1843
+//line midl/parse.y:1842
 		{
 			RPCVAL.Kind = RPCDollar[1].Kind
 		}
 	case 230:
 		RPCDollar = RPCS[RPCpt-1 : RPCpt+1]
-//line midl/parse.y:1850
+//line midl/parse.y:1849
 		{
 			RPCVAL.Kind = TypeFloat32
 		}
 	case 231:
 		RPCDollar = RPCS[RPCpt-1 : RPCpt+1]
-//line midl/parse.y:1854
+//line midl/parse.y:1853
 		{
 			RPCVAL.Kind = TypeFloat64
 		}
 	case 232:
 		RPCDollar = RPCS[RPCpt-1 : RPCpt+1]
-//line midl/parse.y:1860
+//line midl/parse.y:1859
 		{
 			RPCVAL.Kind = RPCDollar[1].Kind
 		}
 	case 233:
 		RPCDollar = RPCS[RPCpt-3 : RPCpt+1]
-//line midl/parse.y:1864
+//line midl/parse.y:1863
 		{
 			switch RPCDollar[2].Token {
 			case UNSIGNED:
@@ -3048,31 +3047,31 @@ RPCdefault:
 		}
 	case 234:
 		RPCDollar = RPCS[RPCpt-3 : RPCpt+1]
-//line midl/parse.y:1873
+//line midl/parse.y:1872
 		{
 			RPCVAL.Kind = TypeUint64
 		}
 	case 235:
 		RPCDollar = RPCS[RPCpt-1 : RPCpt+1]
-//line midl/parse.y:1879
+//line midl/parse.y:1878
 		{
 			RPCVAL.Kind = RPCDollar[1].Kind
 		}
 	case 236:
 		RPCDollar = RPCS[RPCpt-1 : RPCpt+1]
-//line midl/parse.y:1883
+//line midl/parse.y:1882
 		{
 			RPCVAL.Kind = RPCDollar[1].Kind
 		}
 	case 237:
 		RPCDollar = RPCS[RPCpt-1 : RPCpt+1]
-//line midl/parse.y:1887
+//line midl/parse.y:1886
 		{
 			RPCVAL.Kind = RPCDollar[1].Kind
 		}
 	case 238:
 		RPCDollar = RPCS[RPCpt-3 : RPCpt+1]
-//line midl/parse.y:1893
+//line midl/parse.y:1892
 		{
 			switch RPCDollar[2].Token {
 			case LONG:
@@ -3085,7 +3084,7 @@ RPCdefault:
 		}
 	case 239:
 		RPCDollar = RPCS[RPCpt-2 : RPCpt+1]
-//line midl/parse.y:1904
+//line midl/parse.y:1903
 		{
 			switch RPCDollar[1].Token {
 			case LONG:
@@ -3098,7 +3097,7 @@ RPCdefault:
 		}
 	case 240:
 		RPCDollar = RPCS[RPCpt-3 : RPCpt+1]
-//line midl/parse.y:1917
+//line midl/parse.y:1916
 		{
 			switch RPCDollar[1].Token {
 			case LONG:
@@ -3111,7 +3110,7 @@ RPCdefault:
 		}
 	case 241:
 		RPCDollar = RPCS[RPCpt-3 : RPCpt+1]
-//line midl/parse.y:1928
+//line midl/parse.y:1927
 		{
 			switch RPCDollar[2].Token {
 			case LONG:
@@ -3124,7 +3123,7 @@ RPCdefault:
 		}
 	case 242:
 		RPCDollar = RPCS[RPCpt-2 : RPCpt+1]
-//line midl/parse.y:1942
+//line midl/parse.y:1941
 		{
 			switch RPCDollar[1].Token {
 			case UNSIGNED:
@@ -3135,7 +3134,7 @@ RPCdefault:
 		}
 	case 243:
 		RPCDollar = RPCS[RPCpt-2 : RPCpt+1]
-//line midl/parse.y:1951
+//line midl/parse.y:1950
 		{
 			switch RPCDollar[1].Token {
 			case UNSIGNED:
@@ -3146,7 +3145,7 @@ RPCdefault:
 		}
 	case 244:
 		RPCDollar = RPCS[RPCpt-2 : RPCpt+1]
-//line midl/parse.y:1960
+//line midl/parse.y:1959
 		{
 			switch RPCDollar[1].Token {
 			case UNSIGNED:
@@ -3157,7 +3156,7 @@ RPCdefault:
 		}
 	case 245:
 		RPCDollar = RPCS[RPCpt-2 : RPCpt+1]
-//line midl/parse.y:1969
+//line midl/parse.y:1968
 		{
 			switch RPCDollar[1].Token {
 			case UNSIGNED:
@@ -3168,7 +3167,7 @@ RPCdefault:
 		}
 	case 246:
 		RPCDollar = RPCS[RPCpt-2 : RPCpt+1]
-//line midl/parse.y:1978
+//line midl/parse.y:1977
 		{
 			switch RPCDollar[1].Token {
 			case UNSIGNED:
@@ -3179,7 +3178,7 @@ RPCdefault:
 		}
 	case 247:
 		RPCDollar = RPCS[RPCpt-2 : RPCpt+1]
-//line midl/parse.y:1987
+//line midl/parse.y:1986
 		{
 			switch RPCDollar[1].Token {
 			case UNSIGNED:
@@ -3190,25 +3189,25 @@ RPCdefault:
 		}
 	case 248:
 		RPCDollar = RPCS[RPCpt-1 : RPCpt+1]
-//line midl/parse.y:1999
+//line midl/parse.y:1998
 		{
 			RPCVAL.Token = LONG
 		}
 	case 249:
 		RPCDollar = RPCS[RPCpt-1 : RPCpt+1]
-//line midl/parse.y:2003
+//line midl/parse.y:2002
 		{
 			RPCVAL.Token = SHORT
 		}
 	case 250:
 		RPCDollar = RPCS[RPCpt-1 : RPCpt+1]
-//line midl/parse.y:2007
+//line midl/parse.y:2006
 		{
 			RPCVAL.Token = SMALL
 		}
 	case 251:
 		RPCDollar = RPCS[RPCpt-2 : RPCpt+1]
-//line midl/parse.y:2013
+//line midl/parse.y:2012
 		{
 			switch RPCDollar[1].Token {
 			case UNSIGNED:
@@ -3219,97 +3218,97 @@ RPCdefault:
 		}
 	case 252:
 		RPCDollar = RPCS[RPCpt-1 : RPCpt+1]
-//line midl/parse.y:2025
+//line midl/parse.y:2024
 		{
 			RPCVAL.Kind = TypeWChar
 		}
 	case 253:
 		RPCDollar = RPCS[RPCpt-1 : RPCpt+1]
-//line midl/parse.y:2032
+//line midl/parse.y:2031
 		{
 			RPCVAL.Kind = TypeBoolean
 		}
 	case 254:
 		RPCDollar = RPCS[RPCpt-1 : RPCpt+1]
-//line midl/parse.y:2038
+//line midl/parse.y:2037
 		{
 			RPCVAL.Kind = TypeUint8
 		}
 	case 255:
 		RPCDollar = RPCS[RPCpt-1 : RPCpt+1]
-//line midl/parse.y:2044
+//line midl/parse.y:2043
 		{
 			RPCVAL.Kind = TypeVoid
 		}
 	case 256:
 		RPCDollar = RPCS[RPCpt-1 : RPCpt+1]
-//line midl/parse.y:2050
+//line midl/parse.y:2049
 		{
 			RPCVAL.Kind = TypeHandle
 		}
 	case 257:
 		RPCDollar = RPCS[RPCpt-0 : RPCpt+1]
-//line midl/parse.y:2056
+//line midl/parse.y:2055
 		{
 			RPCVAL.Token = 0
 		}
 	case 258:
 		RPCDollar = RPCS[RPCpt-1 : RPCpt+1]
-//line midl/parse.y:2060
+//line midl/parse.y:2059
 		{
 			RPCVAL.Token = UNSIGNED
 		}
 	case 259:
 		RPCDollar = RPCS[RPCpt-0 : RPCpt+1]
-//line midl/parse.y:2066
+//line midl/parse.y:2065
 		{
 			RPCVAL.Token = 0
 		}
 	case 260:
 		RPCDollar = RPCS[RPCpt-1 : RPCpt+1]
-//line midl/parse.y:2070
+//line midl/parse.y:2069
 		{
 			RPCVAL.Token = UNSIGNED
 		}
 	case 261:
 		RPCDollar = RPCS[RPCpt-1 : RPCpt+1]
-//line midl/parse.y:2074
+//line midl/parse.y:2073
 		{
 			RPCVAL.Token = 0
 		}
 	case 266:
 		RPCDollar = RPCS[RPCpt-1 : RPCpt+1]
-//line midl/parse.y:2089
+//line midl/parse.y:2088
 		{
 			RPCVAL.Type = RPCDollar[1].Type
 		}
 	case 267:
 		RPCDollar = RPCS[RPCpt-1 : RPCpt+1]
-//line midl/parse.y:2093
+//line midl/parse.y:2092
 		{
 			RPCVAL.Type = RPCDollar[1].Type
 		}
 	case 268:
 		RPCDollar = RPCS[RPCpt-1 : RPCpt+1]
-//line midl/parse.y:2097
+//line midl/parse.y:2096
 		{
 			RPCVAL.Type = RPCDollar[1].Type
 		}
 	case 269:
 		RPCDollar = RPCS[RPCpt-1 : RPCpt+1]
-//line midl/parse.y:2101
+//line midl/parse.y:2100
 		{
 			RPCVAL.Type = RPCDollar[1].Type
 		}
 	case 270:
 		RPCDollar = RPCS[RPCpt-1 : RPCpt+1]
-//line midl/parse.y:2105
+//line midl/parse.y:2104
 		{
 			RPCVAL.Type = RPCDollar[1].Type
 		}
 	case 271:
 		RPCDollar = RPCS[RPCpt-2 : RPCpt+1]
-//line midl/parse.y:2111
+//line midl/parse.y:2110
 		{
 			ref := &Type{Kind: TypeRef, Name: "_struct_" + RPCDollar[2].String}
 			typ, ok := lookupType(RPClex, ref.Name)
@@ -3322,13 +3321,13 @@ RPCdefault:
 		}
 	case 272:
 		RPCDollar = RPCS[RPCpt-1 : RPCpt+1]
-//line midl/parse.y:2122
+//line midl/parse.y:2121
 		{
 			RPCVAL.Type = RPCDollar[1].Type
 		}
 	case 273:
 		RPCDollar = RPCS[RPCpt-4 : RPCpt+1]
-//line midl/parse.y:2128
+//line midl/parse.y:2127
 		{
 			for i := range RPCDollar[3].Fields {
 				RPCDollar[3].Fields[i].Position = i + 1
@@ -3339,7 +3338,7 @@ RPCdefault:
 		}
 	case 274:
 		RPCDollar = RPCS[RPCpt-5 : RPCpt+1]
-//line midl/parse.y:2139
+//line midl/parse.y:2138
 		{
 			for i := range RPCDollar[4].Fields {
 				RPCDollar[4].Fields[i].Position = i + 1
@@ -3350,31 +3349,31 @@ RPCdefault:
 		}
 	case 275:
 		RPCDollar = RPCS[RPCpt-1 : RPCpt+1]
-//line midl/parse.y:2150
+//line midl/parse.y:2149
 		{
 			RPCVAL.String = RPCDollar[1].Ident
 		}
 	case 276:
 		RPCDollar = RPCS[RPCpt-1 : RPCpt+1]
-//line midl/parse.y:2156
+//line midl/parse.y:2155
 		{
 			RPCVAL.Fields = RPCDollar[1].Fields
 		}
 	case 277:
 		RPCDollar = RPCS[RPCpt-2 : RPCpt+1]
-//line midl/parse.y:2160
+//line midl/parse.y:2159
 		{
 			RPCVAL.Fields = append(RPCVAL.Fields, RPCDollar[2].Fields...)
 		}
 	case 278:
 		RPCDollar = RPCS[RPCpt-2 : RPCpt+1]
-//line midl/parse.y:2166
+//line midl/parse.y:2165
 		{
 			RPCVAL.Fields = RPCDollar[1].Fields
 		}
 	case 279:
 		RPCDollar = RPCS[RPCpt-4 : RPCpt+1]
-//line midl/parse.y:2172
+//line midl/parse.y:2171
 		{
 			RPCVAL.Fields = make([]*Field, 0, len(RPCDollar[3].Declarators))
 			for _, decl := range RPCDollar[3].Declarators {
@@ -3385,31 +3384,31 @@ RPCdefault:
 		}
 	case 280:
 		RPCDollar = RPCS[RPCpt-0 : RPCpt+1]
-//line midl/parse.y:2183
+//line midl/parse.y:2182
 		{
 			RPCVAL.Expr = Expr{}
 		}
 	case 281:
 		RPCDollar = RPCS[RPCpt-2 : RPCpt+1]
-//line midl/parse.y:2187
+//line midl/parse.y:2186
 		{
 			RPCVAL.Expr = RPCDollar[2].Expr
 		}
 	case 282:
 		RPCDollar = RPCS[RPCpt-2 : RPCpt+1]
-//line midl/parse.y:2193
+//line midl/parse.y:2192
 		{
 			RPCVAL.Type = &Type{Kind: TypeUnion, Tag: RPCDollar[2].String}
 		}
 	case 283:
 		RPCDollar = RPCS[RPCpt-1 : RPCpt+1]
-//line midl/parse.y:2197
+//line midl/parse.y:2196
 		{
 			RPCVAL.Type = RPCDollar[1].Type
 		}
 	case 284:
 		RPCDollar = RPCS[RPCpt-6 : RPCpt+1]
-//line midl/parse.y:2203
+//line midl/parse.y:2202
 		{
 			pos := 1
 			for i := range RPCDollar[5].UnionCases {
@@ -3422,7 +3421,7 @@ RPCdefault:
 		}
 	case 285:
 		RPCDollar = RPCS[RPCpt-4 : RPCpt+1]
-//line midl/parse.y:2214
+//line midl/parse.y:2213
 		{
 			pos := 1
 			for i := range RPCDollar[3].UnionCases {
@@ -3435,7 +3434,7 @@ RPCdefault:
 		}
 	case 286:
 		RPCDollar = RPCS[RPCpt-4 : RPCpt+1]
-//line midl/parse.y:2225
+//line midl/parse.y:2224
 		{
 			pos := 1
 			for i := range RPCDollar[3].UnionCases {
@@ -3448,37 +3447,37 @@ RPCdefault:
 		}
 	case 287:
 		RPCDollar = RPCS[RPCpt-5 : RPCpt+1]
-//line midl/parse.y:2238
+//line midl/parse.y:2237
 		{
 			RPCVAL.UnionSwitch = &UnionSwitch{Type: RPCDollar[3].Type, Name: RPCDollar[4].Ident}
 		}
 	case 288:
 		RPCDollar = RPCS[RPCpt-1 : RPCpt+1]
-//line midl/parse.y:2244
+//line midl/parse.y:2243
 		{
 			RPCVAL.Type = &Type{Kind: RPCDollar[1].Kind}
 		}
 	case 289:
 		RPCDollar = RPCS[RPCpt-1 : RPCpt+1]
-//line midl/parse.y:2248
+//line midl/parse.y:2247
 		{
 			RPCVAL.Type = &Type{Kind: RPCDollar[1].Kind}
 		}
 	case 290:
 		RPCDollar = RPCS[RPCpt-1 : RPCpt+1]
-//line midl/parse.y:2252
+//line midl/parse.y:2251
 		{
 			RPCVAL.Type = &Type{Kind: RPCDollar[1].Kind}
 		}
 	case 291:
 		RPCDollar = RPCS[RPCpt-1 : RPCpt+1]
-//line midl/parse.y:2256
+//line midl/parse.y:2255
 		{
 			RPCVAL.Type = RPCDollar[1].Type
 		}
 	case 292:
 		RPCDollar = RPCS[RPCpt-2 : RPCpt+1]
-//line midl/parse.y:2261
+//line midl/parse.y:2260
 		{
 			ref := &Type{Kind: TypeRef, Name: "_enum_" + RPCDollar[2].String}
 			typ, ok := lookupType(RPClex, ref.Name)
@@ -3491,7 +3490,7 @@ RPCdefault:
 		}
 	case 293:
 		RPCDollar = RPCS[RPCpt-7 : RPCpt+1]
-//line midl/parse.y:2274
+//line midl/parse.y:2273
 		{
 			pos := 1
 			for i := range RPCDollar[6].UnionCases {
@@ -3504,7 +3503,7 @@ RPCdefault:
 		}
 	case 294:
 		RPCDollar = RPCS[RPCpt-5 : RPCpt+1]
-//line midl/parse.y:2285
+//line midl/parse.y:2284
 		{
 			pos := 1
 			for i := range RPCDollar[4].UnionCases {
@@ -3517,7 +3516,7 @@ RPCdefault:
 		}
 	case 295:
 		RPCDollar = RPCS[RPCpt-5 : RPCpt+1]
-//line midl/parse.y:2296
+//line midl/parse.y:2295
 		{
 			pos := 1
 			for i := range RPCDollar[4].UnionCases {
@@ -3530,7 +3529,7 @@ RPCdefault:
 		}
 	case 296:
 		RPCDollar = RPCS[RPCpt-0 : RPCpt+1]
-//line midl/parse.y:2309
+//line midl/parse.y:2308
 		{
 			// In encapsulated unions, if the <union_name> is
 			// omitted, the union is assigned the name tagged_union
@@ -3539,49 +3538,49 @@ RPCdefault:
 		}
 	case 297:
 		RPCDollar = RPCS[RPCpt-1 : RPCpt+1]
-//line midl/parse.y:2316
+//line midl/parse.y:2315
 		{
 			RPCVAL.String = RPCDollar[1].Ident
 		}
 	case 298:
 		RPCDollar = RPCS[RPCpt-1 : RPCpt+1]
-//line midl/parse.y:2322
+//line midl/parse.y:2321
 		{
 			RPCVAL.UnionCases = []*UnionCase{RPCDollar[1].UnionCase}
 		}
 	case 299:
 		RPCDollar = RPCS[RPCpt-2 : RPCpt+1]
-//line midl/parse.y:2326
+//line midl/parse.y:2325
 		{
 			RPCVAL.UnionCases = append(RPCVAL.UnionCases, RPCDollar[2].UnionCase)
 		}
 	case 300:
 		RPCDollar = RPCS[RPCpt-1 : RPCpt+1]
-//line midl/parse.y:2332
+//line midl/parse.y:2331
 		{
 			RPCVAL.UnionCases = []*UnionCase{&UnionCase{Arms: RPCDollar[1].Fields}}
 		}
 	case 301:
 		RPCDollar = RPCS[RPCpt-2 : RPCpt+1]
-//line midl/parse.y:2336
+//line midl/parse.y:2335
 		{
 			RPCVAL.UnionCases = append(RPCVAL.UnionCases, &UnionCase{Arms: RPCDollar[2].Fields})
 		}
 	case 302:
 		RPCDollar = RPCS[RPCpt-1 : RPCpt+1]
-//line midl/parse.y:2342
+//line midl/parse.y:2341
 		{
 			RPCVAL.UnionCases = []*UnionCase{RPCDollar[1].UnionCase}
 		}
 	case 303:
 		RPCDollar = RPCS[RPCpt-2 : RPCpt+1]
-//line midl/parse.y:2346
+//line midl/parse.y:2345
 		{
 			RPCVAL.UnionCases = append(RPCVAL.UnionCases, RPCDollar[2].UnionCase)
 		}
 	case 304:
 		RPCDollar = RPCS[RPCpt-2 : RPCpt+1]
-//line midl/parse.y:2352
+//line midl/parse.y:2351
 		{
 			labels := make([]interface{}, 0, len(RPCDollar[1].Exprs))
 			for _, label := range RPCDollar[1].Exprs {
@@ -3591,25 +3590,25 @@ RPCdefault:
 		}
 	case 305:
 		RPCDollar = RPCS[RPCpt-1 : RPCpt+1]
-//line midl/parse.y:2360
+//line midl/parse.y:2359
 		{
 			RPCVAL.UnionCase = &UnionCase{Arms: RPCDollar[1].Fields, IsDefault: true}
 		}
 	case 306:
 		RPCDollar = RPCS[RPCpt-1 : RPCpt+1]
-//line midl/parse.y:2366
+//line midl/parse.y:2365
 		{
 			RPCVAL.Exprs = RPCDollar[1].Exprs
 		}
 	case 307:
 		RPCDollar = RPCS[RPCpt-2 : RPCpt+1]
-//line midl/parse.y:2370
+//line midl/parse.y:2369
 		{
 			RPCVAL.Exprs = append(RPCVAL.Exprs, RPCDollar[2].Exprs...)
 		}
 	case 308:
 		RPCDollar = RPCS[RPCpt-2 : RPCpt+1]
-//line midl/parse.y:2376
+//line midl/parse.y:2375
 		{
 			labels := make([]interface{}, 0, len(RPCDollar[1].Exprs))
 			for _, label := range RPCDollar[1].Exprs {
@@ -3619,55 +3618,55 @@ RPCdefault:
 		}
 	case 309:
 		RPCDollar = RPCS[RPCpt-1 : RPCpt+1]
-//line midl/parse.y:2384
+//line midl/parse.y:2383
 		{
 			RPCVAL.UnionCase = &UnionCase{Labels: nil, Arms: RPCDollar[1].Fields, IsDefault: true}
 		}
 	case 310:
 		RPCDollar = RPCS[RPCpt-3 : RPCpt+1]
-//line midl/parse.y:2390
+//line midl/parse.y:2389
 		{
 			RPCVAL.Exprs = Exprs{RPCDollar[2].Expr}
 		}
 	case 311:
 		RPCDollar = RPCS[RPCpt-6 : RPCpt+1]
-//line midl/parse.y:2396
+//line midl/parse.y:2395
 		{
 			RPCVAL.Exprs = RPCDollar[4].Exprs
 		}
 	case 312:
 		RPCDollar = RPCS[RPCpt-1 : RPCpt+1]
-//line midl/parse.y:2402
+//line midl/parse.y:2401
 		{
 			RPCVAL.Exprs = Exprs{RPCDollar[1].Expr}
 		}
 	case 313:
 		RPCDollar = RPCS[RPCpt-3 : RPCpt+1]
-//line midl/parse.y:2406
+//line midl/parse.y:2405
 		{
 			RPCVAL.Exprs = append(RPCVAL.Exprs, RPCDollar[3].Expr)
 		}
 	case 314:
 		RPCDollar = RPCS[RPCpt-3 : RPCpt+1]
-//line midl/parse.y:2413
+//line midl/parse.y:2412
 		{
 			RPCVAL.Fields = RPCDollar[3].Fields
 		}
 	case 315:
 		RPCDollar = RPCS[RPCpt-4 : RPCpt+1]
-//line midl/parse.y:2419
+//line midl/parse.y:2418
 		{
 			RPCVAL.Fields = RPCDollar[4].Fields
 		}
 	case 316:
 		RPCDollar = RPCS[RPCpt-1 : RPCpt+1]
-//line midl/parse.y:2425
+//line midl/parse.y:2424
 		{
 			RPCVAL.Fields = nil
 		}
 	case 317:
 		RPCDollar = RPCS[RPCpt-2 : RPCpt+1]
-//line midl/parse.y:2429
+//line midl/parse.y:2428
 		{
 			for i := range RPCDollar[1].Fields {
 				RPCDollar[1].Fields[i].Position = i + 1
@@ -3676,37 +3675,37 @@ RPCdefault:
 		}
 	case 318:
 		RPCDollar = RPCS[RPCpt-4 : RPCpt+1]
-//line midl/parse.y:2438
+//line midl/parse.y:2437
 		{
 			RPCVAL.Type = RPCDollar[3].Type
 		}
 	case 319:
 		RPCDollar = RPCS[RPCpt-4 : RPCpt+1]
-//line midl/parse.y:2444
+//line midl/parse.y:2443
 		{
 			RPCVAL.AttrType = pAttrType{SWITCH_IS, pAttr{SwitchIs: RPCDollar[3].Expr}}
 		}
 	case 320:
 		RPCDollar = RPCS[RPCpt-5 : RPCpt+1]
-//line midl/parse.y:2450
+//line midl/parse.y:2449
 		{
 			RPCVAL.Type = &Type{Kind: TypeEnum, Enum: &Enum{Elems: make([]*Element, 0, len(RPCDollar[3].TagIDs))}}
 			for idx, i := 0, 0; i < len(RPCDollar[3].TagIDs); i, idx = i+1, idx+1 {
 				tag, exp := RPCDollar[3].TagIDs[i].Tag, RPCDollar[3].TagIDs[i].ID
-				if !exp.Empty() {
-					val, ok := exp.Eval(RPClex.(ExprStore))
-					if !ok {
-						RPClex.Error("cannot evaluate tag-id expression")
+				if !exp.IsEmpty() {
+					val, err := exp.Eval(RPClex.(expr.Env))
+					if err != nil {
+						RPClex.Error("cannot evaluate tag-id expression: " + err.Error())
 						return 0
 					}
-					bi, ok := val.BigInt()
+					bi, ok := val.Int()
 					if !ok {
 						RPClex.Error("enum: not an integer type")
 						return 0
 					}
 					idx, exp = int(bi.Uint64()), val
 				} else {
-					exp = NewValue(big.NewInt(int64(idx)))
+					exp = expr.Int64(int64(idx))
 				}
 				if uint32(uint16(idx)) != uint32(idx) {
 					RPCVAL.Type.Enum.Is32 = true
@@ -3717,37 +3716,37 @@ RPCdefault:
 		}
 	case 321:
 		RPCDollar = RPCS[RPCpt-2 : RPCpt+1]
-//line midl/parse.y:2480
+//line midl/parse.y:2479
 		{
 			RPCVAL.Type = &Type{Kind: TypeEnum, Tag: RPCDollar[2].String}
 		}
 	case 322:
 		RPCDollar = RPCS[RPCpt-1 : RPCpt+1]
-//line midl/parse.y:2484
+//line midl/parse.y:2483
 		{
 			RPCVAL.Type = RPCDollar[1].Type
 		}
 	case 323:
 		RPCDollar = RPCS[RPCpt-6 : RPCpt+1]
-//line midl/parse.y:2490
+//line midl/parse.y:2489
 		{
 			RPCVAL.Type = &Type{Kind: TypeEnum, Tag: RPCDollar[2].String, Enum: &Enum{Elems: make([]*Element, 0, len(RPCDollar[4].TagIDs))}}
 			for idx, i := 0, 0; i < len(RPCDollar[4].TagIDs); i, idx = i+1, idx+1 {
 				tag, exp := RPCDollar[4].TagIDs[i].Tag, RPCDollar[4].TagIDs[i].ID
-				if !exp.Empty() {
-					val, ok := exp.Eval(RPClex.(ExprStore))
-					if !ok {
-						RPClex.Error("cannot evaluate tag-id expression")
+				if !exp.IsEmpty() {
+					val, err := exp.Eval(RPClex.(expr.Env))
+					if err != nil {
+						RPClex.Error("cannot evaluate tag-id expression: " + err.Error())
 						return 0
 					}
-					bi, ok := val.BigInt()
+					bi, ok := val.Int()
 					if !ok {
 						RPClex.Error("enum: not an integer type")
 						return 0
 					}
 					idx, exp = int(bi.Uint64()), val
 				} else {
-					exp = NewValue(big.NewInt(int64(idx)))
+					exp = expr.Int64(int64(idx))
 				}
 				if uint32(uint16(idx)) != uint32(idx) {
 					RPCVAL.Type.Enum.Is32 = true
@@ -3758,37 +3757,37 @@ RPCdefault:
 		}
 	case 324:
 		RPCDollar = RPCS[RPCpt-1 : RPCpt+1]
-//line midl/parse.y:2520
+//line midl/parse.y:2519
 		{
 			RPCVAL.TagIDs = pTagIDs{RPCDollar[1].TagID}
 		}
 	case 325:
 		RPCDollar = RPCS[RPCpt-3 : RPCpt+1]
-//line midl/parse.y:2524
+//line midl/parse.y:2523
 		{
 			RPCVAL.TagIDs = append(RPCVAL.TagIDs, RPCDollar[3].TagID)
 		}
 	case 328:
 		RPCDollar = RPCS[RPCpt-1 : RPCpt+1]
-//line midl/parse.y:2534
+//line midl/parse.y:2533
 		{
 			RPCVAL.TagID = pTagID{Tag: RPCDollar[1].Ident}
 		}
 	case 329:
 		RPCDollar = RPCS[RPCpt-3 : RPCpt+1]
-//line midl/parse.y:2539
+//line midl/parse.y:2538
 		{
 			RPCVAL.TagID = pTagID{Tag: RPCDollar[1].Ident, ID: RPCDollar[3].Expr}
 		}
 	case 330:
 		RPCDollar = RPCS[RPCpt-2 : RPCpt+1]
-//line midl/parse.y:2546
+//line midl/parse.y:2545
 		{
 			RPCVAL.Type = &Type{Kind: TypePipe, Elem: RPCDollar[2].Type}
 		}
 	case 331:
 		RPCDollar = RPCS[RPCpt-4 : RPCpt+1]
-//line midl/parse.y:2552
+//line midl/parse.y:2551
 		{
 
 			// XXX: array associativity is different from pointer.
@@ -3814,13 +3813,13 @@ RPCdefault:
 		}
 	case 332:
 		RPCDollar = RPCS[RPCpt-0 : RPCpt+1]
-//line midl/parse.y:2578
+//line midl/parse.y:2577
 		{
 			RPCVAL.ArrayBound = ArrayBound{Lower: 0, Upper: -1}
 		}
 	case 333:
 		RPCDollar = RPCS[RPCpt-1 : RPCpt+1]
-//line midl/parse.y:2582
+//line midl/parse.y:2581
 		{
 			if RPCDollar[1].Int.Int64() == -1 {
 				RPCVAL.ArrayBound = ArrayBound{Lower: -1, Upper: 0}
@@ -3831,31 +3830,31 @@ RPCdefault:
 		}
 	case 334:
 		RPCDollar = RPCS[RPCpt-1 : RPCpt+1]
-//line midl/parse.y:2591
+//line midl/parse.y:2590
 		{
 			RPCVAL.ArrayBound = RPCDollar[1].ArrayBound
 		}
 	case 335:
 		RPCDollar = RPCS[RPCpt-3 : RPCpt+1]
-//line midl/parse.y:2597
+//line midl/parse.y:2596
 		{
 			RPCVAL.ArrayBound = ArrayBound{Lower: RPCDollar[1].Int.Int64(), Upper: RPCDollar[3].Int.Int64()}
 		}
 	case 336:
 		RPCDollar = RPCS[RPCpt-1 : RPCpt+1]
-//line midl/parse.y:2603
+//line midl/parse.y:2602
 		{
 			RPCVAL.Int = big.NewInt(-1)
 		}
 	case 337:
 		RPCDollar = RPCS[RPCpt-1 : RPCpt+1]
-//line midl/parse.y:2607
+//line midl/parse.y:2606
 		{
-			if !RPCDollar[1].Expr.CanEval() {
+			if !RPCDollar[1].Expr.IsConst() {
 				RPClex.Error("cannot evaluate integer bound")
 				return 0
 			}
-			val, ok := RPCDollar[1].Expr.BigInt()
+			val, ok := RPCDollar[1].Expr.Int()
 			if !ok {
 				RPClex.Error("cannot use non-integer as a bound declarator")
 				return 0
@@ -3864,78 +3863,78 @@ RPCdefault:
 		}
 	case 338:
 		RPCDollar = RPCS[RPCpt-1 : RPCpt+1]
-//line midl/parse.y:2622
+//line midl/parse.y:2621
 		{
 			RPCVAL.Token = USAGE_STRING
 		}
 	case 339:
 		RPCDollar = RPCS[RPCpt-1 : RPCpt+1]
-//line midl/parse.y:2626
+//line midl/parse.y:2625
 		{
 			RPCVAL.Token = USAGE_CONTEXT_HANDLE
 		}
 	case 340:
 		RPCDollar = RPCS[RPCpt-1 : RPCpt+1]
-//line midl/parse.y:2632
+//line midl/parse.y:2631
 		{
 			RPCVAL.Token = FORMAT_UTF8
 		}
 	case 341:
 		RPCDollar = RPCS[RPCpt-1 : RPCpt+1]
-//line midl/parse.y:2636
+//line midl/parse.y:2635
 		{
 			RPCVAL.Token = FORMAT_NULL_TERMINATED
 		}
 	case 342:
 		RPCDollar = RPCS[RPCpt-1 : RPCpt+1]
-//line midl/parse.y:2640
+//line midl/parse.y:2639
 		{
 			RPCVAL.Token = FORMAT_MULTI_SIZE
 		}
 	case 343:
 		RPCDollar = RPCS[RPCpt-1 : RPCpt+1]
-//line midl/parse.y:2644
+//line midl/parse.y:2643
 		{
 			RPCVAL.Token = FORMAT_RUNE
 		}
 	case 344:
 		RPCDollar = RPCS[RPCpt-1 : RPCpt+1]
-//line midl/parse.y:2648
+//line midl/parse.y:2647
 		{
 			RPCVAL.Token = FORMAT_HEX
 		}
 	case 345:
 		RPCDollar = RPCS[RPCpt-1 : RPCpt+1]
-//line midl/parse.y:2652
+//line midl/parse.y:2651
 		{
 			RPCVAL.Token = FORMAT_PRESERVE_NULL
 		}
 	case 346:
 		RPCDollar = RPCS[RPCpt-1 : RPCpt+1]
-//line midl/parse.y:2658
+//line midl/parse.y:2657
 		{
 			RPCVAL.Type = RPCDollar[1].Type
 		}
 	case 347:
 		RPCDollar = RPCS[RPCpt-2 : RPCpt+1]
-//line midl/parse.y:2664
+//line midl/parse.y:2663
 		{
 			RPCVAL.AttrType = pAttrType{RANGE, pAttr{Range: RPCDollar[2].Range}}
 		}
 	case 348:
 		RPCDollar = RPCS[RPCpt-5 : RPCpt+1]
-//line midl/parse.y:2670
+//line midl/parse.y:2669
 		{
-			if !CanEval(RPCDollar[2].Expr, RPCDollar[4].Expr) {
+			if !RPCDollar[2].Expr.IsConst() || !RPCDollar[4].Expr.IsConst() {
 				RPClex.Error("cannot evaluate range declaration")
 				return 0
 			}
-			min, ok := RPCDollar[2].Expr.BigInt()
+			min, ok := RPCDollar[2].Expr.Int()
 			if !ok {
 				RPClex.Error("invalid min value for range declarator")
 				return 0
 			}
-			max, ok := RPCDollar[4].Expr.BigInt()
+			max, ok := RPCDollar[4].Expr.Int()
 			if !ok {
 				RPClex.Error("invalid max value for range declarator")
 				return 0
@@ -3944,19 +3943,19 @@ RPCdefault:
 		}
 	case 349:
 		RPCDollar = RPCS[RPCpt-3 : RPCpt+1]
-//line midl/parse.y:2689
+//line midl/parse.y:2688
 		{
 			RPCVAL.Range = &Range{Min: RPCDollar[2].ArrayBound.Lower, Max: RPCDollar[2].ArrayBound.Upper}
 		}
 	case 350:
 		RPCDollar = RPCS[RPCpt-1 : RPCpt+1]
-//line midl/parse.y:2696
+//line midl/parse.y:2695
 		{
 			RPCVAL.Exprs = []Expr{RPCDollar[1].Expr}
 		}
 	case 351:
 		RPCDollar = RPCS[RPCpt-3 : RPCpt+1]
-//line midl/parse.y:2700
+//line midl/parse.y:2699
 		{
 			// see https://learn.microsoft.com/en-us/windows/win32/rpc/multiple-levels-of-pointers
 			// for (,Size) constructions.
@@ -3964,61 +3963,61 @@ RPCdefault:
 		}
 	case 352:
 		RPCDollar = RPCS[RPCpt-0 : RPCpt+1]
-//line midl/parse.y:2708
+//line midl/parse.y:2707
 		{
 			RPCVAL.Expr = Expr{}
 		}
 	case 353:
 		RPCDollar = RPCS[RPCpt-1 : RPCpt+1]
-//line midl/parse.y:2712
+//line midl/parse.y:2711
 		{
 			RPCVAL.Expr = RPCDollar[1].Expr
 		}
 	case 354:
 		RPCDollar = RPCS[RPCpt-0 : RPCpt+1]
-//line midl/parse.y:2718
+//line midl/parse.y:2717
 		{
 			RPCVAL.Int64 = 0
 		}
 	case 355:
 		RPCDollar = RPCS[RPCpt-1 : RPCpt+1]
-//line midl/parse.y:2722
+//line midl/parse.y:2721
 		{
 			RPCVAL.Int64 = RPCDollar[1].Int64
 		}
 	case 356:
 		RPCDollar = RPCS[RPCpt-1 : RPCpt+1]
-//line midl/parse.y:2728
+//line midl/parse.y:2727
 		{
 			RPCVAL.Int64++
 		}
 	case 357:
 		RPCDollar = RPCS[RPCpt-2 : RPCpt+1]
-//line midl/parse.y:2732
+//line midl/parse.y:2731
 		{
 			RPCVAL.Int64++
 		}
 	case 358:
 		RPCDollar = RPCS[RPCpt-1 : RPCpt+1]
-//line midl/parse.y:2742
+//line midl/parse.y:2741
 		{
 			RPCVAL.Token = POINTER_REF
 		}
 	case 359:
 		RPCDollar = RPCS[RPCpt-1 : RPCpt+1]
-//line midl/parse.y:2746
+//line midl/parse.y:2745
 		{
 			RPCVAL.Token = POINTER_UNIQUE
 		}
 	case 360:
 		RPCDollar = RPCS[RPCpt-1 : RPCpt+1]
-//line midl/parse.y:2750
+//line midl/parse.y:2749
 		{
 			RPCVAL.Token = POINTER_PTR
 		}
 	case 361:
 		RPCDollar = RPCS[RPCpt-6 : RPCpt+1]
-//line midl/parse.y:2756
+//line midl/parse.y:2755
 		{
 			for i := range RPCDollar[5].Params {
 				if RPCDollar[5].Params[i].Name == "" {
@@ -4032,37 +4031,37 @@ RPCdefault:
 		}
 	case 362:
 		RPCDollar = RPCS[RPCpt-6 : RPCpt+1]
-//line midl/parse.y:2768
+//line midl/parse.y:2767
 		{
 			RPCVAL.Operation = &Operation{Attrs: RPCDollar[1].Attr.Operation(), Type: RPCDollar[2].Type, Name: RPCDollar[3].Ident}
 		}
 	case 363:
 		RPCDollar = RPCS[RPCpt-3 : RPCpt+1]
-//line midl/parse.y:2774
+//line midl/parse.y:2773
 		{
 			RPCVAL.Params = append(RPCVAL.Params, RPCDollar[3].Param)
 		}
 	case 364:
 		RPCDollar = RPCS[RPCpt-1 : RPCpt+1]
-//line midl/parse.y:2778
+//line midl/parse.y:2777
 		{
 			RPCVAL.Params = []*Param{RPCDollar[1].Param}
 		}
 	case 365:
 		RPCDollar = RPCS[RPCpt-2 : RPCpt+1]
-//line midl/parse.y:2784
+//line midl/parse.y:2783
 		{
 			RPCVAL.String = RPCVAL.String + RPCDollar[2].String
 		}
 	case 366:
 		RPCDollar = RPCS[RPCpt-1 : RPCpt+1]
-//line midl/parse.y:2788
+//line midl/parse.y:2787
 		{
 			RPCVAL.String = RPCDollar[1].String
 		}
 	case 367:
 		RPCDollar = RPCS[RPCpt-3 : RPCpt+1]
-//line midl/parse.y:2794
+//line midl/parse.y:2793
 		{
 			RPCDollar[3].Declarator.Type = RPCDollar[3].Declarator.Type.Append(RPCDollar[2].Type)
 			RPCVAL.Param = &Param{Attrs: RPCDollar[1].Attr.Param(), Name: RPCDollar[3].Declarator.Name, Type: RPCDollar[3].Declarator.Type}
@@ -4078,7 +4077,7 @@ RPCdefault:
 		}
 	case 368:
 		RPCDollar = RPCS[RPCpt-2 : RPCpt+1]
-//line midl/parse.y:2808
+//line midl/parse.y:2807
 		{
 			RPCDollar[2].Declarator.Type = RPCDollar[2].Declarator.Type.Append(RPCDollar[1].Type)
 			attrs := pAttr{Direction: Direction{In: true}}
@@ -4086,19 +4085,19 @@ RPCdefault:
 		}
 	case 369:
 		RPCDollar = RPCS[RPCpt-1 : RPCpt+1]
-//line midl/parse.y:2816
+//line midl/parse.y:2815
 		{
 			RPCVAL.AttrType = pAttrType{IN, pAttr{}}
 		}
 	case 370:
 		RPCDollar = RPCS[RPCpt-1 : RPCpt+1]
-//line midl/parse.y:2820
+//line midl/parse.y:2819
 		{
 			RPCVAL.AttrType = pAttrType{OUT, pAttr{}}
 		}
 	case 371:
 		RPCDollar = RPCS[RPCpt-4 : RPCpt+1]
-//line midl/parse.y:2826
+//line midl/parse.y:2825
 		{
 			for i := range RPCDollar[3].Params {
 				if RPCDollar[3].Params[i].Name == "" {
@@ -4109,19 +4108,19 @@ RPCdefault:
 		}
 	case 372:
 		RPCDollar = RPCS[RPCpt-4 : RPCpt+1]
-//line midl/parse.y:2835
+//line midl/parse.y:2834
 		{
 			RPCVAL.Declarator = &pDeclarator{Name: RPCDollar[1].Declarator.Name, Type: &Type{Kind: TypeFunc, Func: &Func{}, Elem: RPCDollar[1].Declarator.Type}}
 		}
 	case 373:
 		RPCDollar = RPCS[RPCpt-1 : RPCpt+1]
-//line midl/parse.y:2846
+//line midl/parse.y:2845
 		{
 			RPCVAL.Type = &Type{Kind: TypeError}
 		}
 	case 374:
 		RPCDollar = RPCS[RPCpt-1 : RPCpt+1]
-//line midl/parse.y:2850
+//line midl/parse.y:2849
 		{
 			RPCVAL.Type = &Type{Kind: TypeCharset}
 
@@ -4136,19 +4135,19 @@ RPCdefault:
 		}
 	case 375:
 		RPCDollar = RPCS[RPCpt-1 : RPCpt+1]
-//line midl/parse.y:2865
+//line midl/parse.y:2864
 		{
 			RPCVAL.Token = ISO_LATIN_1
 		}
 	case 376:
 		RPCDollar = RPCS[RPCpt-1 : RPCpt+1]
-//line midl/parse.y:2869
+//line midl/parse.y:2868
 		{
 			RPCVAL.Token = ISO_MULTILINGUAL
 		}
 	case 377:
 		RPCDollar = RPCS[RPCpt-1 : RPCpt+1]
-//line midl/parse.y:2873
+//line midl/parse.y:2872
 		{
 			RPCVAL.Token = ISO_UCS
 		}

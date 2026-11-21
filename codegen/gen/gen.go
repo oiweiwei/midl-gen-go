@@ -396,10 +396,10 @@ func (p *Generator) GenConst(ctx context.Context, c *midl.Const) {
 	p.P()
 	p.P("//", GoName(ctx, c.Name), "represents the", c.Name, "RPC constant")
 	if midl.IsIntegerType(c.Type) && !c.Type.Signed() {
-		p.P("const", GoName(ctx, c.Name), "=", c.Value.Expression(ctx, GoName, GoHex(midl.PrimitiveTypeSize(c.Type))))
+		p.P("const", GoName(ctx, c.Name), "=", p.FormatConstExpr(ctx, c.Value, midl.PrimitiveTypeSize(c.Type)))
 		return
 	}
-	p.P("var", GoName(ctx, c.Name), "=", c.Value.Expression(ctx, GoName))
+	p.P("var", GoName(ctx, c.Name), "=", p.FormatConstExpr(ctx, c.Value, 0))
 }
 
 func (p *Generator) GenType(ctx context.Context, t *midl.Type) {
@@ -553,7 +553,7 @@ func (p *Generator) GenTag(ctx context.Context, field *midl.Field) string {
 
 		szs := []string{}
 		for _, sz := range size.E {
-			szs = append(szs, sz.Expression(ctx))
+			szs = append(szs, p.FormatExpr(ctx, sz))
 		}
 		tag = append(tag, size.N+":("+strings.Join(szs, ", ")+")")
 	}
@@ -562,7 +562,7 @@ func (p *Generator) GenTag(ctx context.Context, field *midl.Field) string {
 		tag = append(tag, "string")
 	}
 
-	if !field.Attrs.SwitchIs.Empty() {
+	if !field.Attrs.SwitchIs.IsEmpty() {
 		tag = append(tag, "switch_is:"+field.Attrs.SwitchIs.String())
 	}
 

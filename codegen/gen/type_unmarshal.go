@@ -35,7 +35,7 @@ func (p *TypeGenerator) GenStructUnmarshalNDR(ctx context.Context) {
 		}
 
 		for _, field := range p.Struct().Fields {
-			if field.Attrs.Ignore && !field.DefaultValue.Empty() {
+			if field.Attrs.Ignore && !field.DefaultValue.IsEmpty() {
 				p.P("//", "default value for ignored field", field.Name)
 				expr := field.DefaultValue
 				p.P(p.EO(ctx, field.Name), "=", p.B(
@@ -249,7 +249,7 @@ func (p *TypeGenerator) GenFieldUnmarshalNDR(ctx context.Context, field *midl.Fi
 
 		if field.Position == 0 || scopes.IsTopLevelArray() {
 
-			if dim := scopes.Dim(); dim.IsString && !dim.NoSizeLimit && dim.Size().Empty() && dim.LengthIs.Empty() {
+			if dim := scopes.Dim(); dim.IsString && !dim.NoSizeLimit && dim.Size().Empty() && dim.LengthIs.IsEmpty() {
 
 				// unmarshal string using std-library.
 
@@ -293,14 +293,14 @@ func (p *TypeGenerator) GenFieldUnmarshalNDR(ctx context.Context, field *midl.Fi
 				p.P("//", "XXX: for opaque unmarshaling")
 				if to, val, ok := p.GetMinVarValue(ctx, sz.Is()); ok {
 					exprTo := p.GenExpr(ctx, to, field, "uint64", "_to")
-					p.If(exprTo /*to.Expression(p.EO) */, ">", val, "&&", szVar, "==", "0", func() {
+					p.If(exprTo, ">", val, "&&", szVar, "==", "0", func() {
 						exprSz := p.GenExpr(ctx, sz.Is(), field, "", "_sz")
-						p.P(szVar, "=", p.B("uint64", exprSz /* sz.Expression(p.EO)*/))
+						p.P(szVar, "=", p.B("uint64", exprSz))
 					})
 				} else {
 					exprSz := p.GenExpr(ctx, sz.Is(), field, "uint64")
-					p.If(exprSz /* sz.Expression(p.EO) */, ">", "0", "&&", szVar, "==", "0", func() {
-						p.P(szVar, "=", p.B("uint64", exprSz /* sz.Expression(p.EO)*/))
+					p.If(exprSz, ">", "0", "&&", szVar, "==", "0", func() {
+						p.P(szVar, "=", p.B("uint64", exprSz))
 					})
 				}
 			}

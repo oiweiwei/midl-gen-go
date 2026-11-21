@@ -3,11 +3,11 @@ package gen
 import (
 	"context"
 	"fmt"
-	"math/big"
 	"strconv"
 	"strings"
 
 	"github.com/oiweiwei/midl-gen-go/midl"
+	"github.com/oiweiwei/midl-gen-go/midl/expr"
 	"github.com/oiweiwei/midl-gen-go/msdn/openspecs"
 )
 
@@ -289,8 +289,8 @@ func (p *TypeGenerator) GenStructPreparePayloadFields(ctx context.Context, field
 					}
 					// check minimum value borders.
 					if to, val, ok := p.GetMinVarValue(ctx, sz.Is()); ok {
-						p.If(to.Expression(ctx, p.EO), "<", val, func() {
-							p.P(to.Expression(ctx, p.EO), "=", val)
+						p.If(p.FormatExprO(ctx, to), "<", val, func() {
+							p.P(p.FormatExprO(ctx, to), "=", val)
 						})
 					}
 					break
@@ -300,13 +300,13 @@ func (p *TypeGenerator) GenStructPreparePayloadFields(ctx context.Context, field
 
 		if scopes := scopes; field.Attrs.LengthIs != nil {
 			for ; scopes != nil; scopes = scopes.Next() {
-				if sz := scopes.Dim().LengthIs; !sz.Empty() {
+				if sz := scopes.Dim().LengthIs; !sz.IsEmpty() {
 					if !skip {
 						p.GenStructPreparePayloadSizeExpr(ctx, field, scopes, sz)
 					}
 					if to, val, ok := p.GetMinVarValue(ctx, sz); ok {
-						p.If(to.Expression(ctx, p.EO), "<", val, func() {
-							p.P(to.Expression(ctx, p.EO), "=", val)
+						p.If(p.FormatExprO(ctx, to), "<", val, func() {
+							p.P(p.FormatExprO(ctx, to), "=", val)
 						})
 					}
 					break
@@ -345,7 +345,7 @@ ranged_loop:
 	}
 
 	for _, field := range defaulted {
-		if !field.DefaultValue.IsZero() && !field.Attrs.Ignore {
+		if !field.DefaultValue.IsEmpty() && !field.Attrs.Ignore {
 			p.If(p.EO(ctx, field.Name), "==", p.GoTypeZeroValue(ctx, p.Scope(), field, NewScopes(field.Scopes())), func() {
 				expr := field.DefaultValue
 				p.P(p.EO(ctx, field.Name), "=", p.B(
@@ -357,19 +357,21 @@ ranged_loop:
 	}
 }
 
-func (p *TypeGenerator) LookupExprField(ctx context.Context, expr midl.Expr) *midl.Field {
+// LookupExprField returns the field of the current struct the expression refers to
+// (its first identifier), or nil.
+func (p *TypeGenerator) LookupExprField(ctx context.Context, e midl.Expr) *midl.Field {
 
 	if p.Struct() == nil {
 		return nil
 	}
 
-	i, ok := expr.ResolveTo(midl.Expr{})
+	name, ok := e.FirstIdent()
 	if !ok {
 		return nil
 	}
 
 	for _, field := range p.Struct().Fields {
-		if i.Value.(string) == field.Name {
+		if name == field.Name {
 			return field
 		}
 	}
@@ -377,16 +379,21 @@ func (p *TypeGenerator) LookupExprField(ctx context.Context, expr midl.Expr) *mi
 	return nil
 }
 
-func (p *TypeGenerator) GenExpr(ctx context.Context, expr midl.Expr, field *midl.Field, typ string, n ...string) string {
+// GenExpr renders the expression as a Go expression for the field and returns
+// it. A conditional on a non-reference, or any expression of a boolean field,
+// needs statements: they are emitted to a temporary variable which is returned.
+func (p *TypeGenerator) GenExpr(ctx context.Context, e midl.Expr, field *midl.Field, typ string, n ...string) string {
 
 	isBool := false
 	if field != nil {
 		isBool = NewScopes(field.Scopes()).IsBool()
 	}
 
-	if field == nil || (!isBool && (expr.Expr.Op != midl.TERNARY || (expr.Expr.Cond.Op == midl.UMUL || expr.Expr.Cond.Op == midl.IDENT))) {
+	root := e.Root()
 
-		out := expr.Expression(ctx, p.EO)
+	if field == nil || root == nil || (!isBool && (root.Kind != expr.NodeCond || root.X.IsRef())) {
+
+		out := p.FormatExprO(ctx, e)
 		if out == "o._" {
 			return "0"
 		}
@@ -401,24 +408,22 @@ func (p *TypeGenerator) GenExpr(ctx context.Context, expr midl.Expr, field *midl
 
 	p.P(varName, ":=", typ+"(0)")
 
-	var cond, lval, rval *midl.ExprTree
+	var cond, lval, rval midl.Expr
 	if isBool {
-		cond = &midl.ExprTree{Op: midl.IDENT, Value: field.Name}
-		lval = &midl.ExprTree{Value: big.NewInt(1)}
-		rval = &midl.ExprTree{Value: big.NewInt(0)}
+		cond, lval, rval = expr.Ident(field.Name), expr.Int64(1), expr.Int64(0)
 	} else {
-		cond, lval, rval = expr.Expr.Cond, expr.Expr.Lval, expr.Expr.Rval
+		cond, lval, rval = expr.FromNode(root.X), expr.FromNode(root.Y), expr.FromNode(root.Z)
 	}
 
 	chk := ""
-	if !isBool && !midl.IsBoolOp(expr.Expr.Cond.Op) {
+	if !isBool && !root.X.IsBool() {
 		chk = "!= 0"
 	}
 
-	p.If(cond.Expression(p.EOWithCtx(ctx)), chk, func() {
-		p.P(varName, "=", p.B(typ, lval.Expression(p.EOWithCtx(ctx))))
+	p.If(p.FormatExprO(ctx, cond), chk, func() {
+		p.P(varName, "=", p.B(typ, p.FormatExprO(ctx, lval)))
 	}, p.Else(func() {
-		p.P(varName, "=", p.B(typ, rval.Expression(p.EOWithCtx(ctx))))
+		p.P(varName, "=", p.B(typ, p.FormatExprO(ctx, rval)))
 	}))
 
 	return varName
@@ -440,17 +445,21 @@ func (p *TypeGenerator) GenStructPreparePayload(ctx context.Context) {
 func (p *TypeGenerator) GenStructPreparePayloadSizeExpr(ctx context.Context, field *midl.Field, scopes *Scopes, sz midl.Expr) {
 
 	n := p.GoFieldName(ctx, field)
-	lenIdent := midl.NewIdent(p.DataLen(ctx, field, NewScopes(field.Scopes()), p.O(n), ""))
+	lenIdent := expr.Ident(p.DataLen(ctx, field, NewScopes(field.Scopes()), p.O(n), ""))
 
-	expr, ok := sz.Resolve(lenIdent)
+	sol, ok := sz.Solve(lenIdent)
 	if !ok {
-		if expr, ok = sz.ResolveTo(lenIdent); !ok {
+		// the expression cannot be inverted: the size is its first identifier
+		// set to the length as it is.
+		name, found := sz.FirstIdent()
+		if !found {
 			p.P("//", "cannot evaluate expression", sz.String())
 			return
 		}
+		sol = expr.Solution{Ident: name, Value: lenIdent}
 	}
 
-	target := fmt.Sprintf("%s", expr.Value)
+	target := sol.Ident
 	for _, szField := range p.Struct().Fields {
 		if szField.Name != target {
 			continue
@@ -460,10 +469,10 @@ func (p *TypeGenerator) GenStructPreparePayloadSizeExpr(ctx context.Context, fie
 		// ... if o.Data != nil && o.DataLen == 0 ...
 		p.If(p.O(n), "!=", p.GoTypeZeroValue(ctx, p.Scope(), field, scopes), "&&", p.O(szN), "==", "0", func() {
 			// TODO: handle complex expressions.
-			p.P(p.O(szN), "=", p.B(szT, expr.Expression(ctx)))
+			p.P(p.O(szN), "=", p.B(szT, p.FormatExpr(ctx, sol.Value)))
 			// check variable borders.
-			if to, val, ok := p.GetMinVarValue(ctx, expr); ok {
-				p.If(to.Expression(ctx), "<", val, func() {
+			if to, val, ok := p.GetMinVarValue(ctx, sol.Value); ok {
+				p.If(p.FormatExpr(ctx, to), "<", val, func() {
 					p.P(p.O(szN), "=", p.B(szT, "0"))
 				})
 			}
@@ -921,7 +930,7 @@ func (p *TypeGenerator) GenMarshalSizeInfo(ctx context.Context, field *midl.Fiel
 
 		// for non-top level array size information is handled via NDRSizeInfo.
 
-		if dim := scopes.Dim(); dim.IsString && !dim.NoSizeLimit && dim.Size().Empty() && dim.LengthIs.Empty() {
+		if dim := scopes.Dim(); dim.IsString && !dim.NoSizeLimit && dim.Size().Empty() && dim.LengthIs.IsEmpty() {
 
 			// top-level string.
 
@@ -999,21 +1008,23 @@ func (p *TypeGenerator) GenMarshalSizeInfo(ctx context.Context, field *midl.Fiel
 	return true
 }
 
+// GetMinVarValue reports whether the size expression can become negative when
+// its only identifier is zero, e.g. size_is(n - 1). It returns the identifier
+// and the value it must be at least.
 func (p *TypeGenerator) GetMinVarValue(ctx context.Context, sizeExpr midl.Expr) (midl.Expr, int64, bool) {
-	expr, ok := sizeExpr.Eval(midl.NewArgs(big.NewInt(0)))
-	if !ok {
+	idents := sizeExpr.Idents()
+	if len(idents) != 1 {
 		return midl.Expr{}, 0, false
 	}
-	val, ok := expr.Int64()
+	atZero, err := sizeExpr.Eval(expr.Always(expr.Int64(0)))
+	if err != nil {
+		return midl.Expr{}, 0, false
+	}
+	val, ok := atZero.Int64()
 	if !ok || val >= 0 {
 		return midl.Expr{}, 0, false
 	}
-	to, ok := sizeExpr.ResolveTo(midl.Expr{})
-	if !ok {
-		return midl.Expr{}, 0, false
-	}
-
-	return to, -val, true
+	return expr.Ident(idents[0]), -val, true
 }
 
 func (p *TypeGenerator) GenArraySizeVar(ctx context.Context, field *midl.Field, i int, scopes *Scopes, name string, sizeExpr midl.Expr) string {
@@ -1024,11 +1035,11 @@ func (p *TypeGenerator) GenArraySizeVar(ctx context.Context, field *midl.Field, 
 
 	dimVar := p.Var("dim"+name, i+1)
 
-	if !sizeExpr.Empty() {
+	if !sizeExpr.IsEmpty() {
 		p.P(dimVar, ":=", p.B("uint64", p.GenExpr(ctx, sizeExpr, p.LookupExprField(ctx, sizeExpr), "uint64")))
 		// check minimum value borders.
 		if to, val, ok := p.GetMinVarValue(ctx, sizeExpr); ok {
-			p.If(p.GenExpr(ctx, to, p.LookupExprField(ctx, to), "") /*to.Expression(p.EO) */, "<", val, func() {
+			p.If(p.GenExpr(ctx, to, p.LookupExprField(ctx, to), ""), "<", val, func() {
 				p.P(dimVar, "=", "uint64(0)")
 			})
 		}

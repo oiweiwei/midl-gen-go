@@ -2,11 +2,10 @@ package midl
 
 import (
 	"bytes"
-	"context"
 	"encoding/json"
 	"fmt"
+	"github.com/oiweiwei/midl-gen-go/midl/expr"
 	"hash/fnv"
-	"math/big"
 	"runtime"
 	"strings"
 )
@@ -365,7 +364,7 @@ func (a *FieldAttr) String() string {
 		ret = append(ret, format)
 	}
 
-	if !a.SwitchIs.Empty() {
+	if !a.SwitchIs.IsEmpty() {
 		ret = append(ret, fmt.Sprintf("switch_is={%s}", a.SwitchIs))
 	}
 
@@ -432,7 +431,7 @@ func (a *OperationAttr) String() string {
 		{a.PropGet, "propget"},
 		{a.PropPut, "propput"},
 		{a.PropPutRef, "propputref"},
-		{!a.ID.Empty(), fmt.Sprintf("id={%s}", a.ID)},
+		{!a.ID.IsEmpty(), fmt.Sprintf("id={%s}", a.ID)},
 		{a.Restricted, "restricted"},
 		{a.CallAs != "", fmt.Sprintf("call_as=%s", a.CallAs)},
 	} {
@@ -460,7 +459,7 @@ func (a *ParamAttr) String() string {
 		ret = append(ret, "disable_consistency_check")
 	}
 
-	if !a.IIDIs.Empty() {
+	if !a.IIDIs.IsEmpty() {
 		ret = append(ret, fmt.Sprintf("iid_is={%s}", a.IIDIs))
 	}
 
@@ -468,7 +467,7 @@ func (a *ParamAttr) String() string {
 		ret = append(ret, "retval")
 	}
 
-	if !a.DefaultValue.Empty() {
+	if !a.DefaultValue.IsEmpty() {
 		ret = append(ret, fmt.Sprintf("default_value={%s}", a.DefaultValue))
 	}
 
@@ -651,181 +650,6 @@ func (c Charset) String() (ret string) {
 	return ret
 }
 
-func (e Expr) MarshalJSON() ([]byte, error) {
-	return json.Marshal(e.String())
-}
-
-func (e Expr) String() string {
-
-	if e.Empty() {
-		return ""
-	}
-
-	if !e.reqParam {
-		switch e.Value.(type) {
-		case string:
-			return fmt.Sprintf("\"%v\"", e.Value)
-		default:
-			return fmt.Sprintf("%v", e.Value)
-		}
-	}
-
-	return e.Expr.String()
-}
-
-func (e Expr) Expression(ctx context.Context, opts ...any) string {
-
-	if e.Empty() {
-		return ""
-	}
-
-	var formatter func(uint64) string
-
-	for i, opt := range opts {
-		switch opt := opt.(type) {
-		case func(uint64) string:
-			formatter = opt
-		case func(context.Context, uint64) string:
-			opts[i] = func(v uint64) string {
-				return opt(ctx, v)
-			}
-		case func(context.Context, string) string:
-			opts[i] = func(s string) string {
-				return opt(ctx, s)
-			}
-		}
-	}
-
-	if !e.reqParam {
-		switch e.Value.(type) {
-		case string:
-			return fmt.Sprintf("\"%v\"", e.Value)
-		case *big.Int:
-			if formatter != nil {
-				return formatter(e.Value.(*big.Int).Uint64())
-			} else {
-				return fmt.Sprintf("%v", e.Value)
-			}
-		default:
-			return fmt.Sprintf("%v", e.Value)
-		}
-	}
-
-	return e.Expr.Expression(opts...)
-}
-
-var opToString = map[int]string{
-	LOGICAL_AND: "&&",
-	LOGICAL_OR:  "||",
-	GE:          ">=",
-	GT:          ">",
-	LE:          "<=",
-	LT:          "<",
-	EQ:          "==",
-	NE:          "!=",
-	OR:          "|",
-	XOR:         "^",
-	AND:         "&",
-	LSH:         "<<",
-	RSH:         ">>",
-	UPLUS:       "+",
-	UMINUS:      "-",
-	UNEG:        "~",
-	UNOT:        "!",
-	UMUL:        "*",
-	'+':         "+",
-	'-':         "-",
-	'*':         "*",
-	'/':         "/",
-}
-
-func (t *ExprTree) Expression(opts ...any) string {
-
-	var (
-		namer     func(string) string
-		formatter func(uint64) string
-	)
-
-	for _, opt := range opts {
-		switch opt := opt.(type) {
-		case func(string) string:
-			namer = opt
-		case func(uint64) string:
-			formatter = opt
-		}
-	}
-
-	var ret string
-
-	if t == nil {
-		return ""
-	}
-
-	switch t.Op {
-	case TERNARY:
-		if t.Cond.Op == UMUL || t.Cond.Op == IDENT {
-			ret = fmt.Sprint(t.Lval.Expression(opts...))
-		} else {
-			ret = fmt.Sprintf("(%s?%s:%s)", t.Cond.Expression(opts...), t.Lval.Expression(opts...), t.Rval.Expression(opts...))
-		}
-	case LOGICAL_AND, LOGICAL_OR, LE, LT, GE, GT, EQ, NE, OR, XOR, AND, LSH, RSH:
-		ret = fmt.Sprintf("(%s%s%s)", t.Lval.Expression(opts...), opToString[t.Op], t.Rval.Expression(opts...))
-	case '+', '-', '*', '/', '%':
-		ret = fmt.Sprintf("(%s%s%s)", t.Lval.Expression(opts...), string(rune(t.Op)), t.Rval.Expression(opts...))
-	case UNEG:
-		ret = fmt.Sprintf("(%suint32(%s))", "^", t.Lval.Expression(opts...))
-	case UPLUS, UMINUS, UNOT:
-		ret = fmt.Sprintf("(%s%s)", opToString[t.Op], t.Lval.Expression(opts...))
-	case UMUL:
-		ret = fmt.Sprintf("%s", t.Lval.Expression(opts...))
-	case IDENT:
-		if namer != nil {
-			ret = namer(fmt.Sprintf("%v", t.Value))
-		} else {
-			ret = fmt.Sprintf("%v", t.Value)
-		}
-	default:
-		if formatter != nil && isBigInt(t.Value) {
-			ret = formatter(t.Value.(*big.Int).Uint64())
-		} else {
-			ret = fmt.Sprintf("%v", t.Value)
-		}
-	}
-
-	return ret
-}
-
-func isBigInt(v any) bool {
-	i, ok := v.(*big.Int)
-	return ok && i != nil
-}
-
-func (t *ExprTree) String() string {
-
-	var ret string
-
-	if t == nil {
-		return ""
-	}
-
-	switch t.Op {
-	case TERNARY:
-		ret = fmt.Sprintf("(%s %s %s ?:)", t.Cond, t.Lval, t.Rval)
-	case LOGICAL_AND, LOGICAL_OR, LE, LT, GE, GT, EQ, NE, OR, XOR, AND, LSH, RSH:
-		ret = fmt.Sprintf("(%s %s %s)", t.Lval, t.Rval, opToString[t.Op])
-	case '+', '-', '*', '/', '%':
-		ret = fmt.Sprintf("(%s %s %s)", t.Lval, t.Rval, opToString[t.Op])
-	case UPLUS, UNEG, UMINUS, UNOT:
-		ret = fmt.Sprintf("(%s %s)", t.Lval, opToString[t.Op])
-	case UMUL:
-		ret = fmt.Sprintf("*%s", t.Lval)
-	default:
-		ret = fmt.Sprintf("%v", t.Value)
-	}
-
-	return ret
-}
-
 func (d Dim) String() string {
 	ret := []string{fmt.Sprintf("dim:%d", d.Dimension)}
 
@@ -840,8 +664,8 @@ func (d Dim) String() string {
 		{"first_is", d.FirstIs},
 		{"last_is", d.LastIs},
 	} {
-		if !size.Value.Empty() {
-			ret = append(ret, fmt.Sprintf("%s=%s", size.Name, size.Value.Expression(context.Background())))
+		if !size.Value.IsEmpty() {
+			ret = append(ret, fmt.Sprintf("%s=%s", size.Name, size.Value.Format(expr.Format{})))
 		}
 	}
 	if d.IsString {

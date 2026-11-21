@@ -1,54 +1,68 @@
 package midl
 
 import (
-	"context"
 	"fmt"
-	"math/big"
+	"strings"
 	"testing"
+
+	"github.com/oiweiwei/midl-gen-go/midl/expr"
 )
 
-type tExprStore map[string]Expr
-
-func (s tExprStore) LookupExpr(v string) (Expr, bool) {
-	e, ok := s[v]
-	return e, ok
+func parseConsts(t *testing.T, body string) *File {
+	t.Helper()
+	f, err := NewSession(WithoutBuiltins()).Parse(`[uuid(12345678-1234-1234-1234-123456789012), version(1.0)] interface consts { ` + body + ` }`)
+	if err != nil {
+		t.Fatal(err)
+	}
+	return f
 }
 
-func TestExprTreeResolve(t *testing.T) {
+func TestConstExpressions(t *testing.T) {
+	f := parseConsts(t, `
+		const long A = 1 << 5;
+		const long B = A + 3 * 2;
+		const long C = -7 / 2;
+		const long D = B > 30 ? 100 : 200;
+		const long E = ~0;
+	`)
+	body := f.Interfaces[0].Body
+	for name, want := range map[string]int64{"A": 32, "B": 38, "C": -3, "D": 100, "E": -1} {
+		c := body.Export[name].Const
+		if got, ok := c.Value.Int64(); !ok || got != want {
+			t.Errorf("%s: got %v, want %d", name, c.Value, want)
+		}
+	}
+}
 
-	e := Expr{
-		reqParam: true,
-		Expr: &ExprTree{
-			Op: '*',
-			Rval: &ExprTree{
-				Value: big.NewInt(4),
-			},
-			Lval: &ExprTree{
-				Op: '+',
-				Lval: &ExprTree{
-					Op: UMINUS,
-					Lval: &ExprTree{
-						Op:    IDENT,
-						Value: "x",
-					},
-				},
-				Rval: &ExprTree{
-					Value: big.NewInt(2),
-				},
-			},
-		}}
+func TestConstDivisionByZeroIsAParseError(t *testing.T) {
+	_, err := NewSession(WithoutBuiltins()).Parse(`[uuid(12345678-1234-1234-1234-123456789012), version(1.0)] interface c { const long A = 1 / 0; }`)
+	if err == nil || !strings.Contains(err.Error(), "division by zero") {
+		t.Fatalf("want a division by zero error, got %v", err)
+	}
+}
 
-	fmt.Println(e.String())
-
-	eval, ok := e.Eval(tExprStore{"x": Expr{Value: big.NewInt(5)}})
-	fmt.Println(eval.String(), ok)
-
-	fmt.Println("y", "=", e.Expression(context.Background()))
-
-	// r := &ExprTree{Value: big.NewInt(28)}
-	rx, ok := e.Resolve(NewIdent("y"))
-	fmt.Println(rx.Value, "=", rx.Expression(context.Background()), ok)
-
+func TestCoerce(t *testing.T) {
+	for _, tc := range []struct {
+		name string
+		e    Expr
+		kind Kind
+		ok   bool
+	}{
+		{"fits short", expr.Int64(1000), TypeInt16, true},
+		{"overflows short", expr.Int64(1 << 16), TypeInt16, false},
+		{"unsigned fits", expr.Int64(0xFFFFFFFF), TypeUint32, true},
+		{"unsigned overflow", expr.Int64(1 << 32), TypeUint32, false},
+		{"string to int", expr.String("a"), TypeInt32, false},
+		{"symbolic", expr.Ident("x"), TypeInt32, false},
+		{"string", expr.String("a"), TypeString, true},
+		{"null to void", expr.Null(), TypeVoid, true},
+		{"unsupported", expr.Int64(1), TypeStruct, false},
+	} {
+		_, err := Coerce(tc.e, tc.kind)
+		if (err == nil) != tc.ok {
+			t.Errorf("%s: err = %v, want ok = %v", tc.name, err, tc.ok)
+		}
+	}
 }
 
 // [callback] operations get their own opnum sequence (MIDL numbering) and do not

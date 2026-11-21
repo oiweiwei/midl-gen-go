@@ -1,6 +1,6 @@
 package midl
 
-import "math/big"
+import "github.com/oiweiwei/midl-gen-go/midl/expr"
 
 type Scope struct {
 	Attr  *TypeAttr
@@ -35,16 +35,22 @@ type Size struct {
 }
 
 func (d Size) Empty() bool {
-	return d.MinIs.Empty() && d.MaxIs.Empty() && d.SizeIs.Empty()
+	return d.MinIs.IsEmpty() && d.MaxIs.IsEmpty() && d.SizeIs.IsEmpty()
 }
 
-func (d Size) Is() (expr Expr) {
-	if expr = d.MaxIs; !expr.Empty() {
-		if !d.MinIs.Empty() {
-			expr, _ = expr.Sub(d.MinIs)
+// Is returns the number of elements: size_is, or max_is - min_is + 1.
+func (d Size) Is() Expr {
+	if max := d.MaxIs; !max.IsEmpty() {
+		// an operation that fails on a malformed operand (e.g. a string) is skipped.
+		if !d.MinIs.IsEmpty() {
+			if n, err := expr.Binary(expr.OpSub, max, d.MinIs); err == nil {
+				max = n
+			}
 		}
-		expr, _ = expr.Add(NewValue(big.NewInt(1)))
-		return expr
+		if n, err := expr.Binary(expr.OpAdd, max, expr.Int64(1)); err == nil {
+			max = n
+		}
+		return max
 	}
 	return d.SizeIs
 }
@@ -54,8 +60,8 @@ func (d Dim) Size() Size {
 }
 
 func (d Dim) Empty() bool {
-	return d.MinIs.Empty() && d.MaxIs.Empty() && d.SizeIs.Empty() &&
-		d.FirstIs.Empty() && d.LastIs.Empty() && d.LengthIs.Empty()
+	return d.MinIs.IsEmpty() && d.MaxIs.IsEmpty() && d.SizeIs.IsEmpty() &&
+		d.FirstIs.IsEmpty() && d.LastIs.IsEmpty() && d.LengthIs.IsEmpty()
 }
 
 func (f *Field) Scopes() []*Scope {
