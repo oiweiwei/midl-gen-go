@@ -1,0 +1,2 @@
+# Built-in naming rules: none. Rules live in the .midl/gonames directory next to
+# the IDL files (see README.md).

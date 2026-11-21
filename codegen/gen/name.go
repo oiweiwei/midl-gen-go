@@ -6,33 +6,33 @@ import (
 	"strings"
 
 	"github.com/oiweiwei/midl-gen-go/desc"
-	go_names "github.com/oiweiwei/midl-gen-go/gonames"
+	"github.com/oiweiwei/midl-gen-go/gonames"
 	"github.com/oiweiwei/midl-gen-go/midl"
 )
 
 var (
-	Escape  = go_names.Escape
-	RPCName = go_names.Unescape
-	Title   = go_names.Title
+	Escape  = gonames.Escape
+	RPCName = gonames.Unescape
+	Title   = gonames.Title
 )
 
 // GoName converts the IDL identifier to a Go name with the namer in effect.
-func GoName(ctx *Env, n string) string { return go_names.GoName(ctx.Namer, n) }
+func GoName(ctx *Env, n string) string { return gonames.GoName(ctx.Namer, n) }
 
 // GoNamePrivate converts the IDL identifier to an unexported Go name.
-func GoNamePrivate(ctx *Env, n string) string { return go_names.GoNamePrivate(ctx.Namer, n) }
+func GoNamePrivate(ctx *Env, n string) string { return gonames.GoNamePrivate(ctx.Namer, n) }
 
 // GoNameNoReserved is GoName without the replacement of Go reserved words.
-func GoNameNoReserved(ctx *Env, n string) string { return go_names.GoNameNoReserved(ctx.Namer, n) }
+func GoNameNoReserved(ctx *Env, n string) string { return gonames.GoNameNoReserved(ctx.Namer, n) }
 
 // GoMergeNames joins two names, dropping the repeated part.
-func GoMergeNames(ctx *Env, n1, n2 string) string { return go_names.GoMergeNames(ctx.Namer, n1, n2) }
+func GoMergeNames(ctx *Env, n1, n2 string) string { return gonames.GoMergeNames(ctx.Namer, n1, n2) }
 
 // GoSnakeCase converts the IDL identifier to a lower case snake case name.
-func GoSnakeCase(ctx *Env, n string) string { return go_names.GoSnakeCase(ctx.Namer, n) }
+func GoSnakeCase(ctx *Env, n string) string { return gonames.GoSnakeCase(ctx.Namer, n) }
 
 // LexName returns the words of the Go name of the IDL identifier.
-func LexName(ctx *Env, n string) []string { return go_names.GoLexName(ctx.Namer, n) }
+func LexName(ctx *Env, n string) []string { return gonames.GoLexName(ctx.Namer, n) }
 
 func GoHex(n int) func(uint64) string {
 	return func(v uint64) string {
@@ -296,7 +296,7 @@ type Package struct {
 func (p *Package) TypeName(n string) string {
 	if p.File != nil {
 		if namer := p.File.Namer(); namer != nil {
-			return go_names.GoName(namer, n)
+			return gonames.GoName(namer, n)
 		}
 	}
 	return n

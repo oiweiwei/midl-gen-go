@@ -108,8 +108,11 @@ or `Length`).
 
 ```yaml
 rotate:
-  ob: Offset    # ObSize -> Size then append "Offset" -> SizeOffset
+  ob: Offset    # obSize -> Size then append "Offset" -> SizeOffset
 ```
+
+The key is compared to the first lexem as it is written, so `ob` matches the
+Hungarian-notation `obSize` but not `ObSize`.
 
 ### `trim.prefix` - drop the first token if it matches
 
@@ -126,9 +129,11 @@ trim:
 ```yaml
 trim:
   word:
-    - Ptr
+    - ptr
     - p
 ```
+
+The words are compared in lower case, so write them in lower case.
 
 ### `abbr` - expand or canonicalize a lowercased token
 

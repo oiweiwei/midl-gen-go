@@ -6,8 +6,9 @@ import (
 	"path"
 	"path/filepath"
 	"strings"
+	"sync"
 
-	go_names "github.com/oiweiwei/midl-gen-go/gonames"
+	"github.com/oiweiwei/midl-gen-go/gonames"
 	"gopkg.in/yaml.v3"
 )
 
@@ -18,35 +19,31 @@ type Config struct {
 	} `yaml:"go,omitempty"`
 	// Path is the path for gonames configuration.
 	GoNames struct {
-		Path   string                        `yaml:"path,omitempty"`
-		Global *go_names.Config              `yaml:"global,omitempty"`
-		IDL    []map[string]*go_names.Config `yaml:"idl,omitempty"`
+		Path   string                       `yaml:"path,omitempty"`
+		Global *gonames.Config              `yaml:"global,omitempty"`
+		IDL    []map[string]*gonames.Config `yaml:"idl,omitempty"`
 	} `yaml:"gonames,omitempty"`
 	// Namer is the namer to use for code generation.
-	Namer *go_names.Namer `yaml:"-"`
+	Namer *gonames.Namer `yaml:"-"`
+
+	namersMu sync.Mutex
+	namers   map[string]*gonames.Namer
 }
 
+// For returns the configuration for the IDL file: the namer is the global one
+// extended with the rules written for that file.
 func (c *Config) For(idl string) *Config {
 
 	if c == nil {
 		return nil
 	}
 
-	n := &go_names.Config{}
-
 	idl = filepath.Base(idl)
 	idl = strings.TrimSuffix(idl, path.Ext(idl))
 
 	for _, m := range c.GoNames.IDL {
-		if cfg, ok := m[idl]; ok {
-			if cfg.Namer == nil {
-				if c.Namer != nil {
-					n = n.Merge(c.Namer.Config)
-				}
-				n = n.Merge(cfg)
-				cfg.Namer = &go_names.Namer{Config: n}
-			}
-			return &Config{Namer: cfg.Namer}
+		if rules, ok := m[idl]; ok {
+			return &Config{Namer: c.NamerFor(idl, rules)}
 		}
 	}
 
@@ -54,9 +51,28 @@ func (c *Config) For(idl string) *Config {
 		return c
 	}
 
-	cc := *c
-	cc.Namer = &go_names.Namer{Config: n}
-	return &cc
+	return &Config{Namer: gonames.NewNamer(nil)}
+}
+
+// NamerFor returns the namer of the IDL: the global rules extended with the
+// rules of the file. The namer is built once per IDL.
+func (c *Config) NamerFor(idl string, rules *gonames.Config) *gonames.Namer {
+
+	c.namersMu.Lock()
+	defer c.namersMu.Unlock()
+
+	if nr, ok := c.namers[idl]; ok {
+		return nr
+	}
+
+	if c.namers == nil {
+		c.namers = make(map[string]*gonames.Namer)
+	}
+
+	nr := gonames.NewNamer(c.Namer.Config().Merge(rules))
+	c.namers[idl] = nr
+
+	return nr
 }
 
 const ConfigDir = ".midl"
@@ -97,13 +113,13 @@ func (s *Session) LoadConfig(dir string) (*Config, error) {
 	}
 
 	if c.GoNames.Path != "" {
-		if c.Namer, err = go_names.LoadNamerFromPath(filepath.Join(dir, ConfigDir, c.GoNames.Path)); err != nil {
+		if c.Namer, err = gonames.LoadNamerFromPath(filepath.Join(dir, ConfigDir, c.GoNames.Path)); err != nil {
 			return nil, fmt.Errorf("load config: load gonames: %w", err)
 		}
 	}
 
 	if c.GoNames.Global != nil {
-		c.Namer = &go_names.Namer{Config: c.Namer.Merge(c.GoNames.Global)}
+		c.Namer = gonames.NewNamer(c.Namer.Config().Merge(c.GoNames.Global))
 	}
 
 	s.mu.Lock()

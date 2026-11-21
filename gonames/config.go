@@ -1,224 +1,148 @@
-package go_names
+package gonames
 
 import (
+	"bytes"
+	_ "embed"
+	"errors"
 	"fmt"
+	"io"
 	"os"
 	"path/filepath"
-	"runtime"
 
 	"gopkg.in/yaml.v3"
 )
 
-var defaultConfig *Config
-
-func init() { defaultConfig = LoadConfig() }
-
+// Config is the naming rules as written in YAML, see README.md for the
+// meaning of each section. The zero Config has no rules.
 type Config struct {
-	Rename     map[string][]string            `yaml:"rename"`
-	Rotate     map[string]string              `yaml:"rotate"`
-	Abbr       map[string]string              `yaml:"abbr"`
-	Split      map[string][]string            `yaml:"split"`
+	// Rename maps a whole identifier to the words of its Go name.
+	Rename map[string][]string `yaml:"rename"`
+	// Rotate maps a leading word to the word that is moved to the end.
+	Rotate map[string]string `yaml:"rotate"`
+	// Abbr maps a lower case word to the exact spelling used in the Go name.
+	Abbr map[string]string `yaml:"abbr"`
+	// Split maps a lexem to the words it consists of.
+	Split map[string][]string `yaml:"split"`
+	// LookBehind maps a previous lexem and the current one to the words that
+	// replace both.
 	LookBehind map[string]map[string][]string `yaml:"lookBehind"`
-	Trim       struct {
-		Words     []string            `yaml:"word"`
-		Word      map[string]struct{} `yaml:"-"`
-		PrefixAll []string            `yaml:"prefixAll"`
-		Prefixes  []string            `yaml:"prefix"`
-		Prefix    map[string]struct{} `yaml:"-"`
-		Suffix    []string            `yaml:"suffix"`
-	}
-	Namer *Namer `yaml:"-"`
+	Trim       Trim                           `yaml:"trim"`
 }
 
-func LoadConfig() *Config {
-	_, p, _, ok := runtime.Caller(0)
-	if !ok {
-		panic("cannot determine current dir")
-	}
-	c, err := LoadConfigFromPath(filepath.Join(filepath.Dir(p), "config"))
-	if err != nil {
-		panic(fmt.Errorf("gonames: load config: %w", err))
-	}
-	return c
+// Trim is the part of the rules that drops text.
+type Trim struct {
+	// Words are dropped wherever they appear (lower case).
+	Words []string `yaml:"word"`
+	// Prefixes are dropped when they are the first word.
+	Prefixes []string `yaml:"prefix"`
+	// PrefixAll are removed from the identifier before it is split.
+	PrefixAll []string `yaml:"prefixAll"`
+	// Suffix are removed from the identifier before it is split.
+	Suffix []string `yaml:"suffix"`
 }
 
-func LoadNamerFromPath(p string) (*Namer, error) {
-
-	c, err := LoadConfigFromPath(p)
-	if err != nil {
-		panic(fmt.Errorf("gonames: load config: %w", err))
-	}
-	if c == nil {
-		return nil, nil
-	}
-	return &Namer{c}, nil
-
-}
-
-func (c *Config) Copy() *Config {
-	c2 := &Config{}
-
-	if c == nil {
-		return c2
-	}
-
-	c2.Rename = make(map[string][]string)
-	for k, v := range c.Rename {
-		c2.Rename[k] = append([]string(nil), v...)
-	}
-
-	c2.Rotate = make(map[string]string)
-	for k, v := range c.Rotate {
-		c2.Rotate[k] = v
-	}
-
-	c2.Abbr = make(map[string]string)
-	for k, v := range c.Abbr {
-		c2.Abbr[k] = v
-	}
-
-	c2.Split = make(map[string][]string)
-	for k, v := range c.Split {
-		c2.Split[k] = append([]string(nil), v...)
-	}
-
-	c2.LookBehind = make(map[string]map[string][]string)
-	for k, v := range c.LookBehind {
-		c2.LookBehind[k] = make(map[string][]string)
-		for k2, v2 := range v {
-			c2.LookBehind[k][k2] = append([]string(nil), v2...)
-		}
-	}
-
-	c2.Trim.PrefixAll = append([]string(nil), c.Trim.PrefixAll...)
-	c2.Trim.Prefixes = append([]string(nil), c.Trim.Prefixes...)
-	c2.Trim.Suffix = append([]string(nil), c.Trim.Suffix...)
-	c2.Trim.Prefix = make(map[string]struct{})
-	c2.Trim.Word = make(map[string]struct{})
-
-	for k := range c.Trim.Prefix {
-		c2.Trim.Prefix[k] = struct{}{}
-	}
-
-	for k := range c.Trim.Word {
-		c2.Trim.Word[k] = struct{}{}
-	}
-
-	return c2
-}
-
+// Merge returns the rules of c overridden and extended by the rules of other.
+// Neither c nor other is modified. Map entries of other replace those of c;
+// lists are concatenated.
 func (c *Config) Merge(other *Config) *Config {
 
-	c2 := c.Copy()
-
-	if other == nil {
-		return c2
+	out := &Config{
+		Rename:     map[string][]string{},
+		Rotate:     map[string]string{},
+		Abbr:       map[string]string{},
+		Split:      map[string][]string{},
+		LookBehind: map[string]map[string][]string{},
 	}
 
-	for k, v := range other.Rename {
-		c2.Rename[k] = v
-	}
-
-	for k, v := range other.Rotate {
-		c2.Rotate[k] = v
-	}
-
-	for k, v := range other.Abbr {
-		c2.Abbr[k] = v
-	}
-
-	for k, v := range other.Split {
-		c2.Split[k] = v
-	}
-
-	for k, v := range other.LookBehind {
-		m, ok := c2.LookBehind[k]
-		if !ok {
-			m = make(map[string][]string)
+	for _, src := range []*Config{c, other} {
+		if src == nil {
+			continue
 		}
-
-		for k2, v2 := range v {
-			m[k2] = v2
+		for k, v := range src.Rename {
+			out.Rename[k] = append([]string(nil), v...)
 		}
-		c2.LookBehind[k] = m
+		for k, v := range src.Rotate {
+			out.Rotate[k] = v
+		}
+		for k, v := range src.Abbr {
+			out.Abbr[k] = v
+		}
+		for k, v := range src.Split {
+			out.Split[k] = append([]string(nil), v...)
+		}
+		for k, v := range src.LookBehind {
+			m := out.LookBehind[k]
+			if m == nil {
+				m = map[string][]string{}
+				out.LookBehind[k] = m
+			}
+			for k2, v2 := range v {
+				m[k2] = append([]string(nil), v2...)
+			}
+		}
+		out.Trim.Words = append(out.Trim.Words, src.Trim.Words...)
+		out.Trim.Prefixes = append(out.Trim.Prefixes, src.Trim.Prefixes...)
+		out.Trim.PrefixAll = append(out.Trim.PrefixAll, src.Trim.PrefixAll...)
+		out.Trim.Suffix = append(out.Trim.Suffix, src.Trim.Suffix...)
 	}
 
-	c2.Trim.PrefixAll = append(c2.Trim.PrefixAll, other.Trim.PrefixAll...)
-	c2.Trim.Prefixes = append(c2.Trim.Prefixes, other.Trim.Prefixes...)
-	c2.Trim.Suffix = append(c2.Trim.Suffix, other.Trim.Suffix...)
-
-	for k := range other.Trim.Prefix {
-		if c2.Trim.Prefix == nil {
-			c2.Trim.Prefix = make(map[string]struct{})
-		}
-		c2.Trim.Prefix[k] = struct{}{}
-	}
-
-	for k := range other.Trim.Word {
-		if c2.Trim.Word == nil {
-			c2.Trim.Word = make(map[string]struct{})
-		}
-		c2.Trim.Word[k] = struct{}{}
-	}
-
-	return c2
+	return out
 }
 
-// ParseConfig parses the YAML configuration from the provided byte slice and returns a Config struct.
+// ParseConfig parses the rules from YAML.
 func ParseConfig(b []byte) (*Config, error) {
 	c := &Config{}
-	if err := yaml.Unmarshal(b, c); err != nil {
-		return nil, fmt.Errorf("gonames: parse config: unmarshal yaml: %w", err)
-	}
-	c.Trim.Prefix = make(map[string]struct{})
-	c.Trim.Word = make(map[string]struct{})
-	for _, pfx := range c.Trim.Prefixes {
-		c.Trim.Prefix[pfx] = struct{}{}
-	}
-	for _, wrd := range c.Trim.Words {
-		c.Trim.Word[wrd] = struct{}{}
+	if err := yaml.NewDecoder(bytes.NewReader(b)).Decode(c); err != nil && !errors.Is(err, io.EOF) { // an empty document has no rules.
+		return nil, fmt.Errorf("gonames: parse config: %w", err)
 	}
 	return c, nil
 }
 
-// UnmarshalYAML implements yaml.Unmarshaler to populate the Prefix and Word maps after decoding the YAML.
-func (c *Config) UnmarshalYAML(n *yaml.Node) error {
+// LoadConfigFromPath loads the rules from all *.yaml files of the directory, in
+// name order, and merges them: a map entry of a later file replaces that of an
+// earlier one, lists are concatenated. A directory without files has no rules.
+func LoadConfigFromPath(dir string) (*Config, error) {
 
-	type config Config
-	if err := n.Decode((*config)(c)); err != nil {
-		return fmt.Errorf("gonames: unmarshal config: decode yaml: %w", err)
+	names, err := filepath.Glob(filepath.Join(dir, "*.yaml"))
+	if err != nil {
+		return nil, fmt.Errorf("gonames: load config: %w", err)
 	}
 
-	c.Trim.Prefix = make(map[string]struct{})
-	c.Trim.Word = make(map[string]struct{})
+	cfg := &Config{}
 
-	for _, pfx := range c.Trim.Prefixes {
-		c.Trim.Prefix[pfx] = struct{}{}
-	}
-	for _, wrd := range c.Trim.Words {
-		c.Trim.Word[wrd] = struct{}{}
-	}
-
-	return nil
-}
-
-// LoadConfigFromPath loads the configuration from all YAML files in the specified directory
-// and merges them into a single Config struct.
-func LoadConfigFromPath(p string) (*Config, error) {
-
-	cc := Config{}
-
-	fileNames, _ := filepath.Glob(filepath.Join(p, "*.yaml"))
-
-	for _, fileName := range fileNames {
-		f, err := os.Open(fileName)
+	for _, name := range names {
+		b, err := os.ReadFile(name)
 		if err != nil {
-			return nil, fmt.Errorf("gonames: load config: open file: %w", err)
+			return nil, fmt.Errorf("gonames: load config: %w", err)
 		}
-		if err := yaml.NewDecoder(f).Decode(&cc); err != nil {
-			return nil, fmt.Errorf("gonames: load config: decode yaml: %w", err)
+		c, err := ParseConfig(b)
+		if err != nil {
+			return nil, fmt.Errorf("%s: %w", name, err)
 		}
+		cfg = cfg.Merge(c)
 	}
 
-	return &cc, nil
+	return cfg, nil
 }
+
+// LoadNamerFromPath loads the rules from the directory (see LoadConfigFromPath)
+// and returns the namer.
+func LoadNamerFromPath(dir string) (*Namer, error) {
+	c, err := LoadConfigFromPath(dir)
+	if err != nil {
+		return nil, err
+	}
+	return NewNamer(c), nil
+}
+
+//go:embed default.yaml
+var defaultYAML []byte
+
+// defaultNamer is the namer without per-IDL rules: the built-in defaults only.
+var defaultNamer = func() *Namer {
+	c, err := ParseConfig(defaultYAML)
+	if err != nil {
+		panic(err) // the embedded file is part of the package.
+	}
+	return NewNamer(c)
+}()

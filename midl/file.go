@@ -5,7 +5,7 @@ import (
 	"sort"
 	"strings"
 
-	go_names "github.com/oiweiwei/midl-gen-go/gonames"
+	"github.com/oiweiwei/midl-gen-go/gonames"
 )
 
 func NewFile(p, pkg string) *File {
@@ -79,7 +79,7 @@ func (f *File) IsEmpty() bool {
 	return true
 }
 
-func (f *File) Namer() *go_names.Namer {
+func (f *File) Namer() *gonames.Namer {
 	if f.MIDLConfig != nil && f.MIDLConfig.Namer != nil {
 		return f.MIDLConfig.Namer
 	}

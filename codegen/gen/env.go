@@ -3,7 +3,7 @@ package gen
 import (
 	"context"
 
-	go_names "github.com/oiweiwei/midl-gen-go/gonames"
+	"github.com/oiweiwei/midl-gen-go/gonames"
 	"github.com/oiweiwei/midl-gen-go/midl"
 )
 
@@ -27,7 +27,7 @@ type Env struct {
 	// Field is the field being generated.
 	Field *midl.Field
 	// Namer converts IDL names to Go names; nil is the default configuration.
-	Namer *go_names.Namer
+	Namer *gonames.Namer
 	// NullMask is the name of the null mask variable of the operation (empty if none).
 	NullMask string
 	// VarName is the name of the variable the value is read into or written from.
@@ -63,7 +63,7 @@ func (e *Env) WithInterface(iff *midl.Interface) *Env { c := e.Clone(); c.Interf
 func (e *Env) WithField(f *midl.Field) *Env { c := e.Clone(); c.Field = f; return c }
 
 // WithNamer returns the state with the namer; a nil namer leaves the current one in effect.
-func (e *Env) WithNamer(n *go_names.Namer) *Env {
+func (e *Env) WithNamer(n *gonames.Namer) *Env {
 	if n == nil {
 		return e
 	}
